@@ -1,82 +1,20 @@
-# ===== DOCKER COMPOSE: Orquestación de Servicios =====
-# Docker Compose permite definir y ejecutar aplicaciones multi-contenedor
-# Cada servicio se ejecuta en su propio contenedor aislado
+version: '3.8'
 
 services:
-  # ===== SERVICIO: BASE DE DATOS =====
-  db:
-    # Imagen oficial de PostgreSQL versión 16 desde Docker Hub
-    image: postgres:16
-    
-    # Variables de entorno para configurar PostgreSQL
-    environment:
-      # Nombre de la base de datos a crear al iniciar
-      # ${VAR:-default} lee de .env, si no existe usa "default"
-      POSTGRES_DB: ${POSTGRES_DB:-transcendence}
-      # Usuario administrador de PostgreSQL
-      POSTGRES_USER: ${POSTGRES_USER:-transcendence}
-      # Contraseña del usuario (⚠️ cambiar en producción)
-      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-transcendence}
-    
-    # Mapeo de puertos: host:contenedor
-    # Permite conectarse a PostgreSQL desde localhost:5432
-    ports:
-      - "5432:5432"
-    
-    # Volúmenes: Persistencia de datos
-    # db_data es un volumen nombrado que persiste los datos de la BD
-    # /var/lib/postgresql/data es donde Postgres guarda sus datos
-    volumes:
-      - db_data:/var/lib/postgresql/data
-
-  # ===== SERVICIO: BACKEND API =====
-  backend:
-    # Construye la imagen desde el Dockerfile en ./backend
-    build: ./backend
-    
-    # Variables de entorno para el backend
-    environment:
-      # Puerto donde el servidor Fastify escuchará
-      BACKEND_PORT: ${BACKEND_PORT:-3000}
-      # Origen permitido para peticiones CORS (el frontend)
-      CORS_ORIGIN: ${CORS_ORIGIN:-http://localhost:5173}
-      # Cadena de conexión a PostgreSQL
-      # Nota: usa "db" como host (nombre del servicio en esta red)
-      DATABASE_URL: ${DATABASE_URL}
-    
-    # Mapeo de puertos: expone el backend en localhost:3000
-    ports:
-      - "3000:3000"
-    
-    # Dependencias: backend espera a que db esté listo
-    # Nota: depends_on solo espera que el contenedor inicie, no que esté "listo"
-    # Para esperar que Postgres acepte conexiones, se necesitaría un health check
-    depends_on:
-      - db
-
-  # ===== SERVICIO: FRONTEND =====
   frontend:
-    # Construye la imagen desde el Dockerfile en ./frontend
-    build: ./frontend
-    
-    # Variables de entorno para Vite
-    environment:
-      # URL base de la API para que el frontend sepa dónde hacer peticiones
-      # Importante: desde el navegador se accede a localhost (no al nombre "backend")
-      VITE_API_BASE: http://localhost:3000
-    
-    # Mapeo de puertos: expone el frontend en localhost:5173
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
     ports:
       - "5173:5173"
-    
-    # Dependencias: frontend espera a que backend esté listo
-    depends_on:
-      - backend
+    volumes:
+      - ./frontend:/app
+      - /app/node_modules
+    environment:
+      - VITE_API_URL=http://localhost:3000
+    networks:
+      - pong-network
 
-# ===== VOLÚMENES =====
-# Definición de volúmenes nombrados para persistencia de datos
-volumes:
-  # db_data: Almacena los datos de PostgreSQL
-  # Persiste incluso si el contenedor se elimina (útil para no perder datos)
-  # Se puede eliminar con: docker compose down --volumes
-  db_data:
+networks:
+  pong-network:
+    driver: bridge

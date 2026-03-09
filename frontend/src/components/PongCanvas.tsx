@@ -1,0 +1,40 @@
+import React, { useEffect, useRef } from 'react';
+import { GameEngine } from '../game/GameEngine';
+
+const PongCanvas: React.FC = () => {
+  const canvasRef = useRef<HTMLCanvasElement>(null);
+  const engineRef = useRef<GameEngine | null>(null);
+
+  useEffect(() => {
+    if (!canvasRef.current) return;
+
+    // Initialize the game engine
+    const canvas = canvasRef.current;
+    
+    // Set explicit size for internal resolution
+    canvas.width = 800;
+    canvas.height = 600;
+
+    engineRef.current = new GameEngine(canvas);
+    engineRef.current.start();
+
+    // Clean up on unmount
+    return () => {
+      engineRef.current?.stop();
+    };
+  }, []);
+
+  return (
+    <canvas 
+      ref={canvasRef} 
+      style={{ 
+        background: '#0a0a14', 
+        borderRadius: '8px',
+        boxShadow: 'inset 0 0 20px rgba(0,0,0,0.8)',
+        border: '1px solid rgba(255,255,255,0.1)'
+      }}
+    />
+  );
+};
+
+export default PongCanvas;
