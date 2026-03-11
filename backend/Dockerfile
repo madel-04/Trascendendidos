@@ -1,6 +1,6 @@
 FROM node:20-alpine
 
-# Install openssl to generate self-signed dev certificates
+# Install openssl to run the cert generation script at startup
 RUN apk add --no-cache openssl
 
 WORKDIR /app
@@ -8,19 +8,20 @@ WORKDIR /app
 COPY package*.json ./
 RUN npm install
 
-# Generate self-signed certificate for development (HTTPS requirement)
-RUN mkdir -p certs && \
-    openssl req -nodes -new -x509 -keyout certs/server.key -out certs/server.cert -subj "/C=US/ST=State/L=City/O=Organization/OU=Unit/CN=localhost"
-
 # Copy source and static assets
 COPY tsconfig.json ./
 COPY src ./src
 COPY public ./public
+
+# Copy entrypoint script and make it executable
+COPY scripts/generate-certs.sh /usr/local/bin/generate-certs.sh
+RUN chmod +x /usr/local/bin/generate-certs.sh
 
 # Build TypeScript
 RUN npm run build
 
 EXPOSE 3000
 
-# Start compiled server
+# ENTRYPOINT runs the cert script first (generates if missing), then starts server
+ENTRYPOINT ["generate-certs.sh"]
 CMD ["npm", "start"]

@@ -23,12 +23,19 @@ services:
       - "3000:3000"
     volumes:
       - ./backend/src:/app/src
+      - certs:/certs
     environment:
       - FRONTEND_URL=https://localhost:5173
       - PORT=3000
+      - CERT_PATH=/certs/server.cert
+      - KEY_PATH=/certs/server.key
     networks:
       - pong-network
 
 networks:
   pong-network:
     driver: bridge
+
+volumes:
+  certs:
+
