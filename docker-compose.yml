@@ -11,7 +11,21 @@ services:
       - ./frontend:/app
       - /app/node_modules
     environment:
-      - VITE_API_URL=http://localhost:3000
+      - VITE_API_URL=https://localhost:3000
+    networks:
+      - pong-network
+
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    ports:
+      - "3000:3000"
+    volumes:
+      - ./backend/src:/app/src
+    environment:
+      - FRONTEND_URL=https://localhost:5173
+      - PORT=3000
     networks:
       - pong-network
 
