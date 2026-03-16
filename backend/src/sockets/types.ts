@@ -24,21 +24,31 @@ export interface MatchFoundPayload {
   opponent: string; // opponent socket id
 }
 
+export interface MatchEndedPayload {
+  reason: 'forfeit' | 'disconnect' | 'completed';
+  winner: 'left' | 'right' | null; // null = draw / incomplete
+}
+
 // Events the SERVER emits → CLIENT
 export interface ServerToClientEvents {
-  match_found: (payload: MatchFoundPayload) => void;
-  paddle_moved: (payload: PaddleMovePayload) => void;
-  ball_state: (payload: BallStatePayload) => void;
-  score_update: (payload: ScorePayload) => void;
-  opponent_disconnected: () => void;
-  waiting_for_opponent: () => void;
+  match_found:           (payload: MatchFoundPayload) => void;
+  paddle_moved:          (payload: PaddleMovePayload) => void;
+  ball_state:            (payload: BallStatePayload) => void;
+  score_update:          (payload: ScorePayload) => void;
+  // Graceful connection handling
+  opponent_disconnected: () => void;       // opponent dropped unexpectedly
+  match_ended:           (payload: MatchEndedPayload) => void; // formal match termination
+  waiting_for_opponent:  () => void;
+  returned_to_lobby:     () => void;       // tells client it can re-queue
 }
 
 // Events the CLIENT emits → SERVER
 export interface ClientToServerEvents {
-  join_matchmaking: () => void;
+  join_matchmaking:  () => void;
   leave_matchmaking: () => void;
-  paddle_move: (payload: PaddleMovePayload) => void;
+  paddle_move:       (payload: PaddleMovePayload) => void;
+  // Voluntary match exit (intentional, not a network drop)
+  leave_match:       () => void;
 }
 
 // Events for server-to-server (not used here, but required by Socket.io types)
