@@ -1,0 +1,642 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Pong Backend · Socket.io Test Panel</title>
+  <script src="https://cdn.socket.io/4.7.5/socket.io.min.js"></script>
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;900&family=JetBrains+Mono:wght@400;600&display=swap');
+
+    :root {
+      --bg: #0a0a0f;
+      --surface: #12121a;
+      --surface2: #1a1a26;
+      --border: #252535;
+      --accent-left: #6c63ff;
+      --accent-right: #ff6584;
+      --accent-green: #43e97b;
+      --accent-yellow: #f9cb28;
+      --text: #e8e8f0;
+      --text-dim: #6b6b8a;
+      --text-muted: #3d3d5c;
+      --radius: 12px;
+      --radius-sm: 8px;
+    }
+
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+
+    body {
+      background: var(--bg);
+      color: var(--text);
+      font-family: 'Inter', sans-serif;
+      min-height: 100vh;
+      overflow-x: hidden;
+    }
+
+    /* ── Animated background grid ── */
+    body::before {
+      content: '';
+      position: fixed;
+      inset: 0;
+      background-image:
+        linear-gradient(rgba(108,99,255,.04) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(108,99,255,.04) 1px, transparent 1px);
+      background-size: 40px 40px;
+      pointer-events: none;
+      z-index: 0;
+    }
+
+    .page {
+      position: relative;
+      z-index: 1;
+      padding: 32px 24px;
+      max-width: 1300px;
+      margin: 0 auto;
+    }
+
+    /* ── Header ── */
+    header {
+      text-align: center;
+      margin-bottom: 40px;
+    }
+    .logo {
+      display: inline-flex;
+      align-items: center;
+      gap: 12px;
+      margin-bottom: 12px;
+    }
+    .logo-icon {
+      width: 44px; height: 44px;
+      background: linear-gradient(135deg, var(--accent-left), var(--accent-right));
+      border-radius: 12px;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 22px;
+    }
+    h1 { font-size: 28px; font-weight: 900; letter-spacing: -0.5px; }
+    h1 span { background: linear-gradient(90deg, var(--accent-left), var(--accent-right)); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
+    .subtitle { color: var(--text-dim); font-size: 14px; margin-top: 6px; }
+
+    /* ── Server status bar ── */
+    .status-bar {
+      display: flex; align-items: center; justify-content: center; gap: 24px;
+      background: var(--surface); border: 1px solid var(--border);
+      border-radius: var(--radius); padding: 14px 24px;
+      margin-bottom: 32px; flex-wrap: wrap;
+    }
+    .status-item { display: flex; align-items: center; gap: 8px; font-size: 13px; color: var(--text-dim); }
+    .dot {
+      width: 8px; height: 8px; border-radius: 50%;
+      background: var(--text-muted);
+      transition: background 0.3s, box-shadow 0.3s;
+    }
+    .dot.green { background: var(--accent-green); box-shadow: 0 0 8px var(--accent-green); }
+    .dot.red   { background: var(--accent-right); box-shadow: 0 0 8px var(--accent-right); }
+
+    /* ── Two-client grid ── */
+    .clients-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 20px;
+      margin-bottom: 24px;
+    }
+    @media (max-width: 800px) { .clients-grid { grid-template-columns: 1fr; } }
+
+    /* ── Client panel ── */
+    .client-panel {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      overflow: hidden;
+      display: flex; flex-direction: column;
+    }
+    .panel-header {
+      padding: 16px 20px;
+      display: flex; align-items: center; gap: 12px;
+      border-bottom: 1px solid var(--border);
+    }
+    .panel-header.left  { border-top: 3px solid var(--accent-left); }
+    .panel-header.right { border-top: 3px solid var(--accent-right); }
+
+    .panel-avatar {
+      width: 36px; height: 36px; border-radius: 50%;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 16px; font-weight: 700;
+    }
+    .left  .panel-avatar { background: rgba(108,99,255,.2); color: var(--accent-left); }
+    .right .panel-avatar { background: rgba(255,101,132,.2); color: var(--accent-right); }
+
+    .panel-info { flex: 1; }
+    .panel-name { font-weight: 600; font-size: 15px; }
+    .panel-id   { font-family: 'JetBrains Mono', monospace; font-size: 11px; color: var(--text-dim); margin-top: 2px; }
+
+    .conn-badge {
+      font-size: 11px; font-weight: 600; padding: 4px 10px;
+      border-radius: 20px; letter-spacing: 0.5px;
+      background: rgba(61,61,92,.5); color: var(--text-muted);
+      transition: all 0.3s;
+    }
+    .conn-badge.connected    { background: rgba(67,233,123,.15); color: var(--accent-green); }
+    .conn-badge.disconnected { background: rgba(255,101,132,.15); color: var(--accent-right); }
+    .conn-badge.waiting      { background: rgba(249,203,40,.15); color: var(--accent-yellow); }
+    .conn-badge.matched      { background: rgba(108,99,255,.2); color: var(--accent-left); }
+
+    .panel-body { padding: 16px 20px; flex: 1; display: flex; flex-direction: column; gap: 12px; }
+
+    /* ── Buttons ── */
+    .btn-row { display: flex; gap: 8px; flex-wrap: wrap; }
+    .btn {
+      padding: 8px 16px; border-radius: var(--radius-sm);
+      border: none; cursor: pointer;
+      font-family: 'Inter', sans-serif;
+      font-size: 13px; font-weight: 500;
+      transition: all 0.2s; display: inline-flex; align-items: center; gap: 6px;
+    }
+    .btn:disabled { opacity: 0.35; cursor: not-allowed; }
+    .btn-primary {
+      background: linear-gradient(135deg, var(--accent-left), #8b7cf8);
+      color: white;
+    }
+    .btn-primary:hover:not(:disabled) { transform: translateY(-1px); box-shadow: 0 4px 14px rgba(108,99,255,.35); }
+    .btn-danger {
+      background: rgba(255,101,132,.15); color: var(--accent-right);
+      border: 1px solid rgba(255,101,132,.3);
+    }
+    .btn-danger:hover:not(:disabled) { background: rgba(255,101,132,.25); }
+    .btn-ghost {
+      background: var(--surface2); color: var(--text-dim);
+      border: 1px solid var(--border);
+    }
+    .btn-ghost:hover:not(:disabled) { color: var(--text); border-color: #3a3a5c; }
+
+    /* ── Paddle simulator ── */
+    .paddle-area {
+      background: var(--surface2); border: 1px solid var(--border);
+      border-radius: var(--radius-sm); padding: 14px;
+      display: none; flex-direction: column; gap: 10px;
+    }
+    .paddle-area.visible { display: flex; }
+    .paddle-label { font-size: 12px; color: var(--text-dim); font-weight: 500; }
+    .paddle-track {
+      position: relative; height: 8px;
+      background: var(--border); border-radius: 4px; cursor: pointer;
+    }
+    .paddle-thumb {
+      position: absolute; top: 50%; transform: translate(-50%, -50%);
+      width: 18px; height: 18px; border-radius: 50%;
+      cursor: grab; transition: left 0.05s;
+    }
+    .left  .paddle-thumb { background: var(--accent-left); box-shadow: 0 0 8px var(--accent-left); }
+    .right .paddle-thumb { background: var(--accent-right); box-shadow: 0 0 8px var(--accent-right); }
+    .paddle-value { font-family: 'JetBrains Mono', monospace; font-size: 12px; color: var(--text-dim); }
+
+    /* ── Opponent paddle display ── */
+    .opp-paddle-display {
+      background: var(--surface2); border: 1px solid var(--border);
+      border-radius: var(--radius-sm); padding: 10px 14px;
+      display: none; align-items: center; gap: 10px;
+    }
+    .opp-paddle-display.visible { display: flex; }
+    .opp-bar-track { flex: 1; height: 6px; background: var(--border); border-radius: 3px; position: relative; }
+    .opp-bar-fill {
+      position: absolute; left: 0; top: 0; height: 100%;
+      border-radius: 3px; transition: width 0.05s;
+    }
+    .left  .opp-bar-fill { background: rgba(255,101,132,.6); }
+    .right .opp-bar-fill { background: rgba(108,99,255,.6); }
+
+    /* ── Log ── */
+    .log-wrap { flex: 1; min-height: 160px; }
+    .log-title { font-size: 11px; text-transform: uppercase; letter-spacing: 1px; color: var(--text-muted); margin-bottom: 8px; }
+    .log {
+      background: #08080f; border: 1px solid var(--border);
+      border-radius: var(--radius-sm); padding: 10px;
+      height: 180px; overflow-y: auto;
+      font-family: 'JetBrains Mono', monospace; font-size: 11px;
+      display: flex; flex-direction: column; gap: 3px;
+    }
+    .log::-webkit-scrollbar { width: 4px; }
+    .log::-webkit-scrollbar-track { background: transparent; }
+    .log::-webkit-scrollbar-thumb { background: var(--border); border-radius: 4px; }
+
+    .log-line { display: flex; gap: 8px; align-items: baseline; }
+    .log-time { color: var(--text-muted); flex-shrink: 0; }
+    .log-msg  { color: var(--text-dim); word-break: break-all; }
+    .log-line.in  .log-msg { color: #a3e6c8; }
+    .log-line.out .log-msg { color: #a3b4e6; }
+    .log-line.err .log-msg { color: var(--accent-right); }
+    .log-line.sys .log-msg { color: var(--accent-yellow); }
+
+    /* ── Mini pong court ── */
+    .court-section {
+      background: var(--surface); border: 1px solid var(--border);
+      border-radius: var(--radius); padding: 20px;
+    }
+    .court-title { font-size: 13px; color: var(--text-dim); font-weight: 600; margin-bottom: 16px; text-align: center; }
+    canvas {
+      display: block; margin: 0 auto;
+      border-radius: var(--radius-sm);
+      border: 1px solid var(--border);
+    }
+
+    .event-feed {
+      background: var(--surface2); border: 1px solid var(--border);
+      border-radius: var(--radius-sm); padding: 12px;
+      margin-top: 16px;
+      height: 100px; overflow-y: auto;
+      font-family: 'JetBrains Mono', monospace; font-size: 11px;
+    }
+  </style>
+</head>
+<body>
+<div class="page">
+  <header>
+    <div class="logo">
+      <div class="logo-icon">🏓</div>
+      <h1>Pong <span>Socket.io</span> Test Panel</h1>
+    </div>
+    <p class="subtitle">Test real-time WebSocket features — open in two browser tabs for full matchmaking simulation</p>
+  </header>
+
+  <!-- Status bar -->
+  <div class="status-bar">
+    <div class="status-item"><span class="dot" id="srv-dot"></span><span id="srv-label">Server: connecting…</span></div>
+    <div class="status-item"><span class="dot" id="match-dot"></span><span id="match-label">Match: none</span></div>
+    <div class="status-item" style="color: var(--text-dim);">Room: <code id="room-label" style="font-family:'JetBrains Mono',monospace;font-size:12px">—</code></div>
+    <div class="status-item" style="color: var(--text-dim);">Side: <code id="side-label" style="font-family:'JetBrains Mono',monospace;font-size:12px">—</code></div>
+    <div class="status-item" style="color: var(--text-dim);">Socket ID: <code id="socketid-label" style="font-family:'JetBrains Mono',monospace;font-size:12px">—</code></div>
+  </div>
+
+  <div class="clients-grid">
+    <!-- My client panel -->
+    <div class="client-panel left" id="my-panel">
+      <div class="panel-header left">
+        <div class="panel-avatar">A</div>
+        <div class="panel-info">
+          <div class="panel-name">This Tab</div>
+          <div class="panel-id" id="my-socket-id">socket id: —</div>
+        </div>
+        <span class="conn-badge" id="my-badge">offline</span>
+      </div>
+      <div class="panel-body">
+        <div class="btn-row">
+          <button class="btn btn-primary" id="btn-connect">⚡ Connect</button>
+          <button class="btn btn-danger" id="btn-disconnect" disabled>Disconnect</button>
+        </div>
+        <div class="btn-row">
+          <button class="btn btn-ghost" id="btn-join" disabled>🎮 Join Matchmaking</button>
+          <button class="btn btn-ghost" id="btn-leave" disabled>Leave Queue</button>
+        </div>
+
+        <!-- My paddle slider -->
+        <div class="paddle-area" id="my-paddle-area">
+          <div class="paddle-label">My Paddle Position <span id="my-paddle-val" class="paddle-value">50%</span></div>
+          <div class="paddle-track" id="my-paddle-track">
+            <div class="paddle-thumb" id="my-paddle-thumb" style="left:50%"></div>
+          </div>
+        </div>
+
+        <!-- Opponent paddle display -->
+        <div class="opp-paddle-display left" id="my-opp-display">
+          <span style="font-size:11px;color:var(--text-dim);white-space:nowrap">Opp. Paddle</span>
+          <div class="opp-bar-track">
+            <div class="opp-bar-fill left" id="my-opp-bar" style="width:50%"></div>
+          </div>
+          <span class="paddle-value" id="my-opp-val">50%</span>
+        </div>
+
+        <div class="log-wrap">
+          <div class="log-title">Event Log</div>
+          <div class="log" id="my-log"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Instructions / right side -->
+    <div class="client-panel right" id="right-panel">
+      <div class="panel-header right">
+        <div class="panel-avatar">?</div>
+        <div class="panel-info">
+          <div class="panel-name">Opponent Tab</div>
+          <div class="panel-id" id="opp-socket-id">open this page in another tab</div>
+        </div>
+        <span class="conn-badge disconnected" id="opp-badge">remote</span>
+      </div>
+      <div class="panel-body">
+        <div style="background:var(--surface2);border:1px solid var(--border);border-radius:var(--radius-sm);padding:14px;">
+          <p style="font-size:13px;color:var(--text-dim);line-height:1.8;">
+            <strong style="color:var(--text);">To test matchmaking:</strong><br>
+            1. Click <strong>Connect</strong> on this tab<br>
+            2. Click <strong>Join Matchmaking</strong><br>
+            3. Open this URL in a second browser tab<br>
+            4. Connect + Join there too<br>
+            5. Watch both tabs get matched and receive their side assignment 🎉
+          </p>
+        </div>
+
+        <div style="background:var(--surface2);border:1px solid var(--border);border-radius:var(--radius-sm);padding:14px;">
+          <p style="font-size:13px;color:var(--text-dim);line-height:1.8;">
+            <strong style="color:var(--text);">Once matched:</strong><br>
+            • Drag the <strong>paddle slider</strong> — the opponent's bar updates in real-time<br>
+            • Kill a tab — the other sees <strong>opponent_disconnected</strong><br>
+            • Check the event logs for every socket event
+          </p>
+        </div>
+
+        <!-- Opponent paddle display (when I'm RIGHT and they are LEFT) -->
+        <div class="opp-paddle-display right" id="right-opp-display" style="display:none">
+          <span style="font-size:11px;color:var(--text-dim);white-space:nowrap">Opp. Paddle</span>
+          <div class="opp-bar-track">
+            <div class="opp-bar-fill right" id="right-opp-bar" style="width:50%"></div>
+          </div>
+          <span class="paddle-value" id="right-opp-val">50%</span>
+        </div>
+
+        <div class="log-wrap">
+          <div class="log-title">Server Events Received</div>
+          <div class="log" id="my-log-2"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Mini Pong court visualisation -->
+  <div class="court-section">
+    <div class="court-title">🏟️ Live Court Preview (updates when in a match)</div>
+    <canvas id="court" width="600" height="200"></canvas>
+    <div class="event-feed" id="court-log"></div>
+  </div>
+</div>
+
+<script>
+  // ── Configuration ────────────────────────────────────────────────────────────
+  const SERVER_URL = 'https://' + window.location.hostname + ':3000';
+
+  // ── State ────────────────────────────────────────────────────────────────────
+  let socket = null;
+  let myPaddleY = 50;       // 0-100
+  let oppPaddleY = 50;
+  let mySide = null;
+  let roomId = null;
+  let dragging = false;
+
+  // ── DOM refs ─────────────────────────────────────────────────────────────────
+  const btnConnect    = document.getElementById('btn-connect');
+  const btnDisconnect = document.getElementById('btn-disconnect');
+  const btnJoin       = document.getElementById('btn-join');
+  const btnLeave      = document.getElementById('btn-leave');
+  const myBadge       = document.getElementById('my-badge');
+  const srvDot        = document.getElementById('srv-dot');
+  const srvLabel      = document.getElementById('srv-label');
+  const matchDot      = document.getElementById('match-dot');
+  const matchLabel    = document.getElementById('match-label');
+  const roomLabel     = document.getElementById('room-label');
+  const sideLabel     = document.getElementById('side-label');
+  const socketidLabel = document.getElementById('socketid-label');
+  const mySocketId    = document.getElementById('my-socket-id');
+  const myLog         = document.getElementById('my-log');
+  const myLog2        = document.getElementById('my-log-2');
+  const myPaddleArea  = document.getElementById('my-paddle-area');
+  const myPaddleThumb = document.getElementById('my-paddle-thumb');
+  const myPaddleVal   = document.getElementById('my-paddle-val');
+  const myOppDisplay  = document.getElementById('my-opp-display');
+  const myOppBar      = document.getElementById('my-opp-bar');
+  const myOppVal      = document.getElementById('my-opp-val');
+  const courtCanvas   = document.getElementById('court');
+  const ctx           = courtCanvas.getContext('2d');
+  const courtLogEl    = document.getElementById('court-log');
+
+  // ── Logging ──────────────────────────────────────────────────────────────────
+  function now() {
+    return new Date().toTimeString().slice(0, 8);
+  }
+  function addLog(el, msg, type = '') {
+    const line = document.createElement('div');
+    line.className = 'log-line ' + type;
+    line.innerHTML = `<span class="log-time">${now()}</span><span class="log-msg">${msg}</span>`;
+    el.appendChild(line);
+    el.scrollTop = el.scrollHeight;
+  }
+  function log(msg, type = '') { addLog(myLog, msg, type); addLog(myLog2, msg, type); }
+
+  function courtLog(msg) {
+    const line = document.createElement('div');
+    line.style.cssText = 'font-family:JetBrains Mono,monospace;font-size:11px;color:#6b6b8a;margin-bottom:2px;';
+    line.textContent = now() + '  ' + msg;
+    courtLogEl.appendChild(line);
+    courtLogEl.scrollTop = courtLogEl.scrollHeight;
+  }
+
+  // ── Court canvas ─────────────────────────────────────────────────────────────
+  function drawCourt() {
+    const W = courtCanvas.width, H = courtCanvas.height;
+    const PAD_W = 10, PAD_H = 60;
+
+    ctx.fillStyle = '#08080f';
+    ctx.fillRect(0, 0, W, H);
+
+    // Dotted centre line
+    ctx.setLineDash([6, 8]);
+    ctx.strokeStyle = '#252535';
+    ctx.lineWidth = 2;
+    ctx.beginPath(); ctx.moveTo(W/2, 0); ctx.lineTo(W/2, H); ctx.stroke();
+    ctx.setLineDash([]);
+
+    // Left paddle
+    const leftY = (myPaddleY / 100) * (H - PAD_H);
+    const leftCol = mySide === 'left' ? '#6c63ff' : '#ff6584';
+    ctx.fillStyle = leftCol;
+    ctx.shadowColor = leftCol; ctx.shadowBlur = 12;
+    ctx.beginPath();
+    ctx.roundRect(12, leftY, PAD_W, PAD_H, 3);
+    ctx.fill();
+
+    // Right paddle
+    const rightY = (oppPaddleY / 100) * (H - PAD_H);
+    const rightCol = mySide === 'right' ? '#6c63ff' : '#ff6584';
+    ctx.fillStyle = rightCol;
+    ctx.shadowColor = rightCol; ctx.shadowBlur = 12;
+    ctx.beginPath();
+    ctx.roundRect(W - 12 - PAD_W, rightY, PAD_W, PAD_H, 3);
+    ctx.fill();
+
+    ctx.shadowBlur = 0;
+
+    // Labels
+    ctx.fillStyle = '#3d3d5c';
+    ctx.font = '11px Inter';
+    ctx.textAlign = 'left';
+    ctx.fillText('LEFT', 26, H - 8);
+    ctx.textAlign = 'right';
+    ctx.fillText('RIGHT', W - 26, H - 8);
+  }
+  drawCourt();
+
+  // ── Paddle slider drag ────────────────────────────────────────────────────────
+  const track = document.getElementById('my-paddle-track');
+
+  function updatePaddleFromEvent(e) {
+    const rect = track.getBoundingClientRect();
+    const clientX = e.touches ? e.touches[0].clientX : e.clientX;
+    let pct = (clientX - rect.left) / rect.width;
+    pct = Math.max(0, Math.min(1, pct));
+    myPaddleY = Math.round(pct * 100);
+    myPaddleThumb.style.left = (pct * 100) + '%';
+    myPaddleVal.textContent = myPaddleY + '%';
+    drawCourt();
+
+    if (socket && roomId && mySide) {
+      socket.emit('paddle_move', { roomId, player: mySide, y: myPaddleY });
+    }
+  }
+
+  track.addEventListener('mousedown',  e => { dragging = true; updatePaddleFromEvent(e); });
+  track.addEventListener('touchstart', e => { dragging = true; updatePaddleFromEvent(e); }, { passive: true });
+  document.addEventListener('mousemove',  e => { if (dragging) updatePaddleFromEvent(e); });
+  document.addEventListener('touchmove',  e => { if (dragging) updatePaddleFromEvent(e); }, { passive: true });
+  document.addEventListener('mouseup',   () => dragging = false);
+  document.addEventListener('touchend',  () => dragging = false);
+
+  // ── Status helpers ────────────────────────────────────────────────────────────
+  function setConnected(id) {
+    myBadge.textContent = 'connected';
+    myBadge.className = 'conn-badge connected';
+    srvDot.className = 'dot green';
+    srvLabel.textContent = 'Server: connected';
+    socketidLabel.textContent = id;
+    mySocketId.textContent = 'socket id: ' + id;
+    btnConnect.disabled = true;
+    btnDisconnect.disabled = false;
+    btnJoin.disabled = false;
+  }
+
+  function setDisconnected() {
+    myBadge.textContent = 'offline';
+    myBadge.className = 'conn-badge disconnected';
+    srvDot.className = 'dot red';
+    srvLabel.textContent = 'Server: disconnected';
+    socketidLabel.textContent = '—';
+    mySocketId.textContent = 'socket id: —';
+    btnConnect.disabled = false;
+    btnDisconnect.disabled = true;
+    btnJoin.disabled = true;
+    btnLeave.disabled = true;
+    myPaddleArea.classList.remove('visible');
+    myOppDisplay.classList.remove('visible');
+    roomId = null; mySide = null;
+    roomLabel.textContent = '—';
+    sideLabel.textContent = '—';
+    matchLabel.textContent = 'Match: none';
+    matchDot.className = 'dot';
+  }
+
+  function setWaiting() {
+    myBadge.textContent = 'waiting…';
+    myBadge.className = 'conn-badge waiting';
+    matchLabel.textContent = 'Match: queued';
+    matchDot.style.background = '#f9cb28';
+    matchDot.style.boxShadow = '0 0 8px #f9cb28';
+    btnJoin.disabled = true;
+    btnLeave.disabled = false;
+  }
+
+  function setMatched(rid, side) {
+    roomId = rid; mySide = side;
+    myBadge.textContent = 'in match';
+    myBadge.className = 'conn-badge matched';
+    matchDot.className = 'dot green';
+    matchLabel.textContent = 'Match: active';
+    roomLabel.textContent = rid;
+    sideLabel.textContent = side.toUpperCase();
+    btnLeave.disabled = true;
+    myPaddleArea.classList.add('visible');
+    myOppDisplay.classList.add('visible');
+  }
+
+  // ── Connect / Disconnect ──────────────────────────────────────────────────────
+  function connect() {
+    log('Connecting to ' + SERVER_URL + '…', 'sys');
+    socket = io(SERVER_URL, {
+      transports: ['websocket', 'polling'],
+      secure: true,
+      rejectUnauthorized: false,
+    });
+
+    socket.on('connect', () => {
+      setConnected(socket.id);
+      log('✅ Connected  id=' + socket.id, 'in');
+      courtLog('Socket connected: ' + socket.id);
+    });
+
+    socket.on('disconnect', (reason) => {
+      log('❌ Disconnected: ' + reason, 'err');
+      courtLog('Disconnected: ' + reason);
+      setDisconnected();
+      drawCourt();
+    });
+
+    socket.on('connect_error', (err) => {
+      log('⚠️ Connect error: ' + err.message, 'err');
+    });
+
+    socket.on('waiting_for_opponent', () => {
+      log('⏳ Waiting for opponent…', 'in');
+      setWaiting();
+    });
+
+    socket.on('match_found', (payload) => {
+      log(`🎮 match_found! room=${payload.roomId} side=${payload.side} opp=${payload.opponent}`, 'in');
+      courtLog('Match found! You are ' + payload.side.toUpperCase());
+      setMatched(payload.roomId, payload.side);
+      drawCourt();
+    });
+
+    socket.on('paddle_moved', (payload) => {
+      oppPaddleY = payload.y;
+      myOppBar.style.width = payload.y + '%';
+      myOppVal.textContent = payload.y + '%';
+      log(`🏓 paddle_moved  player=${payload.player}  y=${payload.y}%`, 'in');
+      drawCourt();
+    });
+
+    socket.on('opponent_disconnected', () => {
+      log('💀 Opponent disconnected!', 'err');
+      courtLog('Opponent disconnected');
+      myBadge.textContent = 'opp. left';
+      myBadge.className = 'conn-badge waiting';
+      matchLabel.textContent  = 'Match: opponent left';
+      matchDot.className = 'dot red';
+    });
+  }
+
+  function disconnect() {
+    if (socket) { socket.disconnect(); socket = null; }
+  }
+
+  // ── Matchmaking ───────────────────────────────────────────────────────────────
+  function joinMatchmaking() {
+    if (!socket) return;
+    log('→ join_matchmaking', 'out');
+    socket.emit('join_matchmaking');
+  }
+
+  function leaveMatchmaking() {
+    if (!socket) return;
+    log('→ leave_matchmaking', 'out');
+    socket.emit('leave_matchmaking');
+    myBadge.textContent = 'connected';
+    myBadge.className = 'conn-badge connected';
+    matchLabel.textContent = 'Match: none';
+    matchDot.className = 'dot';
+    btnJoin.disabled = false;
+    btnLeave.disabled = true;
+  }
+
+  // ── Event listeners ───────────────────────────────────────────────────────────
+  btnConnect.addEventListener('click', connect);
+  btnDisconnect.addEventListener('click', disconnect);
+  btnJoin.addEventListener('click', joinMatchmaking);
+  btnLeave.addEventListener('click', leaveMatchmaking);
+</script>
+</body>
+</html>
