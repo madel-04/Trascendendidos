@@ -3,9 +3,10 @@ import { useTranslation } from 'react-i18next';
 
 interface MainMenuProps {
   onStartGame: () => void;
+  onStartMultiplayer: () => void;
 }
 
-const MainMenu: React.FC<MainMenuProps> = ({ onStartGame }) => {
+const MainMenu: React.FC<MainMenuProps> = ({ onStartGame, onStartMultiplayer }) => {
   const { t } = useTranslation();
   return (
     <div className="glass-panel main-menu">
@@ -23,8 +24,8 @@ const MainMenu: React.FC<MainMenuProps> = ({ onStartGame }) => {
         <button className="btn-premium" onClick={onStartGame}>
           {t('PLAY LOCAL (2P)')}
         </button>
-        <button className="btn-premium secondary" disabled style={{ opacity: 0.5, cursor: 'not-allowed' }}>
-          {t('MULTIPLAYER (COMING SOON)')}
+        <button className="btn-premium secondary" onClick={onStartMultiplayer}>
+          {t('MULTIPLAYER')}
         </button>
         <button className="btn-premium secondary" disabled style={{ opacity: 0.5, cursor: 'not-allowed' }}>
           {t('LOGIN / REGISTER')}

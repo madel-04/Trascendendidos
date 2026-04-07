@@ -1,43 +1,56 @@
-# Makefile para Pong Multijugador - Hito 1 (Frontend)
+# Makefile para Pong Multijugador - Ecosistema Completo (Docker Compose)
 
-.PHONY: all install run clean fclean re
+NAME = trascendendidos_pong
 
-# Variables
-FRONTEND_DIR = frontend
+.PHONY: all up down clean fclean re logs install
 
-# Regla por defecto: Instala dependencias y lanza el servidor de desarrollo
-all: install run
+# Regla por defecto: Levanta todo el entorno Docker
+all: up
 
-# Instala los paquetes de Node.js en la carpeta frontend
+# Instala dependencias si es que aún quedan herramientas locales útiles
 install:
-	@echo "Instalando dependencias del Frontend..."
-	@cd $(FRONTEND_DIR) && npm install
+	@echo "Instalando dependencias de frontend y backend por si se usan localmente..."
+	@cd frontend && npm install
+	@cd backend && npm install
 
-# Lanza el servidor de desarrollo de Vite
-run:
-	@echo "Iniciando servidor de desarrollo interactivo Vite..."
-	@cd $(FRONTEND_DIR) && npm run dev -- --host
+# Levanta el entorno en segundo plano construyendo las imágenes si es necesario
+up:
+	@echo "Iniciando entorno completo (Frontend + Backend) con Docker Compose..."
+	@docker compose up --build -d
+	@echo "\n--------------------------------------------------------------"
+	@echo "✅ ¡Entorno listo!"
+	@echo "🌍 Jugar al Pong: https://localhost:5173"
+	@echo "🔌 Servidor Base: https://localhost:3000"
+	@echo "--------------------------------------------------------------\n"
 
-# Limpia la build generada (dist)
-clean:
-	@echo "Limpiando archivos construidos..."
-	@rm -rf $(FRONTEND_DIR)/dist
+# Apaga los contenedores y redes
+down:
+	@echo "Deteniendo todos los servicios..."
+	@docker compose down
 
-# Limpia de forma profunda eliminando tambien los node_modules
-fclean: clean
-	@echo "Realizando limpieza profunda (eliminando node_modules)..."
-	@rm -rf $(FRONTEND_DIR)/node_modules
-	@rm -rf $(FRONTEND_DIR)/package-lock.json
+# Limpia contenedores
+clean: down
 
-# Reconstruir desde cero
+# Limpieza profunda: elimina redes, contenedores, imágenes y volúmenes persistentes
+fclean: down
+	@echo "Realizando limpieza profunda (eliminando volúmenes e imágenes completas)..."
+	@docker compose down -v --rmi all --remove-orphans
+
+# Reiniciar desde el principio
 re: fclean all
 
-# Ayuda rápida
+# Ver logs en vivo
+logs:
+	@docker compose logs -f
+
+# Menú de ayuda rápida
 help:
-	@echo "Opciones disponibles:"
-	@echo "  make          - Instala lo necesario y arranca el entorno"
-	@echo "  make install  - Solo instala las dependencias npm"
-	@echo "  make run      - Solo levanta el servidor Vite"
-	@echo "  make clean    - Borra la compilación (carpeta dist)"
-	@echo "  make fclean   - Limpia dist y node_modules"
-	@echo "  make re       - Limpieza profunda y arranque completo"
+	@echo "Opciones disponibles en este Makefile:"
+	@echo "--------------------------------------------------------------"
+	@echo "  make o make up   - Levanta Frontend y Backend con Docker en segundo plano"
+	@echo "  make down        - Detiene y elimina los contenedores activados"
+	@echo "  make logs        - Observar en vivo qué están haciendo los contenedores"
+	@echo "  make clean       - Hace lo que 'make down'"
+	@echo "  make fclean      - Resetea todo eliminando imágenes y base de datos/volúmenes"
+	@echo "  make re          - Hace fclean seguido de un make normal"
+	@echo "--------------------------------------------------------------"

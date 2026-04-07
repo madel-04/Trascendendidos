@@ -152,10 +152,22 @@ export function registerSocketHandlers(io: IoServer): void {
     // ── In-game events ────────────────────────────────────────────────────────
 
     // Paddle movement: broadcast ONLY to the opponent in the same room
-    socket.on('paddle_move', (payload) => {
+    socket.on('paddle_move', (payload: any) => {
       const roomId = socket.data.roomId;
       if (!roomId) return;
       socket.to(roomId).emit('paddle_moved', payload);
+    });
+
+    socket.on('ball_state', (payload: any) => {
+      const roomId = socket.data.roomId;
+      if (!roomId) return;
+      socket.to(roomId).emit('ball_state', payload);
+    });
+
+    socket.on('score_update', (payload: any) => {
+      const roomId = socket.data.roomId;
+      if (!roomId) return;
+      socket.to(roomId).emit('score_update', payload);
     });
 
     // Voluntary match exit (e.g. player clicks "Leave Match" in the UI)

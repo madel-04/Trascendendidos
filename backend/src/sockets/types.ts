@@ -47,6 +47,8 @@ export interface ClientToServerEvents {
   join_matchmaking:  () => void;
   leave_matchmaking: () => void;
   paddle_move:       (payload: PaddleMovePayload) => void;
+  ball_state:        (payload: BallStatePayload) => void;
+  score_update:      (payload: ScorePayload) => void;
   // Voluntary match exit (intentional, not a network drop)
   leave_match:       () => void;
 }
