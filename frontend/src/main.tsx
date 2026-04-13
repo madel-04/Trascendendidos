@@ -11,8 +11,10 @@ import { BrowserRouter } from "react-router-dom";
 import App from "./App";
 // Importamos el proveedor de autenticación
 import { AuthProvider } from "./context/AuthContext";
+import "./i18n";
 import "./index.css";
 import "./App.css";
+import "./styles/index.css";
 
 // Obtenemos el elemento <div id="root"> del HTML donde montaremos React
 // El ! le dice a TypeScript que confiamos en que el elemento existe

@@ -1,20 +1,20 @@
 :root {
-  --bg-main: #fff7ec;
-  --bg-soft: #ffe8d6;
-  --bg-card: rgba(255, 255, 255, 0.75);
-  --ink-strong: #1f2937;
-  --ink-muted: #5b6472;
-  --line: #f0c7a7;
-  --brand: #ef6c00;
-  --brand-strong: #c24f00;
-  --accent: #1e88e5;
-  --success: #2e7d32;
-  --danger: #b71c1c;
+  --bg-main: #05050a;
+  --bg-soft: rgba(20, 20, 30, 0.72);
+  --bg-card: rgba(20, 20, 30, 0.62);
+  --ink-strong: #ffffff;
+  --ink-muted: #8892b0;
+  --line: rgba(255, 255, 255, 0.1);
+  --brand: #00f0ff;
+  --brand-strong: #ff003c;
+  --accent: #00f0ff;
+  --success: #22c55e;
+  --danger: #ff4d67;
   --radius-lg: 18px;
   --radius-md: 12px;
-  --shadow-soft: 0 20px 50px rgba(173, 92, 21, 0.16);
+  --shadow-soft: 0 14px 40px rgba(0, 0, 0, 0.45);
 
-  font-family: "Manrope", "Nunito Sans", "Segoe UI", sans-serif;
+  font-family: "Outfit", "Manrope", "Nunito Sans", "Segoe UI", sans-serif;
   line-height: 1.5;
   font-weight: 500;
   color: var(--ink-strong);
@@ -38,9 +38,9 @@ body,
 body {
   min-width: 320px;
   background:
-    radial-gradient(circle at 8% 10%, rgba(255, 158, 69, 0.3), transparent 36%),
-    radial-gradient(circle at 88% 5%, rgba(30, 136, 229, 0.22), transparent 34%),
-    linear-gradient(180deg, var(--bg-main) 0%, #ffeede 48%, #fffaf4 100%);
+    radial-gradient(circle at 15% 50%, rgba(0, 240, 255, 0.08) 0%, transparent 50%),
+    radial-gradient(circle at 85% 30%, rgba(255, 0, 60, 0.08) 0%, transparent 50%),
+    linear-gradient(180deg, #05050a 0%, #070914 60%, #05050a 100%);
   color: var(--ink-strong);
 }
 
@@ -50,14 +50,14 @@ a {
 }
 
 a:hover {
-  color: #0d5ea8;
+  color: #ff003c;
 }
 
 h1,
 h2,
 h3,
 h4 {
-  font-family: "Sora", "Avenir Next", "Segoe UI", sans-serif;
+  font-family: "Space Grotesk", "Sora", "Avenir Next", "Segoe UI", sans-serif;
   letter-spacing: -0.02em;
   margin-top: 0;
 }
@@ -83,7 +83,7 @@ textarea {
   border: 1px solid var(--line);
   border-radius: var(--radius-lg);
   background: var(--bg-card);
-  backdrop-filter: blur(6px);
+  backdrop-filter: blur(12px);
   box-shadow: var(--shadow-soft);
   overflow: hidden;
 }
@@ -93,7 +93,7 @@ textarea {
   gap: 14px;
   align-items: center;
   padding: 14px 18px;
-  background: linear-gradient(120deg, rgba(255, 183, 125, 0.4), rgba(255, 236, 216, 0.8));
+  background: linear-gradient(120deg, rgba(0, 240, 255, 0.14), rgba(255, 0, 60, 0.1));
   border-bottom: 1px solid var(--line);
   flex-wrap: wrap;
 }
@@ -101,14 +101,14 @@ textarea {
 .nav-link {
   padding: 8px 11px;
   border-radius: 999px;
-  color: #2f3948;
+  color: var(--ink-strong);
   border: 1px solid transparent;
   transition: all 0.2s ease;
 }
 
 .nav-link:hover {
-  background: rgba(255, 255, 255, 0.76);
-  border-color: #f8c29a;
+  background: rgba(0, 240, 255, 0.12);
+  border-color: rgba(0, 240, 255, 0.45);
 }
 
 .user-strip {
@@ -134,14 +134,14 @@ textarea {
 
 .btn-primary {
   background: linear-gradient(135deg, var(--brand), var(--brand-strong));
-  color: #fff;
-  box-shadow: 0 8px 20px rgba(239, 108, 0, 0.28);
+  color: #05050a;
+  box-shadow: 0 8px 20px rgba(0, 240, 255, 0.3);
 }
 
 .btn-outline {
-  background: #fff;
-  border-color: #f2b68a;
-  color: #984016;
+  background: rgba(20, 20, 30, 0.72);
+  border-color: rgba(255, 255, 255, 0.14);
+  color: var(--ink-strong);
 }
 
 .content-wrap {
@@ -155,10 +155,10 @@ textarea {
 }
 
 .hero-card {
-  border: 1px solid #f5ceac;
+  border: 1px solid rgba(0, 240, 255, 0.24);
   border-radius: var(--radius-lg);
   padding: 22px;
-  background: linear-gradient(140deg, #fff 0%, #fff5ea 100%);
+  background: linear-gradient(140deg, rgba(10, 12, 24, 0.9) 0%, rgba(8, 10, 20, 0.92) 100%);
 }
 
 .hero-title {
@@ -173,9 +173,9 @@ textarea {
   border-radius: 999px;
   padding: 6px 12px;
   font-size: 0.88rem;
-  border: 1px solid #c9e9d0;
-  background: #f1fff4;
-  color: #1d6330;
+  border: 1px solid rgba(0, 240, 255, 0.42);
+  background: rgba(0, 240, 255, 0.14);
+  color: #9ef8ff;
 }
 
 .grid-cards {
@@ -184,10 +184,10 @@ textarea {
 }
 
 .feature-card {
-  border: 1px solid #f4d8be;
+  border: 1px solid rgba(255, 255, 255, 0.12);
   border-radius: var(--radius-md);
   padding: 14px;
-  background: #fff;
+  background: rgba(16, 18, 30, 0.72);
 }
 
 .feature-card h3 {
@@ -200,10 +200,10 @@ textarea {
 }
 
 .legal-panel {
-  border: 1px solid #f3d1b5;
+  border: 1px solid rgba(255, 255, 255, 0.12);
   border-radius: var(--radius-lg);
   padding: 24px;
-  background: #fff;
+  background: rgba(16, 18, 30, 0.8);
   margin-bottom: 14px;
 }
 
@@ -214,7 +214,7 @@ textarea {
 
 .legal-meta {
   font-size: 0.88rem;
-  color: #7a8492;
+  color: var(--ink-muted);
   margin-bottom: 20px;
 }
 
@@ -235,7 +235,7 @@ textarea {
 .footer {
   border-top: 1px solid var(--line);
   padding: 14px 24px 20px;
-  color: #7d6f5e;
+  color: var(--ink-muted);
   display: flex;
   justify-content: space-between;
   flex-wrap: wrap;
@@ -248,8 +248,8 @@ textarea {
   margin: 30px auto;
   padding: 24px;
   border-radius: var(--radius-lg);
-  border: 1px solid #f2ccaa;
-  background: linear-gradient(150deg, #ffffff, #fff4e8);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  background: linear-gradient(150deg, rgba(20, 20, 30, 0.9), rgba(10, 12, 24, 0.94));
   box-shadow: var(--shadow-soft);
 }
 
@@ -269,7 +269,7 @@ textarea {
 
 .auth-label {
   font-size: 0.84rem;
-  color: #4f5a69;
+  color: var(--ink-muted);
   font-weight: 700;
 }
 
@@ -277,19 +277,19 @@ textarea {
 .profile-shell input,
 .profile-shell textarea {
   width: 100%;
-  border: 1px solid #f1c6a4;
-  background: #fff;
+  border: 1px solid rgba(255, 255, 255, 0.16);
+  background: rgba(6, 8, 16, 0.8);
   border-radius: 10px;
   padding: 10px 12px;
-  color: #223042;
+  color: var(--ink-strong);
 }
 
 .auth-error {
   font-size: 0.86rem;
   color: var(--danger);
-  border: 1px solid #f3c5c5;
+  border: 1px solid rgba(255, 77, 103, 0.45);
   border-radius: 10px;
-  background: #fff0f0;
+  background: rgba(255, 77, 103, 0.12);
   padding: 10px;
 }
 
@@ -307,19 +307,19 @@ textarea {
 
 .tab-btn {
   flex: 1;
-  border: 1px solid #efbf97;
-  background: #fff;
+  border: 1px solid rgba(255, 255, 255, 0.16);
+  background: rgba(8, 10, 20, 0.8);
   border-radius: 10px;
   padding: 10px;
   font-weight: 700;
-  color: #87441d;
+  color: var(--ink-strong);
   cursor: pointer;
 }
 
 .tab-btn.active {
   background: linear-gradient(135deg, var(--brand), var(--brand-strong));
   border-color: transparent;
-  color: #fff;
+  color: #05050a;
 }
 
 .split-actions {
@@ -336,10 +336,10 @@ textarea {
 }
 
 .notif-btn {
-  border: 1px solid #f2b68a;
+  border: 1px solid rgba(255, 255, 255, 0.16);
   border-radius: 999px;
-  background: #fff;
-  color: #87441d;
+  background: rgba(8, 10, 20, 0.85);
+  color: var(--ink-strong);
   padding: 8px 12px;
   font-weight: 700;
   cursor: pointer;
@@ -355,8 +355,8 @@ textarea {
   margin-left: 6px;
   padding: 0 4px;
   font-size: 0.72rem;
-  background: #d32f2f;
-  color: #fff;
+  background: var(--accent);
+  color: #05050a;
 }
 
 .notif-panel {
@@ -366,18 +366,18 @@ textarea {
   width: 260px;
   max-height: 260px;
   overflow-y: auto;
-  border: 1px solid #f1c7a8;
+  border: 1px solid rgba(255, 255, 255, 0.16);
   border-radius: 10px;
-  background: #fff;
-  box-shadow: 0 12px 30px rgba(33, 38, 45, 0.16);
+  background: rgba(8, 10, 20, 0.95);
+  box-shadow: 0 12px 30px rgba(0, 0, 0, 0.5);
   z-index: 40;
 }
 
 .notif-item {
   padding: 10px;
   font-size: 0.84rem;
-  color: #455164;
-  border-bottom: 1px solid #f4ebdf;
+  color: var(--ink-strong);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.12);
 }
 
 .notif-item:last-child {
@@ -392,7 +392,7 @@ textarea {
   width: 100%;
   height: 8px;
   border-radius: 999px;
-  background: #f3e6d8;
+  background: rgba(255, 255, 255, 0.14);
   overflow: hidden;
 }
 
@@ -403,21 +403,21 @@ textarea {
 }
 
 .password-meter-fill.weak {
-  background: #ef5350;
+  background: #ff4d67;
 }
 
 .password-meter-fill.medium {
-  background: #fb8c00;
+  background: #ff9c33;
 }
 
 .password-meter-fill.strong {
-  background: #43a047;
+  background: #22c55e;
 }
 
 .password-meter-label {
   margin-top: 6px;
   font-size: 0.8rem;
-  color: #5f6a78;
+  color: var(--ink-muted);
 }
 
 .password-rules {
@@ -430,11 +430,116 @@ textarea {
 
 .password-rule {
   font-size: 0.78rem;
-  color: #7a8492;
+  color: var(--ink-muted);
 }
 
 .password-rule.ok {
-  color: #2e7d32;
+  color: var(--success);
+}
+
+.tournament-shell {
+  width: 100%;
+}
+
+.tournament-grid {
+  display: grid;
+  grid-template-columns: 360px 1fr;
+  gap: 18px;
+}
+
+.tournament-column {
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: var(--radius-lg);
+  background: rgba(16, 18, 30, 0.8);
+  padding: 18px;
+}
+
+.tournament-create {
+  display: grid;
+  gap: 8px;
+  margin: 14px 0 18px;
+}
+
+.tournament-list-wrap {
+  display: grid;
+  gap: 8px;
+  max-height: 430px;
+  overflow: auto;
+}
+
+.tournament-list-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 12px;
+  background: rgba(6, 8, 16, 0.7);
+  color: var(--ink-strong);
+  padding: 12px;
+  text-align: left;
+  cursor: pointer;
+}
+
+.tournament-list-item.active {
+  border-color: rgba(0, 240, 255, 0.5);
+  background: rgba(0, 240, 255, 0.12);
+}
+
+.tournament-list-item span {
+  display: block;
+}
+
+.tournament-detail {
+  display: grid;
+  gap: 16px;
+}
+
+.tournament-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.tournament-actions {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.tournament-meta-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(120px, 1fr));
+  gap: 10px;
+}
+
+.tournament-chip-list {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.tournament-chip {
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 999px;
+  padding: 6px 10px;
+  background: rgba(6, 8, 16, 0.7);
+}
+
+.tournament-matches {
+  display: grid;
+  gap: 10px;
+}
+
+@media (max-width: 980px) {
+  .tournament-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .tournament-meta-grid {
+    grid-template-columns: 1fr;
+  }
 }
 
 @media (max-width: 900px) {

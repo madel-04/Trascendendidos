@@ -18,7 +18,7 @@ function resolveAvatarUrl(avatarUrl?: string | null): string | null {
 export default function Profile() {
   const { user, token, logout, setCurrentUser } = useAuth();
   const navigate = useNavigate();
-  const [activeTab, setActiveTab] = useState<"profile" | "security" | "social">("profile");
+  const [activeTab, setActiveTab] = useState<"profile" | "security" | "matches" | "social">("profile");
   
   const [twoFAEnabled, setTwoFAEnabled] = useState(false);
   const [qrCodeUrl, setQrCodeUrl] = useState<string | null>(null);
@@ -38,6 +38,19 @@ export default function Profile() {
   const [newPassword, setNewPassword] = useState("");
   const [confirmNewPassword, setConfirmNewPassword] = useState("");
   const [savingPassword, setSavingPassword] = useState(false);
+  const [gameStats, setGameStats] = useState<{ totalPlayed: number; wins: number; losses: number; draws: number; winRate: number } | null>(null);
+  const [matchHistory, setMatchHistory] = useState<Array<{
+    id: string;
+    roomId: string;
+    opponentUsername: string;
+    reason: string;
+    player1Score: number;
+    player2Score: number;
+    winnerId: number | null;
+    createdAt: string;
+    endedAt: string;
+  }>>([]);
+  const [loadingStats, setLoadingStats] = useState(false);
 
   const passwordStrength = useMemo(
     () => evaluatePasswordStrength(newPassword, { email: user?.email, username: user?.username }),
@@ -53,6 +66,41 @@ export default function Profile() {
       setAvatarUrl(user.avatarUrl ?? "");
     }
   }, [user]);
+
+  useEffect(() => {
+    if (!token) return;
+
+    const loadGameData = async () => {
+      setLoadingStats(true);
+      try {
+        const [statsResponse, historyResponse] = await Promise.all([
+          fetch(`${API}/api/game/stats`, {
+            headers: { Authorization: `Bearer ${token}` },
+          }),
+          fetch(`${API}/api/game/history?limit=10`, {
+            headers: { Authorization: `Bearer ${token}` },
+          }),
+        ]);
+
+        const statsData = await statsResponse.json();
+        const historyData = await historyResponse.json();
+
+        if (statsResponse.ok) {
+          setGameStats(statsData);
+        }
+
+        if (historyResponse.ok) {
+          setMatchHistory(historyData.matches ?? []);
+        }
+      } catch (_error) {
+        // Silently ignore; stats are secondary UI.
+      } finally {
+        setLoadingStats(false);
+      }
+    };
+
+    void loadGameData();
+  }, [token]);
 
   const profileValidationError = useMemo(() => {
     const trimmedUsername = username.trim();
@@ -390,6 +438,12 @@ export default function Profile() {
           Seguridad
         </button>
         <button
+          className={`tab-btn ${activeTab === "matches" ? "active" : ""}`}
+          onClick={() => setActiveTab("matches")}
+        >
+          Partidas
+        </button>
+        <button
           className={`tab-btn ${activeTab === "social" ? "active" : ""}`}
           onClick={() => setActiveTab("social")}
         >
@@ -400,24 +454,24 @@ export default function Profile() {
       {activeTab === "profile" && (
         <form
           onSubmit={handleProfileSave}
-          style={{ border: "1px solid #ddd", padding: 20, marginBottom: 30, display: "grid", gap: 14 }}
+          style={{ border: "1px solid rgba(255, 255, 255, 0.16)", padding: 20, marginBottom: 30, display: "grid", gap: 14 }}
         >
-          <div style={{ fontSize: 13, color: "#666" }}>
+          <div style={{ fontSize: 13, color: "var(--ink-muted)" }}>
             Puedes actualizar tu username, nombre visible, bio y avatar.
           </div>
 
           <label style={{ display: "grid", gap: 6 }}>
-            <span style={{ fontSize: 13, color: "#555" }}>Email (solo lectura)</span>
+            <span style={{ fontSize: 13, color: "var(--ink-muted)" }}>Email (solo lectura)</span>
             <input
               type="email"
               value={user?.email ?? ""}
               readOnly
-              style={{ padding: 10, fontSize: 14, border: "1px solid #ddd", backgroundColor: "#f7f7f7", color: "#666" }}
+              style={{ padding: 10, fontSize: 14, border: "1px solid rgba(255, 255, 255, 0.16)", backgroundColor: "rgba(255, 255, 255, 0.06)", color: "var(--ink-muted)" }}
             />
           </label>
 
           <label style={{ display: "grid", gap: 6 }}>
-            <span style={{ fontSize: 13, color: "#555" }}>Username</span>
+            <span style={{ fontSize: 13, color: "var(--ink-muted)" }}>Username</span>
             <input
               type="text"
               value={username}
@@ -425,12 +479,12 @@ export default function Profile() {
               minLength={3}
               maxLength={50}
               required
-              style={{ padding: 10, fontSize: 14, border: "1px solid #ddd", backgroundColor: "#fafafa", color: "#111" }}
+              style={{ padding: 10, fontSize: 14, border: "1px solid rgba(255, 255, 255, 0.16)", backgroundColor: "rgba(8, 10, 20, 0.86)", color: "var(--ink-strong)" }}
             />
           </label>
 
           <label style={{ display: "grid", gap: 6 }}>
-            <span style={{ fontSize: 13, color: "#555" }}>Nombre visible</span>
+            <span style={{ fontSize: 13, color: "var(--ink-muted)" }}>Nombre visible</span>
             <input
               type="text"
               value={displayName}
@@ -438,31 +492,31 @@ export default function Profile() {
               minLength={2}
               maxLength={80}
               placeholder="Tu nombre en el perfil"
-              style={{ padding: 10, fontSize: 14, border: "1px solid #ddd", backgroundColor: "#fafafa", color: "#111" }}
+              style={{ padding: 10, fontSize: 14, border: "1px solid rgba(255, 255, 255, 0.16)", backgroundColor: "rgba(8, 10, 20, 0.86)", color: "var(--ink-strong)" }}
             />
           </label>
 
           <label style={{ display: "grid", gap: 6 }}>
-            <span style={{ fontSize: 13, color: "#555" }}>Avatar (archivo de imagen)</span>
+            <span style={{ fontSize: 13, color: "var(--ink-muted)" }}>Avatar (archivo de imagen)</span>
             {resolveAvatarUrl(avatarUrl) && (
               <img
                 src={resolveAvatarUrl(avatarUrl) ?? ""}
                 alt="Avatar actual"
-                style={{ width: 96, height: 96, objectFit: "cover", borderRadius: 8, border: "1px solid #ddd" }}
+                style={{ width: 96, height: 96, objectFit: "cover", borderRadius: 8, border: "1px solid rgba(255, 255, 255, 0.16)" }}
               />
             )}
             <input
               type="file"
               accept="image/png,image/jpeg,image/webp,image/gif"
               onChange={(e) => setAvatarFile(e.target.files?.[0] ?? null)}
-              style={{ padding: 10, fontSize: 14, border: "1px solid #ddd", backgroundColor: "#fafafa", color: "#111" }}
+              style={{ padding: 10, fontSize: 14, border: "1px solid rgba(255, 255, 255, 0.16)", backgroundColor: "rgba(8, 10, 20, 0.86)", color: "var(--ink-strong)" }}
             />
             {avatarFile && (
-              <div style={{ fontSize: 12, color: "#666" }}>
+              <div style={{ fontSize: 12, color: "var(--ink-muted)" }}>
                 Seleccionado: {avatarFile.name} ({Math.round(avatarFile.size / 1024)} KB)
               </div>
             )}
-            <div style={{ fontSize: 12, color: "#777" }}>Formatos permitidos: PNG, JPG, WEBP, GIF. Maximo 2MB.</div>
+            <div style={{ fontSize: 12, color: "var(--ink-muted)" }}>Formatos permitidos: PNG, JPG, WEBP, GIF. Maximo 2MB.</div>
             <div style={{ display: "flex", gap: 8 }}>
               <button
                 type="button"
@@ -473,9 +527,9 @@ export default function Profile() {
                   padding: 10,
                   fontSize: 13,
                   fontWeight: 600,
-                  backgroundColor: uploadingAvatar || !avatarFile ? "#f5f5f5" : "#111",
-                  color: uploadingAvatar || !avatarFile ? "#999" : "white",
-                  border: "1px solid #111",
+                  backgroundColor: uploadingAvatar || !avatarFile ? "rgba(255, 255, 255, 0.08)" : "rgba(0, 240, 255, 0.18)",
+                  color: uploadingAvatar || !avatarFile ? "var(--ink-muted)" : "#9ef8ff",
+                  border: "1px solid rgba(0, 240, 255, 0.55)",
                   cursor: uploadingAvatar || !avatarFile ? "not-allowed" : "pointer",
                   marginTop: 4,
                 }}
@@ -491,9 +545,9 @@ export default function Profile() {
                   padding: 10,
                   fontSize: 13,
                   fontWeight: 600,
-                  backgroundColor: uploadingAvatar || !avatarUrl ? "#f5f5f5" : "white",
-                  color: uploadingAvatar || !avatarUrl ? "#999" : "#111",
-                  border: "1px solid #ddd",
+                  backgroundColor: uploadingAvatar || !avatarUrl ? "rgba(255, 255, 255, 0.08)" : "rgba(8, 10, 20, 0.86)",
+                  color: uploadingAvatar || !avatarUrl ? "var(--ink-muted)" : "var(--ink-strong)",
+                  border: "1px solid rgba(255, 255, 255, 0.16)",
                   cursor: uploadingAvatar || !avatarUrl ? "not-allowed" : "pointer",
                   marginTop: 4,
                 }}
@@ -504,18 +558,18 @@ export default function Profile() {
           </label>
 
           <label style={{ display: "grid", gap: 6 }}>
-            <span style={{ fontSize: 13, color: "#555" }}>Bio</span>
+            <span style={{ fontSize: 13, color: "var(--ink-muted)" }}>Bio</span>
             <textarea
               value={bio}
               onChange={(e) => setBio(e.target.value)}
               maxLength={280}
               rows={4}
               placeholder="Cuéntanos algo sobre ti"
-              style={{ padding: 10, fontSize: 14, border: "1px solid #ddd", backgroundColor: "#fafafa", color: "#111", resize: "vertical" }}
+              style={{ padding: 10, fontSize: 14, border: "1px solid rgba(255, 255, 255, 0.16)", backgroundColor: "rgba(8, 10, 20, 0.86)", color: "var(--ink-strong)", resize: "vertical" }}
             />
           </label>
 
-          <div style={{ fontSize: 12, color: "#777" }}>{bio.length}/280</div>
+          <div style={{ fontSize: 12, color: "var(--ink-muted)" }}>{bio.length}/280</div>
 
           <button
             type="submit"
@@ -524,9 +578,9 @@ export default function Profile() {
               padding: 10,
               fontSize: 13,
               fontWeight: 600,
-              backgroundColor: savingProfile || !!profileValidationError ? "#f5f5f5" : "#111",
-              color: savingProfile || !!profileValidationError ? "#999" : "white",
-              border: "1px solid #111",
+              backgroundColor: savingProfile || !!profileValidationError ? "rgba(255, 255, 255, 0.08)" : "rgba(0, 240, 255, 0.18)",
+              color: savingProfile || !!profileValidationError ? "var(--ink-muted)" : "#9ef8ff",
+              border: "1px solid rgba(0, 240, 255, 0.55)",
               cursor: savingProfile || !!profileValidationError ? "not-allowed" : "pointer",
             }}
           >
@@ -541,9 +595,9 @@ export default function Profile() {
           padding: 12,
           marginBottom: 20,
           fontSize: 14,
-          backgroundColor: message.type === "success" ? "#f0f0f0" : "#f5f5f5",
-          color: message.type === "success" ? "#111" : "#555",
-          border: `1px solid ${message.type === "success" ? "#ddd" : "#ccc"}`,
+          backgroundColor: message.type === "success" ? "rgba(0, 240, 255, 0.1)" : "rgba(255, 255, 255, 0.08)",
+          color: message.type === "success" ? "#9ef8ff" : "var(--ink-muted)",
+          border: `1px solid ${message.type === "success" ? "rgba(255, 255, 255, 0.16)" : "rgba(255, 255, 255, 0.2)"}`,
         }}>
           {message.text}
         </div>
@@ -551,7 +605,7 @@ export default function Profile() {
 
       {/* Sección 2FA */}
       {activeTab === "security" && (
-      <div style={{ border: "1px solid #ddd", padding: 20, marginBottom: 30 }}>
+      <div style={{ border: "1px solid rgba(255, 255, 255, 0.16)", padding: 20, marginBottom: 30 }}>
         <h2 style={{
           fontSize: 14,
           fontWeight: 600,
@@ -559,7 +613,7 @@ export default function Profile() {
           marginBottom: 10,
           textTransform: "uppercase",
           letterSpacing: "0.5px",
-          color: "#555"
+          color: "var(--ink-muted)"
         }}>
           Password Security
         </h2>
@@ -570,7 +624,7 @@ export default function Profile() {
             onChange={(e) => setCurrentPassword(e.target.value)}
             placeholder="Contraseña actual"
             required
-            style={{ padding: 10, fontSize: 14, border: "1px solid #ddd", backgroundColor: "#fafafa", color: "#111" }}
+            style={{ padding: 10, fontSize: 14, border: "1px solid rgba(255, 255, 255, 0.16)", backgroundColor: "rgba(8, 10, 20, 0.86)", color: "var(--ink-strong)" }}
           />
           <input
             type="password"
@@ -579,7 +633,7 @@ export default function Profile() {
             placeholder="Nueva contraseña"
             minLength={12}
             required
-            style={{ padding: 10, fontSize: 14, border: "1px solid #ddd", backgroundColor: "#fafafa", color: "#111" }}
+            style={{ padding: 10, fontSize: 14, border: "1px solid rgba(255, 255, 255, 0.16)", backgroundColor: "rgba(8, 10, 20, 0.86)", color: "var(--ink-strong)" }}
           />
 
           <div className="password-meter">
@@ -598,6 +652,63 @@ export default function Profile() {
                   {rule.passed ? "OK" : "-"} {rule.label}
                 </li>
               ))}
+
+              {activeTab === "matches" && (
+                <div style={{ border: "1px solid rgba(255, 255, 255, 0.16)", padding: 20, marginBottom: 30, display: "grid", gap: 16 }}>
+                  <h2 style={{ fontSize: 14, fontWeight: 600, margin: 0, textTransform: "uppercase", letterSpacing: "0.5px", color: "var(--ink-muted)" }}>
+                    Match Stats
+                  </h2>
+
+                  {loadingStats ? (
+                    <p style={{ margin: 0, color: "var(--ink-muted)" }}>Cargando estadísticas...</p>
+                  ) : (
+                    <>
+                      <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(140px, 1fr))", gap: 12 }}>
+                        <div style={{ padding: 14, border: "1px solid rgba(255, 255, 255, 0.12)", backgroundColor: "rgba(8, 10, 20, 0.86)" }}>
+                          <div style={{ fontSize: 12, color: "var(--ink-muted)" }}>Jugadas</div>
+                          <div style={{ fontSize: 24, fontWeight: 700 }}>{gameStats?.totalPlayed ?? 0}</div>
+                        </div>
+                        <div style={{ padding: 14, border: "1px solid rgba(255, 255, 255, 0.12)", backgroundColor: "rgba(8, 10, 20, 0.86)" }}>
+                          <div style={{ fontSize: 12, color: "var(--ink-muted)" }}>Victorias</div>
+                          <div style={{ fontSize: 24, fontWeight: 700, color: "#9bf2bd" }}>{gameStats?.wins ?? 0}</div>
+                        </div>
+                        <div style={{ padding: 14, border: "1px solid rgba(255, 255, 255, 0.12)", backgroundColor: "rgba(8, 10, 20, 0.86)" }}>
+                          <div style={{ fontSize: 12, color: "var(--ink-muted)" }}>Derrotas</div>
+                          <div style={{ fontSize: 24, fontWeight: 700, color: "#ff8da1" }}>{gameStats?.losses ?? 0}</div>
+                        </div>
+                        <div style={{ padding: 14, border: "1px solid rgba(255, 255, 255, 0.12)", backgroundColor: "rgba(8, 10, 20, 0.86)" }}>
+                          <div style={{ fontSize: 12, color: "var(--ink-muted)" }}>Win rate</div>
+                          <div style={{ fontSize: 24, fontWeight: 700, color: "#9ef8ff" }}>{gameStats?.winRate ?? 0}%</div>
+                        </div>
+                      </div>
+
+                      <div>
+                        <h3 style={{ margin: "0 0 10px", fontSize: 13, color: "var(--ink-strong)" }}>Últimas partidas</h3>
+                        {matchHistory.length === 0 ? (
+                          <p style={{ margin: 0, color: "var(--ink-muted)" }}>Todavía no tienes partidas registradas.</p>
+                        ) : (
+                          <div style={{ display: "grid", gap: 8 }}>
+                            {matchHistory.map((match) => (
+                              <div key={match.id} style={{ padding: 12, border: "1px solid rgba(255, 255, 255, 0.12)", backgroundColor: "rgba(8, 10, 20, 0.86)", display: "grid", gap: 4 }}>
+                                <div style={{ display: "flex", justifyContent: "space-between", gap: 10, flexWrap: "wrap" }}>
+                                  <strong>vs @{match.opponentUsername}</strong>
+                                  <span style={{ color: "var(--ink-muted)", fontSize: 12 }}>{new Date(match.endedAt).toLocaleString()}</span>
+                                </div>
+                                <div style={{ fontSize: 13, color: "var(--ink-muted)" }}>
+                                  Resultado: {match.reason} · Score {match.player1Score} - {match.player2Score}
+                                </div>
+                                <div style={{ fontSize: 13, color: match.winnerId ? "#9bf2bd" : "var(--ink-muted)" }}>
+                                  {match.winnerId ? "Partida decidida" : "Empate / sin ganador"}
+                                </div>
+                              </div>
+                            ))}
+                          </div>
+                        )}
+                      </div>
+                    </>
+                  )}
+                </div>
+              )}
             </ul>
           </div>
 
@@ -608,9 +719,9 @@ export default function Profile() {
             placeholder="Confirmar nueva contraseña"
             minLength={12}
             required
-            style={{ padding: 10, fontSize: 14, border: "1px solid #ddd", backgroundColor: "#fafafa", color: "#111" }}
+            style={{ padding: 10, fontSize: 14, border: "1px solid rgba(255, 255, 255, 0.16)", backgroundColor: "rgba(8, 10, 20, 0.86)", color: "var(--ink-strong)" }}
           />
-          <div style={{ fontSize: 12, color: "#777" }}>
+          <div style={{ fontSize: 12, color: "var(--ink-muted)" }}>
             Requisitos: 12+ caracteres, mayúsculas, minúsculas, números y símbolos.
           </div>
           <button
@@ -620,9 +731,9 @@ export default function Profile() {
               padding: 10,
               fontSize: 13,
               fontWeight: 600,
-              backgroundColor: savingPassword ? "#f5f5f5" : "#111",
-              color: savingPassword ? "#999" : "white",
-              border: "1px solid #111",
+              backgroundColor: savingPassword ? "rgba(255, 255, 255, 0.08)" : "rgba(0, 240, 255, 0.18)",
+              color: savingPassword ? "var(--ink-muted)" : "#9ef8ff",
+              border: "1px solid rgba(0, 240, 255, 0.55)",
               cursor: savingPassword ? "not-allowed" : "pointer",
             }}
           >
@@ -637,13 +748,13 @@ export default function Profile() {
           marginBottom: 10,
           textTransform: "uppercase",
           letterSpacing: "0.5px",
-          color: "#555"
+          color: "var(--ink-muted)"
         }}>
           Two-Factor Authentication
         </h2>
         <p style={{ 
           fontSize: 13, 
-          color: "#666", 
+          color: "var(--ink-muted)", 
           lineHeight: 1.6,
           marginBottom: 20 
         }}>
@@ -658,9 +769,9 @@ export default function Profile() {
               padding: 10,
               fontSize: 13,
               fontWeight: 500,
-              backgroundColor: loading ? "#f5f5f5" : "#111",
-              color: loading ? "#999" : "white",
-              border: "1px solid #111",
+              backgroundColor: loading ? "rgba(255, 255, 255, 0.08)" : "rgba(0, 240, 255, 0.18)",
+              color: loading ? "var(--ink-muted)" : "#9ef8ff",
+              border: "1px solid rgba(0, 240, 255, 0.55)",
               cursor: loading ? "not-allowed" : "pointer",
               width: "100%",
               transition: "all 0.2s"
@@ -676,19 +787,19 @@ export default function Profile() {
               fontSize: 13, 
               fontWeight: 500,
               marginBottom: 15,
-              color: "#333"
+              color: "var(--ink-strong)"
             }}>
               Step 1: Scan QR Code
             </div>
-            <p style={{ fontSize: 13, color: "#666", marginBottom: 20 }}>
+            <p style={{ fontSize: 13, color: "var(--ink-muted)", marginBottom: 20 }}>
               Use Google Authenticator, Authy or any TOTP app
             </p>
             
             <div style={{ 
               textAlign: "center", 
               padding: 20, 
-              backgroundColor: "white",
-              border: "1px solid #ddd",
+              backgroundColor: "rgba(8, 10, 20, 0.86)",
+              border: "1px solid rgba(255, 255, 255, 0.16)",
               marginBottom: 20
             }}>
               <img 
@@ -701,7 +812,7 @@ export default function Profile() {
             <details style={{ marginBottom: 20 }}>
               <summary style={{ 
                 fontSize: 12, 
-                color: "#666", 
+                color: "var(--ink-muted)", 
                 cursor: "pointer",
                 marginBottom: 10
               }}>
@@ -709,12 +820,12 @@ export default function Profile() {
               </summary>
               <code style={{ 
                 display: "block", 
-                backgroundColor: "#f5f5f5", 
+                backgroundColor: "rgba(255, 255, 255, 0.08)", 
                 padding: 10, 
                 fontSize: 11,
-                border: "1px solid #ddd",
+                border: "1px solid rgba(255, 255, 255, 0.16)",
                 wordBreak: "break-all",
-                color: "#333"
+                color: "var(--ink-strong)"
               }}>
                 {secret}
               </code>
@@ -724,11 +835,11 @@ export default function Profile() {
               fontSize: 13, 
               fontWeight: 500,
               marginBottom: 15,
-              color: "#333"
+              color: "var(--ink-strong)"
             }}>
               Step 2: Verify Code
             </div>
-            <p style={{ fontSize: 13, color: "#666", marginBottom: 12 }}>
+            <p style={{ fontSize: 13, color: "var(--ink-muted)", marginBottom: 12 }}>
               Enter the 6-digit code from your app
             </p>
             
@@ -745,9 +856,9 @@ export default function Profile() {
                 textAlign: "center",
                 letterSpacing: "0.5em",
                 marginBottom: 12,
-                border: "1px solid #ddd",
-                backgroundColor: "#fafafa",
-                color: "#111"
+                border: "1px solid rgba(255, 255, 255, 0.16)",
+                backgroundColor: "rgba(8, 10, 20, 0.86)",
+                color: "var(--ink-strong)"
               }}
             />
 
@@ -760,9 +871,9 @@ export default function Profile() {
                   padding: 10,
                   fontSize: 13,
                   fontWeight: 500,
-                  backgroundColor: loading || verificationCode.length !== 6 ? "#f5f5f5" : "#111",
-                  color: loading || verificationCode.length !== 6 ? "#999" : "white",
-                  border: "1px solid #111",
+                  backgroundColor: loading || verificationCode.length !== 6 ? "rgba(255, 255, 255, 0.08)" : "rgba(0, 240, 255, 0.18)",
+                  color: loading || verificationCode.length !== 6 ? "var(--ink-muted)" : "#9ef8ff",
+                  border: "1px solid rgba(0, 240, 255, 0.55)",
                   cursor: loading || verificationCode.length !== 6 ? "not-allowed" : "pointer",
                 }}
               >
@@ -780,9 +891,9 @@ export default function Profile() {
                   padding: 10,
                   fontSize: 13,
                   fontWeight: 500,
-                  backgroundColor: "white",
-                  color: "#666",
-                  border: "1px solid #ddd",
+                  backgroundColor: "rgba(8, 10, 20, 0.86)",
+                  color: "var(--ink-muted)",
+                  border: "1px solid rgba(255, 255, 255, 0.16)",
                   cursor: loading ? "not-allowed" : "pointer",
                 }}
               >
@@ -798,9 +909,9 @@ export default function Profile() {
               padding: 12,
               marginBottom: 15,
               fontSize: 13,
-              backgroundColor: "#f5f5f5",
-              color: "#333",
-              border: "1px solid #ddd",
+              backgroundColor: "rgba(255, 255, 255, 0.08)",
+              color: "var(--ink-strong)",
+              border: "1px solid rgba(255, 255, 255, 0.16)",
             }}>
               Your account is protected with 2FA
             </div>
@@ -812,9 +923,9 @@ export default function Profile() {
                 padding: 10,
                 fontSize: 13,
                 fontWeight: 500,
-                backgroundColor: loading ? "#f5f5f5" : "white",
-                color: loading ? "#999" : "#111",
-                border: "1px solid #ddd",
+                backgroundColor: loading ? "rgba(255, 255, 255, 0.08)" : "rgba(8, 10, 20, 0.86)",
+                color: loading ? "var(--ink-muted)" : "var(--ink-strong)",
+                border: "1px solid rgba(255, 255, 255, 0.16)",
                 cursor: loading ? "not-allowed" : "pointer",
                 width: "100%",
               }}

@@ -1,7 +1,13 @@
 import React, { useEffect, useRef } from 'react';
 import { GameEngine } from '../game/GameEngine';
 
-const PongCanvas: React.FC = () => {
+interface PongCanvasProps {
+  isMultiplayer?: boolean;
+  side?: 'left' | 'right';
+  roomId?: string;
+}
+
+const PongCanvas: React.FC<PongCanvasProps> = ({ isMultiplayer, side, roomId }) => {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const engineRef = useRef<GameEngine | null>(null);
 
@@ -15,14 +21,14 @@ const PongCanvas: React.FC = () => {
     canvas.width = 800;
     canvas.height = 600;
 
-    engineRef.current = new GameEngine(canvas);
+    engineRef.current = new GameEngine(canvas, isMultiplayer, side, roomId);
     engineRef.current.start();
 
     // Clean up on unmount
     return () => {
       engineRef.current?.stop();
     };
-  }, []);
+  }, [isMultiplayer, roomId, side]);
 
   return (
     <canvas 

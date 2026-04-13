@@ -9,5 +9,5 @@
 
 .page-subtitle {
   margin-bottom: 0;
-  color: #667180;
+  color: var(--ink-muted);
 }

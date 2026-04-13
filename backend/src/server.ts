@@ -10,6 +10,7 @@ import staticPlugin from "@fastify/static";
 import websocket from "@fastify/websocket";
 // Plugin para JWT (JSON Web Tokens) - autenticación sin sesiones
 import jwt from "@fastify/jwt";
+import fastifySocketIO from "fastify-socket.io";
 import path from "path";
 import type { FastifyInstance } from "fastify";
 import { mkdir } from "fs/promises";
@@ -25,6 +26,8 @@ import { socialRoutes } from "./routes/social.js";
 import { chatRoutes } from "./routes/chat.js";
 import { matchRoutes } from "./routes/match.js";
 import { gameRoutes } from "./routes/game.js";
+import { tournamentRoutes } from "./routes/tournament.js";
+import { registerSocketHandlers } from "./sockets/handlers.js";
 
 import type { SocialRealtimeEvent, SocialRealtimePayload, WsConnection } from "./types.js";
 
@@ -81,6 +84,35 @@ app.decorate("authenticate", async function (request: FastifyRequest, reply: Fas
 // Registramos el plugin de WebSocket para comunicación bidireccional en tiempo real
 await app.register(websocket);
 
+await app.register(fastifySocketIO, {
+  cors: {
+    origin: env.CORS_ORIGIN,
+    methods: ["GET", "POST"],
+    credentials: true,
+  },
+  transports: ["websocket", "polling"],
+});
+
+((app as any).io).use(async (socket: any, next: any) => {
+  try {
+    const token = String(socket.handshake.auth?.token ?? socket.handshake.query?.token ?? "").trim();
+    if (!token) {
+      return next(new Error("auth_required"));
+    }
+
+    const decoded = await app.jwt.verify<{ userId?: number; email?: string }>(token);
+    if (!decoded?.userId || typeof decoded.userId !== "number") {
+      return next(new Error("auth_invalid"));
+    }
+
+    socket.data.userId = decoded.userId;
+    socket.data.username = typeof decoded.email === "string" ? decoded.email : undefined;
+    return next();
+  } catch (_error) {
+    return next(new Error("auth_invalid"));
+  }
+});
+
 app.decorate("notifySocialUser", (userId, event, data) => {
   const sockets = socialSocketsByUser.get(userId);
   if (!sockets || sockets.size === 0) return;
@@ -116,6 +148,7 @@ await app.register(socialRoutes);
 await app.register(chatRoutes);
 await app.register(matchRoutes);
 await app.register(gameRoutes);
+await app.register(tournamentRoutes);
 
 // ===== ENDPOINT WEBSOCKET =====
 // Configuramos un endpoint WebSocket en /ws para comunicación en tiempo real
@@ -171,6 +204,9 @@ app.get("/ws", { websocket: true }, async (socket, request) => {
     }
   });
 });
+
+registerSocketHandlers((app as any).io);
+app.log.info("Socket.io attached and ready");
 
 // ===== INICIAR SERVIDOR =====
 // Ponemos el servidor a escuchar peticiones

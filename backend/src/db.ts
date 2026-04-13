@@ -1,11 +1,9 @@
-// ===== CONEXIÓN A LA BASE DE DATOS =====
+// ===== CONEXION A LA BASE DE DATOS =====
 import pg from "pg";
 import { env } from "./env.js";
 
 const { Pool } = pg;
 
-// Pool de conexiones a PostgreSQL
-// Reutiliza conexiones para mejor rendimiento
 export const pool = new Pool({
   connectionString: env.DATABASE_URL,
 });
@@ -17,8 +15,6 @@ function sleep(ms: number): Promise<void> {
   return new Promise((resolve) => setTimeout(resolve, ms));
 }
 
-// ===== INICIALIZACIÓN DE TABLAS =====
-// Crea las tablas si no existen
 export async function initDatabase() {
   let client: pg.PoolClient | undefined;
   let lastError: unknown;
@@ -42,9 +38,8 @@ export async function initDatabase() {
     console.error("Database connection failed after retries", lastError);
     throw lastError;
   }
-  
+
   try {
-    // Tabla de usuarios
     await client.query(`
       CREATE TABLE IF NOT EXISTS users (
         id SERIAL PRIMARY KEY,
@@ -61,7 +56,6 @@ export async function initDatabase() {
       );
     `);
 
-    // Backward-compatible schema upgrades for existing databases.
     await client.query(`
       ALTER TABLE users
       ADD COLUMN IF NOT EXISTS display_name VARCHAR(80),
@@ -69,13 +63,11 @@ export async function initDatabase() {
       ADD COLUMN IF NOT EXISTS avatar_url VARCHAR(2048);
     `);
 
-    // Índices para mejorar rendimiento
     await client.query(`
       CREATE INDEX IF NOT EXISTS idx_users_email ON users(email);
       CREATE INDEX IF NOT EXISTS idx_users_username ON users(username);
     `);
 
-    // Solicitudes de amistad entre usuarios.
     await client.query(`
       CREATE TABLE IF NOT EXISTS friend_requests (
         id SERIAL PRIMARY KEY,
@@ -89,7 +81,6 @@ export async function initDatabase() {
       );
     `);
 
-    // Relacion de amistad materializada en ambos sentidos.
     await client.query(`
       CREATE TABLE IF NOT EXISTS friends (
         user_id INT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
@@ -100,7 +91,6 @@ export async function initDatabase() {
       );
     `);
 
-    // Bloqueos de usuario a usuario.
     await client.query(`
       CREATE TABLE IF NOT EXISTS blocks (
         blocker_id INT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
@@ -121,7 +111,6 @@ export async function initDatabase() {
       CREATE INDEX IF NOT EXISTS idx_blocks_blocked_id ON blocks(blocked_id);
     `);
 
-    // Mensajeria directa entre usuarios amigos.
     await client.query(`
       CREATE TABLE IF NOT EXISTS direct_messages (
         id BIGSERIAL PRIMARY KEY,
@@ -133,7 +122,11 @@ export async function initDatabase() {
       );
     `);
 
-    // Invitaciones para nueva partida entre usuarios.
+    await client.query(`
+      ALTER TABLE direct_messages
+      ADD COLUMN IF NOT EXISTS read_at TIMESTAMP;
+    `);
+
     await client.query(`
       CREATE TABLE IF NOT EXISTS match_invites (
         id BIGSERIAL PRIMARY KEY,
@@ -152,7 +145,6 @@ export async function initDatabase() {
       ADD COLUMN IF NOT EXISTS match_room_id VARCHAR(128);
     `);
 
-    // Salas de juego activas con estado de jugadores.
     await client.query(`
       CREATE TABLE IF NOT EXISTS game_rooms (
         id BIGSERIAL PRIMARY KEY,
@@ -164,6 +156,65 @@ export async function initDatabase() {
         game_started BOOLEAN DEFAULT FALSE,
         created_at TIMESTAMP DEFAULT NOW(),
         updated_at TIMESTAMP DEFAULT NOW(),
+        CHECK (player1_id <> player2_id)
+      );
+    `);
+
+    await client.query(`
+      CREATE TABLE IF NOT EXISTS tournaments (
+        id BIGSERIAL PRIMARY KEY,
+        name VARCHAR(120) NOT NULL,
+        creator_id INT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+        status VARCHAR(16) NOT NULL DEFAULT 'open' CHECK (status IN ('open', 'in_progress', 'completed', 'cancelled')),
+        max_players INT NOT NULL CHECK (max_players IN (4, 8, 16)),
+        champion_id INT REFERENCES users(id) ON DELETE SET NULL,
+        created_at TIMESTAMP DEFAULT NOW(),
+        started_at TIMESTAMP,
+        ended_at TIMESTAMP
+      );
+    `);
+
+    await client.query(`
+      CREATE TABLE IF NOT EXISTS tournament_participants (
+        id BIGSERIAL PRIMARY KEY,
+        tournament_id BIGINT NOT NULL REFERENCES tournaments(id) ON DELETE CASCADE,
+        user_id INT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+        seed INT,
+        joined_at TIMESTAMP DEFAULT NOW(),
+        UNIQUE(tournament_id, user_id),
+        UNIQUE(tournament_id, seed)
+      );
+    `);
+
+    await client.query(`
+      CREATE TABLE IF NOT EXISTS tournament_matches (
+        id BIGSERIAL PRIMARY KEY,
+        tournament_id BIGINT NOT NULL REFERENCES tournaments(id) ON DELETE CASCADE,
+        round INT NOT NULL,
+        match_order INT NOT NULL,
+        player1_id INT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+        player2_id INT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+        winner_id INT REFERENCES users(id) ON DELETE SET NULL,
+        status VARCHAR(16) NOT NULL DEFAULT 'pending' CHECK (status IN ('pending', 'completed')),
+        created_at TIMESTAMP DEFAULT NOW(),
+        completed_at TIMESTAMP,
+        UNIQUE(tournament_id, round, match_order),
+        CHECK (player1_id <> player2_id)
+      );
+    `);
+
+    await client.query(`
+      CREATE TABLE IF NOT EXISTS game_matches (
+        id BIGSERIAL PRIMARY KEY,
+        room_id VARCHAR(128) UNIQUE NOT NULL,
+        player1_id INT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+        player2_id INT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+        winner_id INT REFERENCES users(id) ON DELETE SET NULL,
+        reason VARCHAR(16) NOT NULL CHECK (reason IN ('forfeit', 'disconnect', 'completed', 'draw')),
+        player1_score INT NOT NULL DEFAULT 0,
+        player2_score INT NOT NULL DEFAULT 0,
+        created_at TIMESTAMP DEFAULT NOW(),
+        ended_at TIMESTAMP,
         CHECK (player1_id <> player2_id)
       );
     `);
@@ -183,6 +234,18 @@ export async function initDatabase() {
       ON game_rooms(room_id);
       CREATE INDEX IF NOT EXISTS idx_game_rooms_players
       ON game_rooms(player1_id, player2_id);
+      CREATE INDEX IF NOT EXISTS idx_game_matches_player1
+      ON game_matches(player1_id, ended_at DESC);
+      CREATE INDEX IF NOT EXISTS idx_game_matches_player2
+      ON game_matches(player2_id, ended_at DESC);
+      CREATE INDEX IF NOT EXISTS idx_game_matches_winner
+      ON game_matches(winner_id);
+      CREATE INDEX IF NOT EXISTS idx_tournaments_status
+      ON tournaments(status, created_at DESC);
+      CREATE INDEX IF NOT EXISTS idx_tournament_participants_tournament
+      ON tournament_participants(tournament_id, joined_at ASC);
+      CREATE INDEX IF NOT EXISTS idx_tournament_matches_tournament_round
+      ON tournament_matches(tournament_id, round, match_order);
     `);
 
     console.log("Database tables initialized");
@@ -194,7 +257,6 @@ export async function initDatabase() {
   }
 }
 
-// Helper para ejecutar queries de forma segura
 export async function query<T = any>(text: string, params?: any[]): Promise<T[]> {
   const result = await pool.query(text, params);
   return result.rows;

@@ -1,4 +1,4 @@
-import { FormEvent, useCallback, useEffect, useMemo, useState } from "react";
+import { FormEvent, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
 
 const API = import.meta.env.VITE_API_BASE ?? "http://localhost:3000";
@@ -51,6 +51,12 @@ type ChatMessage = {
   toUserId: number;
   content: string;
   createdAt: string;
+  readAt?: string | null;
+};
+
+type ChatReadAt = {
+  messageId: string;
+  readAt?: string;
 };
 
 type MatchInvite = {
@@ -107,10 +113,19 @@ export default function SocialPanel({ token }: { token: string | null }) {
   const [chatInput, setChatInput] = useState("");
   const [chatMessages, setChatMessages] = useState<ChatMessage[]>([]);
   const [chatLoading, setChatLoading] = useState(false);
+  const [typingUsers, setTypingUsers] = useState<Set<string>>(new Set());
+  const [readReceipts, setReadReceipts] = useState<Map<string, ChatReadAt>>(new Map());
+  const [showChatProfile, setShowChatProfile] = useState(false);
+  const typingTimeoutRef = useRef<number | null>(null);
 
   const friendUsernames = useMemo(
     () => overview.friends.map((friend) => friend.user.username),
     [overview.friends]
+  );
+
+  const activeChatFriend = useMemo(
+    () => overview.friends.find((friend) => friend.user.username === chatTarget)?.user,
+    [chatTarget, overview.friends]
   );
 
   const pushNotification = useCallback((text: string) => {
@@ -175,6 +190,29 @@ export default function SocialPanel({ token }: { token: string | null }) {
         return;
       }
       setChatMessages(data.messages ?? []);
+
+      const readResponse = await fetch(
+        `${API}/api/chat/conversation/${encodeURIComponent(targetUsername.trim())}/read`,
+        {
+          method: "POST",
+          headers: { Authorization: `Bearer ${token}` },
+        }
+      );
+      const readData = await readResponse.json();
+      if (readResponse.ok && Array.isArray(readData.updated)) {
+        setReadReceipts((prev) => {
+          const next = new Map(prev);
+          for (const item of readData.updated) {
+            if (typeof item?.messageId === "string") {
+              next.set(item.messageId, {
+                messageId: item.messageId,
+                readAt: item.readAt,
+              });
+            }
+          }
+          return next;
+        });
+      }
     } catch (_error) {
       setMessage({ type: "error", text: "Error de conexion al cargar chat" });
     } finally {
@@ -217,6 +255,46 @@ export default function SocialPanel({ token }: { token: string | null }) {
           setMessage({ type: "success", text: messages[payload.event] });
           pushNotification(messages[payload.event]);
         }
+
+        if (
+          payload.event === "typing_indicator" &&
+          typeof payload.data?.fromUsername === "string" &&
+          payload.data.fromUsername === chatTarget
+        ) {
+          const fromUsername = payload.data.fromUsername;
+          setTypingUsers((prev) => {
+            const next = new Set(prev);
+            next.add(fromUsername);
+            return next;
+          });
+        }
+
+        if (
+          payload.event === "typing_stopped" &&
+          typeof payload.data?.fromUsername === "string"
+        ) {
+          const fromUsername = payload.data.fromUsername;
+          setTypingUsers((prev) => {
+            const next = new Set(prev);
+            next.delete(fromUsername);
+            return next;
+          });
+        }
+
+        if (
+          payload.event === "message_marked_read" &&
+          typeof payload.data?.messageId === "string"
+        ) {
+          setReadReceipts((prev) => {
+            const next = new Map(prev);
+            next.set(payload.data.messageId, {
+              messageId: payload.data.messageId,
+              readAt: payload.data.readAt,
+            });
+            return next;
+          });
+        }
+
         void fetchOverview();
         void fetchInvites();
 
@@ -432,6 +510,54 @@ export default function SocialPanel({ token }: { token: string | null }) {
     }
   };
 
+  const blockFromChat = async () => {
+    if (!token || !chatTarget.trim()) return;
+    setActionLoading(true);
+    setMessage(null);
+    try {
+      const response = await fetch(`${API}/api/chat/conversation/${encodeURIComponent(chatTarget.trim())}/block`, {
+        method: "POST",
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      const data = await response.json();
+      if (!response.ok) {
+        setMessage({ type: "error", text: data.error || "No se pudo bloquear al usuario" });
+        return;
+      }
+      setMessage({ type: "success", text: data.message });
+      setChatTarget("");
+      setChatMessages([]);
+      await fetchOverview();
+    } catch (_error) {
+      setMessage({ type: "error", text: "Error de conexion al bloquear" });
+    } finally {
+      setActionLoading(false);
+    }
+  };
+
+  const inviteFromChat = async () => {
+    if (!token || !chatTarget.trim()) return;
+    setActionLoading(true);
+    setMessage(null);
+    try {
+      const response = await fetch(`${API}/api/chat/conversation/${encodeURIComponent(chatTarget.trim())}/invite-to-game`, {
+        method: "POST",
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      const data = await response.json();
+      if (!response.ok) {
+        setMessage({ type: "error", text: data.error || "No se pudo enviar la invitacion" });
+        return;
+      }
+      setMessage({ type: "success", text: data.message });
+      await fetchInvites();
+    } catch (_error) {
+      setMessage({ type: "error", text: "Error de conexion al invitar" });
+    } finally {
+      setActionLoading(false);
+    }
+  };
+
   const sendChatMessage = async (event: FormEvent) => {
     event.preventDefault();
     if (!token || !chatTarget.trim()) {
@@ -458,6 +584,18 @@ export default function SocialPanel({ token }: { token: string | null }) {
       }
 
       setChatInput("");
+      if (typingTimeoutRef.current !== null) {
+        window.clearTimeout(typingTimeoutRef.current);
+        typingTimeoutRef.current = null;
+      }
+      await fetch(`${API}/api/chat/conversation/${encodeURIComponent(chatTarget.trim())}/typing`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({ typing: false }),
+      });
       setChatMessages((prev) => [...prev, data.message]);
     } catch (_error) {
       setMessage({ type: "error", text: "Error de conexion al enviar mensaje" });
@@ -468,12 +606,42 @@ export default function SocialPanel({ token }: { token: string | null }) {
 
   const handleOpenConversation = async (username: string) => {
     setChatTarget(username);
+    setShowChatProfile(false);
     await loadConversation(username);
   };
 
+  const handleChatInputChange = async (value: string) => {
+    setChatInput(value);
+    if (!token || !chatTarget.trim()) return;
+
+    await fetch(`${API}/api/chat/conversation/${encodeURIComponent(chatTarget.trim())}/typing`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${token}`,
+      },
+      body: JSON.stringify({ typing: value.trim().length > 0 }),
+    });
+
+    if (typingTimeoutRef.current !== null) {
+      window.clearTimeout(typingTimeoutRef.current);
+    }
+
+    typingTimeoutRef.current = window.setTimeout(() => {
+      void fetch(`${API}/api/chat/conversation/${encodeURIComponent(chatTarget.trim())}/typing`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({ typing: false }),
+      });
+    }, 1200);
+  };
+
   return (
-    <div style={{ border: "1px solid #ddd", padding: 20, marginBottom: 30, display: "grid", gap: 16 }}>
-      <h2 style={{ margin: 0, fontSize: 14, textTransform: "uppercase", letterSpacing: "0.5px", color: "#555" }}>
+    <div style={{ border: "1px solid rgba(255, 255, 255, 0.16)", padding: 20, marginBottom: 30, display: "grid", gap: 16 }}>
+      <h2 style={{ margin: 0, fontSize: 14, textTransform: "uppercase", letterSpacing: "0.5px", color: "var(--ink-muted)" }}>
         Social
       </h2>
 
@@ -481,9 +649,9 @@ export default function SocialPanel({ token }: { token: string | null }) {
         <div
           style={{
             padding: 10,
-            border: `1px solid ${message.type === "success" ? "#ddd" : "#ccc"}`,
-            backgroundColor: message.type === "success" ? "#f0f0f0" : "#f5f5f5",
-            color: message.type === "success" ? "#111" : "#555",
+            border: `1px solid ${message.type === "success" ? "rgba(255, 255, 255, 0.16)" : "rgba(255, 255, 255, 0.2)"}`,
+            backgroundColor: message.type === "success" ? "rgba(0, 240, 255, 0.1)" : "rgba(255, 255, 255, 0.08)",
+            color: message.type === "success" ? "#9ef8ff" : "var(--ink-muted)",
             fontSize: 13,
           }}
         >
@@ -492,19 +660,19 @@ export default function SocialPanel({ token }: { token: string | null }) {
       )}
 
       <form onSubmit={sendFriendRequest} style={{ display: "grid", gap: 8 }}>
-        <label style={{ fontSize: 13, color: "#555" }}>Enviar solicitud de amistad por username</label>
+        <label style={{ fontSize: 13, color: "var(--ink-muted)" }}>Enviar solicitud de amistad por username</label>
         <div style={{ display: "flex", gap: 8 }}>
           <input
             value={friendUsername}
             onChange={(e) => setFriendUsername(e.target.value)}
             placeholder="username"
             required
-            style={{ flex: 1, padding: 10, border: "1px solid #ddd", backgroundColor: "#fafafa" }}
+            style={{ flex: 1, padding: 10, border: "1px solid rgba(255, 255, 255, 0.16)", backgroundColor: "rgba(8, 10, 20, 0.86)" }}
           />
           <button
             type="submit"
             disabled={actionLoading || friendUsername.trim().length < 3}
-            style={{ padding: "10px 14px", border: "1px solid #111", backgroundColor: "#111", color: "white", cursor: "pointer" }}
+            style={{ padding: "10px 14px", border: "1px solid rgba(0, 240, 255, 0.55)", backgroundColor: "rgba(0, 240, 255, 0.18)", color: "#9ef8ff", cursor: "pointer" }}
           >
             Enviar
           </button>
@@ -512,19 +680,19 @@ export default function SocialPanel({ token }: { token: string | null }) {
       </form>
 
       <form onSubmit={blockUser} style={{ display: "grid", gap: 8 }}>
-        <label style={{ fontSize: 13, color: "#555" }}>Bloquear usuario por username</label>
+        <label style={{ fontSize: 13, color: "var(--ink-muted)" }}>Bloquear usuario por username</label>
         <div style={{ display: "flex", gap: 8 }}>
           <input
             value={blockUsername}
             onChange={(e) => setBlockUsername(e.target.value)}
             placeholder="username"
             required
-            style={{ flex: 1, padding: 10, border: "1px solid #ddd", backgroundColor: "#fafafa" }}
+            style={{ flex: 1, padding: 10, border: "1px solid rgba(255, 255, 255, 0.16)", backgroundColor: "rgba(8, 10, 20, 0.86)" }}
           />
           <button
             type="submit"
             disabled={actionLoading || blockUsername.trim().length < 3}
-            style={{ padding: "10px 14px", border: "1px solid #ddd", backgroundColor: "white", color: "#111", cursor: "pointer" }}
+            style={{ padding: "10px 14px", border: "1px solid rgba(255, 255, 255, 0.16)", backgroundColor: "rgba(8, 10, 20, 0.86)", color: "var(--ink-strong)", cursor: "pointer" }}
           >
             Bloquear
           </button>
@@ -532,19 +700,19 @@ export default function SocialPanel({ token }: { token: string | null }) {
       </form>
 
       <form onSubmit={sendMatchInvite} style={{ display: "grid", gap: 8 }}>
-        <label style={{ fontSize: 13, color: "#555" }}>Invitar amigo a nueva partida</label>
+        <label style={{ fontSize: 13, color: "var(--ink-muted)" }}>Invitar amigo a nueva partida</label>
         <div style={{ display: "flex", gap: 8 }}>
           <input
             value={inviteUsername}
             onChange={(e) => setInviteUsername(e.target.value)}
             placeholder="username"
             required
-            style={{ flex: 1, padding: 10, border: "1px solid #ddd", backgroundColor: "#fafafa" }}
+            style={{ flex: 1, padding: 10, border: "1px solid rgba(255, 255, 255, 0.16)", backgroundColor: "rgba(8, 10, 20, 0.86)" }}
           />
           <button
             type="submit"
             disabled={actionLoading || inviteUsername.trim().length < 3}
-            style={{ padding: "10px 14px", border: "1px solid #111", backgroundColor: "#111", color: "white", cursor: "pointer" }}
+            style={{ padding: "10px 14px", border: "1px solid rgba(0, 240, 255, 0.55)", backgroundColor: "rgba(0, 240, 255, 0.18)", color: "#9ef8ff", cursor: "pointer" }}
           >
             Invitar
           </button>
@@ -552,13 +720,13 @@ export default function SocialPanel({ token }: { token: string | null }) {
       </form>
 
       <section>
-        <h3 style={{ margin: "8px 0", fontSize: 13, color: "#333" }}>Notificaciones en tiempo real</h3>
+        <h3 style={{ margin: "8px 0", fontSize: 13, color: "var(--ink-strong)" }}>Notificaciones en tiempo real</h3>
         {notifications.length === 0 ? (
-          <p style={{ margin: 0, fontSize: 13, color: "#777" }}>Aun no tienes notificaciones.</p>
+          <p style={{ margin: 0, fontSize: 13, color: "var(--ink-muted)" }}>Aun no tienes notificaciones.</p>
         ) : (
           <div style={{ display: "grid", gap: 6, maxHeight: 180, overflowY: "auto" }}>
             {notifications.map((item) => (
-              <div key={item.id} style={{ border: "1px solid #eee", padding: 8, fontSize: 12, background: "#fff" }}>
+              <div key={item.id} style={{ border: "1px solid rgba(255, 255, 255, 0.12)", padding: 8, fontSize: 12, background: "rgba(8, 10, 20, 0.86)" }}>
                 {item.text}
               </div>
             ))}
@@ -568,22 +736,22 @@ export default function SocialPanel({ token }: { token: string | null }) {
 
       <div style={{ display: "grid", gap: 12 }}>
         <section>
-          <h3 style={{ margin: "8px 0", fontSize: 13, color: "#333" }}>Solicitudes recibidas</h3>
+          <h3 style={{ margin: "8px 0", fontSize: 13, color: "var(--ink-strong)" }}>Solicitudes recibidas</h3>
           {loading ? (
-            <p style={{ margin: 0, fontSize: 13, color: "#777" }}>Cargando...</p>
+            <p style={{ margin: 0, fontSize: 13, color: "var(--ink-muted)" }}>Cargando...</p>
           ) : overview.incomingRequests.length === 0 ? (
-            <p style={{ margin: 0, fontSize: 13, color: "#777" }}>No hay solicitudes pendientes.</p>
+            <p style={{ margin: 0, fontSize: 13, color: "var(--ink-muted)" }}>No hay solicitudes pendientes.</p>
           ) : (
             <div style={{ display: "grid", gap: 8 }}>
               {overview.incomingRequests.map((item) => (
-                <div key={item.requestId} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", border: "1px solid #eee", padding: 10 }}>
+                <div key={item.requestId} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", border: "1px solid rgba(255, 255, 255, 0.12)", padding: 10 }}>
                   <span style={{ fontSize: 13 }}>{displayUserName(item.user)}</span>
                   <div style={{ display: "flex", gap: 6 }}>
                     <button
                       type="button"
                       onClick={() => respondToRequest(item.requestId, "accept")}
                       disabled={actionLoading}
-                      style={{ padding: "6px 10px", border: "1px solid #111", background: "#111", color: "white", cursor: "pointer", fontSize: 12 }}
+                      style={{ padding: "6px 10px", border: "1px solid rgba(0, 240, 255, 0.55)", background: "rgba(0, 240, 255, 0.18)", color: "#9ef8ff", cursor: "pointer", fontSize: 12 }}
                     >
                       Aceptar
                     </button>
@@ -591,7 +759,7 @@ export default function SocialPanel({ token }: { token: string | null }) {
                       type="button"
                       onClick={() => respondToRequest(item.requestId, "reject")}
                       disabled={actionLoading}
-                      style={{ padding: "6px 10px", border: "1px solid #ddd", background: "white", color: "#111", cursor: "pointer", fontSize: 12 }}
+                      style={{ padding: "6px 10px", border: "1px solid rgba(255, 255, 255, 0.16)", background: "rgba(8, 10, 20, 0.86)", color: "var(--ink-strong)", cursor: "pointer", fontSize: 12 }}
                     >
                       Rechazar
                     </button>
@@ -603,20 +771,20 @@ export default function SocialPanel({ token }: { token: string | null }) {
         </section>
 
         <section>
-          <h3 style={{ margin: "8px 0", fontSize: 13, color: "#333" }}>Invitaciones de partida recibidas</h3>
+          <h3 style={{ margin: "8px 0", fontSize: 13, color: "var(--ink-strong)" }}>Invitaciones de partida recibidas</h3>
           {incomingInvites.filter((item) => item.status === "pending").length === 0 ? (
-            <p style={{ margin: 0, fontSize: 13, color: "#777" }}>No hay invitaciones pendientes.</p>
+            <p style={{ margin: 0, fontSize: 13, color: "var(--ink-muted)" }}>No hay invitaciones pendientes.</p>
           ) : (
             <div style={{ display: "grid", gap: 8 }}>
               {incomingInvites.filter((item) => item.status === "pending").map((item) => (
-                <div key={item.id} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", border: "1px solid #eee", padding: 10 }}>
+                <div key={item.id} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", border: "1px solid rgba(255, 255, 255, 0.12)", padding: 10 }}>
                   <span style={{ fontSize: 13 }}>{displayUserName(item.user)}</span>
                   <div style={{ display: "flex", gap: 6 }}>
                     <button
                       type="button"
                       onClick={() => respondInvite(item.id, "accept")}
                       disabled={actionLoading}
-                      style={{ padding: "6px 10px", border: "1px solid #111", background: "#111", color: "white", cursor: "pointer", fontSize: 12 }}
+                      style={{ padding: "6px 10px", border: "1px solid rgba(0, 240, 255, 0.55)", background: "rgba(0, 240, 255, 0.18)", color: "#9ef8ff", cursor: "pointer", fontSize: 12 }}
                     >
                       Aceptar
                     </button>
@@ -624,7 +792,7 @@ export default function SocialPanel({ token }: { token: string | null }) {
                       type="button"
                       onClick={() => respondInvite(item.id, "reject")}
                       disabled={actionLoading}
-                      style={{ padding: "6px 10px", border: "1px solid #ddd", background: "white", color: "#111", cursor: "pointer", fontSize: 12 }}
+                      style={{ padding: "6px 10px", border: "1px solid rgba(255, 255, 255, 0.16)", background: "rgba(8, 10, 20, 0.86)", color: "var(--ink-strong)", cursor: "pointer", fontSize: 12 }}
                     >
                       Rechazar
                     </button>
@@ -636,13 +804,13 @@ export default function SocialPanel({ token }: { token: string | null }) {
         </section>
 
         <section>
-          <h3 style={{ margin: "8px 0", fontSize: 13, color: "#333" }}>Invitaciones enviadas</h3>
+          <h3 style={{ margin: "8px 0", fontSize: 13, color: "var(--ink-strong)" }}>Invitaciones enviadas</h3>
           {outgoingInvites.filter((item) => item.status === "pending").length === 0 ? (
-            <p style={{ margin: 0, fontSize: 13, color: "#777" }}>No hay invitaciones enviadas pendientes.</p>
+            <p style={{ margin: 0, fontSize: 13, color: "var(--ink-muted)" }}>No hay invitaciones enviadas pendientes.</p>
           ) : (
             <div style={{ display: "grid", gap: 8 }}>
               {outgoingInvites.filter((item) => item.status === "pending").map((item) => (
-                <div key={item.id} style={{ border: "1px solid #eee", padding: 10, fontSize: 13 }}>
+                <div key={item.id} style={{ border: "1px solid rgba(255, 255, 255, 0.12)", padding: 10, fontSize: 13 }}>
                   {displayUserName(item.user)}
                 </div>
               ))}
@@ -651,10 +819,10 @@ export default function SocialPanel({ token }: { token: string | null }) {
         </section>
 
         <section>
-          <h3 style={{ margin: "8px 0", fontSize: 13, color: "#333" }}>Chat en tiempo real</h3>
+          <h3 style={{ margin: "8px 0", fontSize: 13, color: "var(--ink-strong)" }}>Chat en tiempo real</h3>
           <div style={{ display: "flex", gap: 8, marginBottom: 8, flexWrap: "wrap" }}>
             {friendUsernames.length === 0 ? (
-              <span style={{ fontSize: 13, color: "#777" }}>Agrega amigos para iniciar chat.</span>
+              <span style={{ fontSize: 13, color: "var(--ink-muted)" }}>Agrega amigos para iniciar chat.</span>
             ) : (
               friendUsernames.map((username) => (
                 <button
@@ -663,9 +831,9 @@ export default function SocialPanel({ token }: { token: string | null }) {
                   onClick={() => void handleOpenConversation(username)}
                   style={{
                     padding: "6px 10px",
-                    border: "1px solid #ddd",
-                    background: chatTarget === username ? "#111" : "white",
-                    color: chatTarget === username ? "white" : "#111",
+                    border: "1px solid rgba(255, 255, 255, 0.16)",
+                    background: chatTarget === username ? "rgba(0, 240, 255, 0.18)" : "rgba(8, 10, 20, 0.86)",
+                    color: chatTarget === username ? "#9ef8ff" : "var(--ink-strong)",
                     cursor: "pointer",
                     fontSize: 12,
                   }}
@@ -678,32 +846,107 @@ export default function SocialPanel({ token }: { token: string | null }) {
 
           {chatTarget && (
             <>
-              <div style={{ border: "1px solid #eee", padding: 10, minHeight: 120, maxHeight: 220, overflowY: "auto", background: "#fff" }}>
+              <div style={{ border: "1px solid rgba(255, 255, 255, 0.12)", padding: 10, minHeight: 120, maxHeight: 260, overflowY: "auto", background: "rgba(8, 10, 20, 0.86)" }}>
+                <div style={{ display: "flex", gap: 8, marginBottom: 10, justifyContent: "space-between", alignItems: "center" }}>
+                  <span style={{ fontSize: 13, fontWeight: "bold", color: "var(--ink-strong)" }}>@{chatTarget}</span>
+                  <div style={{ display: "flex", gap: 6 }}>
+                    <button
+                      type="button"
+                      onClick={() => setShowChatProfile((prev) => !prev)}
+                      style={{
+                        padding: "4px 8px",
+                        border: "1px solid rgba(255, 255, 255, 0.16)",
+                        background: "rgba(8, 10, 20, 0.86)",
+                        color: "var(--ink-strong)",
+                        cursor: "pointer",
+                        fontSize: 11,
+                      }}
+                    >
+                      👤 Perfil
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => void inviteFromChat()}
+                      disabled={actionLoading}
+                      style={{
+                        padding: "4px 8px",
+                        border: "1px solid rgba(0, 240, 255, 0.55)",
+                        background: "rgba(0, 240, 255, 0.18)",
+                        color: "#9ef8ff",
+                        cursor: "pointer",
+                        fontSize: 11,
+                      }}
+                    >
+                      🎮 Invitar
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => void blockFromChat()}
+                      disabled={actionLoading}
+                      style={{
+                        padding: "4px 8px",
+                        border: "1px solid rgba(255, 255, 255, 0.16)",
+                        background: "rgba(8, 10, 20, 0.86)",
+                        color: "var(--ink-muted)",
+                        cursor: "pointer",
+                        fontSize: 11,
+                      }}
+                    >
+                      🚫 Bloquear
+                    </button>
+                  </div>
+                </div>
+                {showChatProfile && activeChatFriend && (
+                  <div style={{ border: "1px solid rgba(255, 255, 255, 0.12)", padding: 8, marginBottom: 10, background: "rgba(255, 255, 255, 0.03)" }}>
+                    <p style={{ margin: 0, fontSize: 12, color: "var(--ink-strong)" }}>{displayUserName(activeChatFriend)}</p>
+                    {activeChatFriend.avatarUrl ? (
+                      <p style={{ margin: "4px 0 0", fontSize: 11, color: "var(--ink-muted)" }}>{activeChatFriend.avatarUrl}</p>
+                    ) : (
+                      <p style={{ margin: "4px 0 0", fontSize: 11, color: "var(--ink-muted)" }}>Sin avatar configurado</p>
+                    )}
+                  </div>
+                )}
                 {chatLoading ? (
-                  <p style={{ margin: 0, fontSize: 13, color: "#777" }}>Cargando conversacion...</p>
+                  <p style={{ margin: 0, fontSize: 13, color: "var(--ink-muted)" }}>Cargando conversacion...</p>
                 ) : chatMessages.length === 0 ? (
-                  <p style={{ margin: 0, fontSize: 13, color: "#777" }}>Sin mensajes aun.</p>
+                  <p style={{ margin: 0, fontSize: 13, color: "var(--ink-muted)" }}>Sin mensajes aun.</p>
                 ) : (
                   <div style={{ display: "grid", gap: 6 }}>
-                    {chatMessages.map((msg) => (
-                      <div key={msg.id} style={{ border: "1px solid #f0f0f0", padding: 8, fontSize: 12 }}>
-                        {msg.content}
-                      </div>
-                    ))}
+                    {chatMessages.map((msg) => {
+                      const readInfo = readReceipts.get(msg.id);
+                      return (
+                        <div key={msg.id} style={{ border: "1px solid rgba(0, 240, 255, 0.1)", padding: 8, fontSize: 12 }}>
+                          <div style={{ display: "flex", justifyContent: "space-between", gap: 8 }}>
+                            <span>{msg.content}</span>
+                            <span style={{ color: readInfo ? "#9ef8ff" : "var(--ink-muted)", fontSize: 10 }}>✓</span>
+                          </div>
+                          {readInfo?.readAt ? (
+                            <p style={{ margin: "4px 0 0", fontSize: 10, color: "var(--ink-muted)" }}>
+                              Leido: {new Date(readInfo.readAt).toLocaleTimeString()}
+                            </p>
+                          ) : null}
+                        </div>
+                      );
+                    })}
                   </div>
+                )}
+                {typingUsers.has(chatTarget) && (
+                  <p style={{ margin: "8px 0 0", fontSize: 11, color: "#9ef8ff", fontStyle: "italic" }}>
+                    @{chatTarget} está escribiendo...
+                  </p>
                 )}
               </div>
               <form onSubmit={sendChatMessage} style={{ display: "flex", gap: 8, marginTop: 8 }}>
                 <input
                   value={chatInput}
-                  onChange={(e) => setChatInput(e.target.value)}
+                  onChange={(e) => void handleChatInputChange(e.target.value)}
                   placeholder={`Mensaje para @${chatTarget}`}
-                  style={{ flex: 1, padding: 10, border: "1px solid #ddd", backgroundColor: "#fafafa" }}
+                  style={{ flex: 1, padding: 10, border: "1px solid rgba(255, 255, 255, 0.16)", backgroundColor: "rgba(8, 10, 20, 0.86)" }}
                 />
                 <button
                   type="submit"
                   disabled={actionLoading || !chatInput.trim()}
-                  style={{ padding: "10px 14px", border: "1px solid #111", backgroundColor: "#111", color: "white", cursor: "pointer" }}
+                  style={{ padding: "10px 14px", border: "1px solid rgba(0, 240, 255, 0.55)", backgroundColor: "rgba(0, 240, 255, 0.18)", color: "#9ef8ff", cursor: "pointer" }}
                 >
                   Enviar
                 </button>
@@ -713,13 +956,13 @@ export default function SocialPanel({ token }: { token: string | null }) {
         </section>
 
         <section>
-          <h3 style={{ margin: "8px 0", fontSize: 13, color: "#333" }}>Solicitudes enviadas</h3>
+          <h3 style={{ margin: "8px 0", fontSize: 13, color: "var(--ink-strong)" }}>Solicitudes enviadas</h3>
           {overview.outgoingRequests.length === 0 ? (
-            <p style={{ margin: 0, fontSize: 13, color: "#777" }}>No hay solicitudes enviadas pendientes.</p>
+            <p style={{ margin: 0, fontSize: 13, color: "var(--ink-muted)" }}>No hay solicitudes enviadas pendientes.</p>
           ) : (
             <div style={{ display: "grid", gap: 8 }}>
               {overview.outgoingRequests.map((item) => (
-                <div key={item.requestId} style={{ border: "1px solid #eee", padding: 10, fontSize: 13 }}>
+                <div key={item.requestId} style={{ border: "1px solid rgba(255, 255, 255, 0.12)", padding: 10, fontSize: 13 }}>
                   {displayUserName(item.user)}
                 </div>
               ))}
@@ -728,19 +971,19 @@ export default function SocialPanel({ token }: { token: string | null }) {
         </section>
 
         <section>
-          <h3 style={{ margin: "8px 0", fontSize: 13, color: "#333" }}>Amigos</h3>
+          <h3 style={{ margin: "8px 0", fontSize: 13, color: "var(--ink-strong)" }}>Amigos</h3>
           {overview.friends.length === 0 ? (
-            <p style={{ margin: 0, fontSize: 13, color: "#777" }}>Aun no tienes amigos.</p>
+            <p style={{ margin: 0, fontSize: 13, color: "var(--ink-muted)" }}>Aun no tienes amigos.</p>
           ) : (
             <div style={{ display: "grid", gap: 8 }}>
               {overview.friends.map((item) => (
-                <div key={item.user.id} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", border: "1px solid #eee", padding: 10 }}>
+                <div key={item.user.id} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", border: "1px solid rgba(255, 255, 255, 0.12)", padding: 10 }}>
                   <span style={{ fontSize: 13 }}>{displayUserName(item.user)}</span>
                   <button
                     type="button"
                     onClick={() => blockFriend(item.user.username)}
                     disabled={actionLoading}
-                    style={{ padding: "6px 10px", border: "1px solid #ddd", background: "white", color: "#111", cursor: "pointer", fontSize: 12 }}
+                    style={{ padding: "6px 10px", border: "1px solid rgba(255, 255, 255, 0.16)", background: "rgba(8, 10, 20, 0.86)", color: "var(--ink-strong)", cursor: "pointer", fontSize: 12 }}
                   >
                     Bloquear
                   </button>
@@ -751,19 +994,19 @@ export default function SocialPanel({ token }: { token: string | null }) {
         </section>
 
         <section>
-          <h3 style={{ margin: "8px 0", fontSize: 13, color: "#333" }}>Bloqueados</h3>
+          <h3 style={{ margin: "8px 0", fontSize: 13, color: "var(--ink-strong)" }}>Bloqueados</h3>
           {overview.blocks.length === 0 ? (
-            <p style={{ margin: 0, fontSize: 13, color: "#777" }}>No hay usuarios bloqueados.</p>
+            <p style={{ margin: 0, fontSize: 13, color: "var(--ink-muted)" }}>No hay usuarios bloqueados.</p>
           ) : (
             <div style={{ display: "grid", gap: 8 }}>
               {overview.blocks.map((item) => (
-                <div key={item.user.id} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", border: "1px solid #eee", padding: 10 }}>
+                <div key={item.user.id} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", border: "1px solid rgba(255, 255, 255, 0.12)", padding: 10 }}>
                   <span style={{ fontSize: 13 }}>{displayUserName(item.user)}</span>
                   <button
                     type="button"
                     onClick={() => unblockUser(item.user.username)}
                     disabled={actionLoading}
-                    style={{ padding: "6px 10px", border: "1px solid #111", background: "#111", color: "white", cursor: "pointer", fontSize: 12 }}
+                    style={{ padding: "6px 10px", border: "1px solid rgba(0, 240, 255, 0.55)", background: "rgba(0, 240, 255, 0.18)", color: "#9ef8ff", cursor: "pointer", fontSize: 12 }}
                   >
                     Desbloquear
                   </button>

@@ -6,6 +6,10 @@ import { useSearchParams } from "react-router-dom";
 
 // Importamos el componente que renderiza la escena 3D con Three.js
 import ThreeCanvas from "../three/ThreeCanvas";
+import MainMenu from "../components/MainMenu";
+import GameView from "../components/GameView";
+import LanguageSwitcher from "../components/LanguageSwitcher";
+import Matchmaking from "../components/Matchmaking";
 
 const API = import.meta.env.VITE_API_BASE ?? "http://localhost:3000";
 
@@ -41,6 +45,8 @@ export default function Play() {
   const [token, setToken] = useState<string | null>(localStorage.getItem("token") ?? null);
   const [roomStatus, setRoomStatus] = useState<GameRoomStatus | null>(null);
   const [isReady, setIsReady] = useState(false);
+  const [localView, setLocalView] = useState<"menu" | "game" | "lobby">("menu");
+  const [multiplayerState, setMultiplayerState] = useState<{ roomId: string; side: "left" | "right" } | null>(null);
   const [loading, setLoading] = useState(false);
   const [message, setMessage] = useState<{ type: "error" | "success"; text: string } | null>(null);
 
@@ -216,6 +222,46 @@ export default function Play() {
     }
   };
 
+  if (!matchContext) {
+    return (
+      <div className="app-container">
+        <LanguageSwitcher />
+        {localView === "menu" && (
+          <MainMenu
+            onStartGame={() => {
+              setMultiplayerState(null);
+              setLocalView("game");
+            }}
+            onStartMultiplayer={() => {
+              setMultiplayerState(null);
+              setLocalView("lobby");
+            }}
+          />
+        )}
+        {localView === "lobby" && (
+          <Matchmaking
+            onMatchFound={(roomId, side) => {
+              setMultiplayerState({ roomId, side });
+              setLocalView("game");
+            }}
+            onCancel={() => setLocalView("menu")}
+          />
+        )}
+        {localView === "game" && (
+          <GameView
+            onExit={() => {
+              setMultiplayerState(null);
+              setLocalView("menu");
+            }}
+            isMultiplayer={!!multiplayerState}
+            multiplayerSide={multiplayerState?.side}
+            roomId={multiplayerState?.roomId}
+          />
+        )}
+      </div>
+    );
+  }
+
   return (
     <div>
       {/* Título de la página */}
@@ -230,9 +276,9 @@ export default function Play() {
               style={{
                 marginBottom: 12,
                 padding: 10,
-                border: `1px solid ${message.type === "success" ? "#2ecc71" : "#e74c3c"}`,
-                backgroundColor: message.type === "success" ? "#f0fdf4" : "#fef2f2",
-                color: message.type === "success" ? "#16a34a" : "#dc2626",
+                border: `1px solid ${message.type === "success" ? "rgba(34, 197, 94, 0.7)" : "rgba(255, 77, 103, 0.7)"}`,
+                backgroundColor: message.type === "success" ? "rgba(34, 197, 94, 0.12)" : "rgba(255, 77, 103, 0.12)",
+                color: message.type === "success" ? "#9bf2bd" : "#ff8da1",
                 fontSize: 13,
                 borderRadius: 6,
               }}
@@ -246,9 +292,9 @@ export default function Play() {
               style={{
                 marginBottom: 12,
                 padding: 12,
-                border: "1px solid #ddd",
+                border: "1px solid rgba(255, 255, 255, 0.16)",
                 borderRadius: 10,
-                background: "#fafafa",
+                background: "rgba(10, 12, 24, 0.86)",
                 display: "grid",
                 gap: 8,
               }}
@@ -257,10 +303,10 @@ export default function Play() {
                 <strong style={{ display: "block", marginBottom: 4 }}>
                   Partida por invitación
                 </strong>
-                <span style={{ display: "block", fontSize: 13, color: "#666" }}>
+                <span style={{ display: "block", fontSize: 13, color: "var(--ink-muted)" }}>
                   Room: {roomStatus.roomId}
                 </span>
-                <span style={{ display: "block", fontSize: 13, color: "#666" }}>
+                <span style={{ display: "block", fontSize: 13, color: "var(--ink-muted)" }}>
                   Rival: @{roomStatus.players.opponent.username}
                 </span>
               </div>
@@ -270,7 +316,7 @@ export default function Play() {
                   display: "grid",
                   gap: 6,
                   fontSize: 13,
-                  borderTop: "1px solid #ddd",
+                  borderTop: "1px solid rgba(255, 255, 255, 0.12)",
                   paddingTop: 8,
                 }}
               >
@@ -279,7 +325,7 @@ export default function Play() {
                   <span
                     style={{
                       fontWeight: "bold",
-                      color: roomStatus.players.you.ready ? "#2ecc71" : "#f39c12",
+                      color: roomStatus.players.you.ready ? "#22c55e" : "#ff9c33",
                     }}
                   >
                     {roomStatus.players.you.ready ? "✓ Listo" : "⏳ Esperando"}
@@ -290,7 +336,7 @@ export default function Play() {
                   <span
                     style={{
                       fontWeight: "bold",
-                      color: roomStatus.players.opponent.ready ? "#2ecc71" : "#f39c12",
+                      color: roomStatus.players.opponent.ready ? "#22c55e" : "#ff9c33",
                     }}
                   >
                     {roomStatus.players.opponent.ready ? "✓ Listo" : "⏳ Esperando"}
@@ -304,9 +350,9 @@ export default function Play() {
                   disabled={loading}
                   style={{
                     padding: "10px 16px",
-                    border: "1px solid #111",
-                    backgroundColor: "#111",
-                    color: "white",
+                    border: "1px solid rgba(0, 240, 255, 0.55)",
+                    backgroundColor: "rgba(0, 240, 255, 0.16)",
+                    color: "#9ef8ff",
                     cursor: loading ? "not-allowed" : "pointer",
                     borderRadius: 6,
                     fontWeight: "bold",
@@ -321,8 +367,8 @@ export default function Play() {
                 <div
                   style={{
                     padding: 10,
-                    backgroundColor: "#2ecc71",
-                    color: "white",
+                    backgroundColor: "rgba(34, 197, 94, 0.22)",
+                    color: "#9bf2bd",
                     borderRadius: 6,
                     textAlign: "center",
                     fontWeight: "bold",
@@ -337,10 +383,10 @@ export default function Play() {
               style={{
                 marginBottom: 12,
                 padding: 12,
-                border: "1px solid #f39c12",
+                border: "1px solid rgba(255, 156, 51, 0.7)",
                 borderRadius: 10,
-                background: "#fffbf0",
-                color: "#b8860b",
+                background: "rgba(255, 156, 51, 0.12)",
+                color: "#ffb866",
                 fontSize: 13,
               }}
             >
@@ -353,10 +399,10 @@ export default function Play() {
           style={{
             marginBottom: 12,
             padding: 12,
-            border: "1px solid #ddd",
+            border: "1px solid rgba(255, 255, 255, 0.14)",
             borderRadius: 10,
-            background: "#f9f9f9",
-            color: "#666",
+            background: "rgba(8, 10, 20, 0.78)",
+            color: "var(--ink-muted)",
           }}
         >
           <p style={{ margin: 0, fontSize: 13 }}>
@@ -376,7 +422,7 @@ export default function Play() {
             height: 520,
             borderRadius: 12,
             overflow: "hidden",
-            border: "1px solid #222",
+            border: "1px solid rgba(0, 240, 255, 0.28)",
           }}
         >
           {/* Componente que crea y anima la escena 3D */}
@@ -388,12 +434,12 @@ export default function Play() {
             height: 520,
             borderRadius: 12,
             overflow: "hidden",
-            border: "1px solid #ddd",
-            background: "#f5f5f5",
+            border: "1px solid rgba(255, 255, 255, 0.14)",
+            background: "rgba(8, 10, 20, 0.86)",
             display: "flex",
             alignItems: "center",
             justifyContent: "center",
-            color: "#999",
+            color: "var(--ink-muted)",
           }}
         >
           <span style={{ fontSize: 14, textAlign: "center" }}>

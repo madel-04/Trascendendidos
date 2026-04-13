@@ -9,6 +9,7 @@ import Terms from "./pages/Terms";
 import Login from "./pages/Login";
 import Register from "./pages/Register";
 import Profile from "./pages/Profile";
+import Tournament from "./pages/Tournament";
 // Importamos el componente de ruta protegida
 import ProtectedRoute from "./components/ProtectedRoute";
 // Importamos el contexto de autenticación
@@ -121,6 +122,7 @@ export default function App() {
         <header className="topbar">
           <Link className="nav-link" to="/">Home</Link>
           <Link className="nav-link" to="/play">Play</Link>
+          {user ? <Link className="nav-link" to="/tournament">Tournament</Link> : null}
 
           <div className="user-strip">
             {user ? (
@@ -213,6 +215,14 @@ export default function App() {
               element={
                 <ProtectedRoute>
                   <Profile />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/tournament"
+              element={
+                <ProtectedRoute>
+                  <Tournament />
                 </ProtectedRoute>
               }
             />
