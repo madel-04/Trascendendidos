@@ -13,6 +13,7 @@ type ViewState = 'MENU' | 'GAME' | 'LOBBY';
 function App() {
   const [currentView, setCurrentView] = useState<ViewState>('MENU');
   const [multiplayerState, setMultiplayerState] = useState<{ roomId: string; side: 'left' | 'right' } | null>(null);
+  const [isMatchFinished, setIsMatchFinished] = useState<{ finished: boolean }>({ finished: false });
   const { t } = useTranslation();
 
   return (
@@ -22,7 +23,7 @@ function App() {
           <h2 style={{ margin: 0, fontSize: '1.2rem', lineHeight: 1, display: 'flex', alignItems: 'center' }}>{multiplayerState ? t('MULTIPLAYER MATCH') : t('LOCAL MATCH')}</h2>
         )}
         <LanguageSwitcher />
-        {currentView === 'GAME' && (
+        {currentView === 'GAME' && !isMatchFinished.finished && (
           <button className="btn-premium secondary" style={{ padding: '8px 16px', fontSize: '0.9rem', height: 'fit-content' }} onClick={() => {
             if (multiplayerState) socket.emit('leave_match');
             setCurrentView('MENU');
@@ -31,9 +32,9 @@ function App() {
           </button>
         )}
       </header>
-      {currentView === 'MENU' && <MainMenu onStartGame={() => { setMultiplayerState(null); setCurrentView('GAME'); }} onStartMultiplayer={() => setCurrentView('LOBBY')} />}
-      {currentView === 'LOBBY' && <Matchmaking onMatchFound={(roomId, side) => { setMultiplayerState({ roomId, side }); setCurrentView('GAME'); }} onCancel={() => setCurrentView('MENU')} />}
-      {currentView === 'GAME' && <GameView onExit={() => setCurrentView('MENU')} isMultiplayer={!!multiplayerState} multiplayerSide={multiplayerState?.side} roomId={multiplayerState?.roomId} />}
+      {currentView === 'MENU' && <MainMenu onStartGame={() => { setMultiplayerState(null); setIsMatchFinished({ finished: false }); setCurrentView('GAME'); }} onStartMultiplayer={() => setCurrentView('LOBBY')} />}
+      {currentView === 'LOBBY' && <Matchmaking onMatchFound={(roomId, side) => { setMultiplayerState({ roomId, side }); setIsMatchFinished({ finished: false }); setCurrentView('GAME'); }} onCancel={() => setCurrentView('MENU')} />}
+      {currentView === 'GAME' && <GameView onExit={() => setCurrentView('MENU')} isMultiplayer={!!multiplayerState} multiplayerSide={multiplayerState?.side} roomId={multiplayerState?.roomId} onStatusChange={(f: boolean) => setIsMatchFinished({ finished: f })} />}
 
       <footer className="main-footer">
         <p>

@@ -21,7 +21,10 @@ const resources = {
       "MATCHMAKING...": "MATCHMAKING...",
       "Searching for an opponent in the queue": "Searching for an opponent in the queue...",
       "CANCEL": "CANCEL",
-      "Opponent disconnected or left! Match ended.": "Opponent disconnected or left! Match ended."
+      "Opponent disconnected or left! Match ended.": "Opponent disconnected or left! Match ended.",
+      "WINNER": "WINNER",
+      "NEW GAME": "NEW GAME",
+      "WAITING FOR OPPONENT": "WAITING FOR OPPONENT"
     }
   },
   es: {
@@ -42,7 +45,10 @@ const resources = {
       "MATCHMAKING...": "BUSCANDO PARTIDA...",
       "Searching for an opponent in the queue": "Buscando oponente en la cola...",
       "CANCEL": "CANCELAR",
-      "Opponent disconnected or left! Match ended.": "¡El oponente se desconectó o abandonó! Fin de la partida."
+      "Opponent disconnected or left! Match ended.": "¡El oponente se desconectó o abandonó! Fin de la partida.",
+      "WINNER": "VENCEDOR",
+      "NEW GAME": "NUEVA PARTIDA",
+      "WAITING FOR OPPONENT": "ESPERANDO RIVAL"
     }
   },
   it: {
@@ -63,7 +69,10 @@ const resources = {
       "MATCHMAKING...": "RICERCA PARTITA...",
       "Searching for an opponent in the queue": "Ricerca di un avversario in coda...",
       "CANCEL": "ANNULLA",
-      "Opponent disconnected or left! Match ended.": "Avversario disconnesso o uscito! Partita terminata."
+      "Opponent disconnected or left! Match ended.": "Avversario disconnesso o uscito! Partita terminata.",
+      "WINNER": "VINCITORE",
+      "NEW GAME": "NUOVA PARTITA",
+      "WAITING FOR OPPONENT": "IN ATTESA DELL'AVVERSARIO"
     }
   }
 };
