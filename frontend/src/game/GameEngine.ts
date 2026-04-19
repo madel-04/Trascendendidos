@@ -40,13 +40,22 @@ export class GameEngine {
    */
   private keysTracker: { [key: string]: boolean } = {};
 
-  /**
-   * Inicializa el GameEngine y sus entidades.
-   * Vincula los escuchadores de eventos del teclado para rastrear la entrada.
+  // Dificultad para IA en Modo Local
+  private aiSpeedMod: number = 0.55;
+
+  /** 
+   * Inicializa el motor del juego y sus entidades.
    * 
    * @param canvas - El elemento canvas objetivo para renderizar el juego.
    */
-  constructor(canvas: HTMLCanvasElement, isMultiplayer = false, side?: 'left' | 'right', roomId?: string, onMatchEnded?: (winner: 'left' | 'right') => void) {
+  constructor(
+    canvas: HTMLCanvasElement, 
+    isMultiplayer = false, 
+    side?: 'left' | 'right', 
+    roomId?: string, 
+    onMatchEnded?: (winner: 'left' | 'right') => void,
+    settings?: { targetScore: number; difficulty: string }
+  ) {
     this.canvas = canvas;
     this.onMatchEnded = onMatchEnded;
     const context = canvas.getContext('2d');
@@ -57,15 +66,25 @@ export class GameEngine {
     this.side = side;
     this.roomId = roomId;
 
-    const cw = this.canvas.width;
-    const ch = this.canvas.height;
+    this.keysTracker = {};
 
-    // Instancia las entidades del juego
-    // P1 a la izquierda (Cyan), P2 a la derecha (Magenta)
-    this.player1 = new Player(30, ch / 2 - 50, 'left', '#00F0FF');
-    this.player2 = new Player(cw - 30 - 16, ch / 2 - 50, 'right', '#FF003C');
-    this.ball = new Ball(cw, ch);
-    this.board = new Board(cw, ch);
+    // Configuración Base y Mapeo de Dificultad Dinámico
+    let pHeight = 130;
+    let bSpeed = 5.5;
+    this.targetScore = settings?.targetScore || 5;
+
+    // Solo afectamos parámetros de velocidad/pala en el entorno local offline
+    if (!this.isMultiplayer && settings) {
+      if (settings.difficulty === 'Intermediate') { pHeight = 90; bSpeed = 7.5; this.aiSpeedMod = 0.65; }
+      if (settings.difficulty === 'Expert') { pHeight = 60; bSpeed = 10; this.aiSpeedMod = 0.80; }
+    }
+
+    this.player1 = new Player(10, (this.canvas.height - pHeight) / 2, 'left', '#00F0FF');
+    this.player1.height = pHeight;
+    this.player2 = new Player(this.canvas.width - 26, (this.canvas.height - pHeight) / 2, 'right', '#FF003C');
+    this.player2.height = pHeight;
+    this.ball = new Ball(this.canvas.width, this.canvas.height, bSpeed);
+    this.board = new Board(this.canvas.width, this.canvas.height);
 
     // Vincula los métodos para asegurar que el contexto `this` se preserve en los eventos
     this.handleKeyDown = this.handleKeyDown.bind(this);
@@ -181,12 +200,11 @@ export class GameEngine {
       // Local Mode: Player 1 is an AI 
       // Si la pelota va hacia la paleta izquierda, intentamos seguirla.
       const paddleCenter = this.player1.y + this.player1.height / 2;
-      const aiSpeedMod = 0.55; // Velocidad del IA limitada al 55% para que sea batible
       if (this.ball.vx < 0) {
         if (this.ball.y < paddleCenter - 10) {
-          this.player1.update(-aiSpeedMod, this.canvas.height);
+          this.player1.update(-this.aiSpeedMod, this.canvas.height);
         } else if (this.ball.y > paddleCenter + 10) {
-          this.player1.update(aiSpeedMod, this.canvas.height);
+          this.player1.update(this.aiSpeedMod, this.canvas.height);
         }
       }
 

@@ -9,9 +9,10 @@ interface GameViewProps {
   multiplayerSide?: 'left' | 'right';
   roomId?: string;
   onStatusChange?: (finished: boolean) => void;
+  settings: { targetScore: number; difficulty: string };
 }
 
-const GameView: React.FC<GameViewProps> = ({ onExit, isMultiplayer, multiplayerSide, roomId, onStatusChange }) => {
+const GameView: React.FC<GameViewProps> = ({ onExit, isMultiplayer, multiplayerSide, roomId, onStatusChange, settings }) => {
   const { t } = useTranslation();
   const [matchStatus, setMatchStatus] = React.useState<'playing' | 'finished'>('playing');
   const [winner, setWinner] = React.useState<'left' | 'right' | null>(null);
@@ -70,7 +71,7 @@ const GameView: React.FC<GameViewProps> = ({ onExit, isMultiplayer, multiplayerS
   return (
     <div className="game-container" style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '1rem', width: '100%', flex: 1, padding: '10px 0' }}>
       <div className="glass-panel" style={{ position: 'relative', padding: '10px', display: 'flex', justifyContent: 'center', alignItems: 'center', width: '100%', maxWidth: '800px', overflow: 'hidden' }}>
-        <PongCanvas key={rematchCount} isMultiplayer={isMultiplayer} side={multiplayerSide} roomId={roomId} onMatchEnded={handleMatchEndedEngine} />
+        <PongCanvas key={rematchCount} isMultiplayer={isMultiplayer} side={multiplayerSide} roomId={roomId} onMatchEnded={handleMatchEndedEngine} settings={settings} />
         
         {matchStatus === 'finished' && winner && (
           <div style={{

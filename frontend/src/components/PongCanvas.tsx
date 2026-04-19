@@ -6,9 +6,10 @@ interface PongCanvasProps {
   side?: 'left' | 'right';
   roomId?: string;
   onMatchEnded?: (winner: 'left' | 'right') => void;
+  settings?: { targetScore: number; difficulty: string };
 }
 
-const PongCanvas: React.FC<PongCanvasProps> = ({ isMultiplayer, side, roomId, onMatchEnded }) => {
+const PongCanvas: React.FC<PongCanvasProps> = ({ isMultiplayer, side, roomId, onMatchEnded, settings }) => {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const engineRef = useRef<GameEngine | null>(null);
 
@@ -22,7 +23,7 @@ const PongCanvas: React.FC<PongCanvasProps> = ({ isMultiplayer, side, roomId, on
     canvas.width = 800;
     canvas.height = 600;
 
-    engineRef.current = new GameEngine(canvas, isMultiplayer, side, roomId, onMatchEnded);
+    engineRef.current = new GameEngine(canvas, isMultiplayer, side, roomId, onMatchEnded, settings);
     engineRef.current.start();
 
     // Clean up on unmount

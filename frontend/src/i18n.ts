@@ -24,7 +24,16 @@ const resources = {
       "Opponent disconnected or left! Match ended.": "Opponent disconnected or left! Match ended.",
       "WINNER": "WINNER",
       "NEW GAME": "NEW GAME",
-      "WAITING FOR OPPONENT": "WAITING FOR OPPONENT"
+      "WAITING FOR OPPONENT": "WAITING FOR OPPONENT",
+      "SETTINGS": "SETTINGS",
+      "TARGET SCORE": "TARGET SCORE",
+      "POINTS": "POINTS",
+      "LOCAL DIFFICULTY": "LOCAL DIFFICULTY",
+      "BEGINNER": "BEGINNER",
+      "INTERMEDIATE": "INTERMEDIATE",
+      "EXPERT": "EXPERT",
+      "SAVE": "SAVE",
+      "CANCEL": "CANCEL"
     }
   },
   es: {
@@ -48,7 +57,16 @@ const resources = {
       "Opponent disconnected or left! Match ended.": "¡El oponente se desconectó o abandonó! Fin de la partida.",
       "WINNER": "VENCEDOR",
       "NEW GAME": "NUEVA PARTIDA",
-      "WAITING FOR OPPONENT": "ESPERANDO RIVAL"
+      "WAITING FOR OPPONENT": "ESPERANDO RIVAL",
+      "SETTINGS": "CONFIGURACIÓN",
+      "TARGET SCORE": "PUNTUACIÓN OBJETIVO",
+      "POINTS": "PUNTOS",
+      "LOCAL DIFFICULTY": "DIFICULTAD LOCAL",
+      "BEGINNER": "PRINCIPIANTE",
+      "INTERMEDIATE": "INTERMEDIO",
+      "EXPERT": "EXPERTO",
+      "SAVE": "GUARDAR",
+      "CANCEL": "CANCELAR"
     }
   },
   it: {
@@ -72,7 +90,16 @@ const resources = {
       "Opponent disconnected or left! Match ended.": "Avversario disconnesso o uscito! Partita terminata.",
       "WINNER": "VINCITORE",
       "NEW GAME": "NUOVA PARTITA",
-      "WAITING FOR OPPONENT": "IN ATTESA DELL'AVVERSARIO"
+      "WAITING FOR OPPONENT": "IN ATTESA DELL'AVVERSARIO",
+      "SETTINGS": "IMPOSTAZIONI",
+      "TARGET SCORE": "PUNTEGGIO OBIETTIVO",
+      "POINTS": "PUNTI",
+      "LOCAL DIFFICULTY": "DIFFICOLTÀ LOCALE",
+      "BEGINNER": "PRINCIPIANTE",
+      "INTERMEDIATE": "INTERMEDIO",
+      "EXPERT": "ESPERTO",
+      "SAVE": "SALVA",
+      "CANCEL": "ANNULLA"
     }
   }
 };

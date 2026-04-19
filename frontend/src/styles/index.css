@@ -7,6 +7,7 @@
   --bg-blur: blur(12px);
   --accent-cyan: #00F0FF;
   --accent-magenta: #FF003C;
+  --accent-green: #00FF66;
   --accent-purple: #8A2BE2;
   --text-main: #FFFFFF;
   --text-muted: #8892B0;
@@ -57,7 +58,7 @@ h4 {
   background: var(--bg-panel);
   backdrop-filter: var(--bg-blur);
   -webkit-backdrop-filter: var(--bg-blur);
-  border: 1px solid rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.8);
   border-radius: 16px;
   box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.3);
 }
@@ -122,6 +123,20 @@ h4 {
 .btn-premium.secondary:hover {
   background: rgba(255, 0, 60, 0.1);
   box-shadow: var(--shadow-neon-magenta);
+}
+
+.btn-premium.tertiary {
+  border-color: var(--accent-green);
+  box-shadow: 0 0 10px rgba(0, 255, 102, 0.2);
+}
+
+.btn-premium.tertiary:hover {
+  background: rgba(0, 255, 102, 0.1);
+  box-shadow: 0 0 10px rgba(0, 255, 102, 0.5), 0 0 20px rgba(0, 255, 102, 0.3);
+}
+
+.btn-premium.tertiary::before {
+  background: linear-gradient(90deg, transparent, rgba(0, 255, 102, 0.4), transparent);
 }
 
 /* Layout */
