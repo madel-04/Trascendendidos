@@ -132,6 +132,11 @@ export class GameEngine {
    * Rastrea cuando se pulsa una tecla hacia abajo.
    */
   private handleKeyDown(e: KeyboardEvent): void {
+    // Evitar el comportamiento por defecto (ej. scroll) de las teclas de movimiento
+    if (['ArrowUp', 'ArrowDown', 'w', 's', 'W', 'S', ' '].includes(e.key)) {
+      e.preventDefault();
+    }
+    
     this.keysTracker[e.code] = true;
     this.keysTracker[e.key] = true;
     this.keysTracker[e.key.toLowerCase()] = true;

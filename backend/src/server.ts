@@ -29,7 +29,7 @@ const app = fastify(appOptions);
 
 // ─── CORS ─────────────────────────────────────────────────────────────────────
 app.register(cors, {
-  origin: process.env.FRONTEND_URL || 'https://localhost:5173',
+  origin: true, // Allow any origin during development (VM routing)
   credentials: true,
 });
 
@@ -52,7 +52,7 @@ app.ready((err) => {
     app.server,
     {
       cors: {
-        origin: process.env.FRONTEND_URL || 'https://localhost:5173',
+        origin: true,
         methods: ['GET', 'POST'],
         credentials: true,
       },

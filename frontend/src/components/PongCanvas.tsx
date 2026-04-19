@@ -34,6 +34,10 @@ const PongCanvas: React.FC<PongCanvasProps> = ({ isMultiplayer, side, roomId }) 
     <canvas 
       ref={canvasRef} 
       style={{ 
+        width: '100%',
+        maxWidth: '800px',
+        maxHeight: '55vh',
+        aspectRatio: '4 / 3',
         background: '#0a0a14', 
         borderRadius: '8px',
         boxShadow: 'inset 0 0 20px rgba(0,0,0,0.8)',

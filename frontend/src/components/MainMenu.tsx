@@ -27,9 +27,6 @@ const MainMenu: React.FC<MainMenuProps> = ({ onStartGame, onStartMultiplayer }) 
         <button className="btn-premium secondary" onClick={onStartMultiplayer}>
           {t('MULTIPLAYER')}
         </button>
-        <button className="btn-premium secondary" disabled style={{ opacity: 0.5, cursor: 'not-allowed' }}>
-          {t('LOGIN / REGISTER')}
-        </button>
       </div>
     </div>
   );

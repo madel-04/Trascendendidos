@@ -28,8 +28,8 @@ body {
   font-family: var(--font-main);
   background-color: var(--bg-dark);
   color: var(--text-main);
-  min-height: 100vh;
-  overflow-x: hidden;
+  height: 100vh;
+  overflow: hidden;
   background-image:
     radial-gradient(circle at 15% 50%, rgba(0, 240, 255, 0.08) 0%, transparent 50%),
     radial-gradient(circle at 85% 30%, rgba(255, 0, 60, 0.08) 0%, transparent 50%);
@@ -130,8 +130,8 @@ h4 {
   display: flex;
   flex-direction: column;
   align-items: center;
-  justify-content: center;
-  padding: 2rem;
+  padding: 1rem;
+  height: 100vh;
 }
 
 /* Header & Footer */
@@ -163,9 +163,8 @@ h4 {
   align-items: center;
   justify-content: center;
   gap: 1.5rem;
-  padding: 3rem;
-  min-width: 600px;
-  /* Increased from 400px to allow more space */
+  padding: 1.5rem;
+  width: 100%;
   max-width: 800px;
   /* Increased from 500px to fit the long title */
   margin: auto;
