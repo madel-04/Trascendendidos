@@ -2,13 +2,13 @@
 // Esta página contiene el canvas 3D con el juego Pong
 
 import { useCallback, useEffect, useMemo, useState } from "react";
+import { useTranslation } from "react-i18next";
 import { useSearchParams } from "react-router-dom";
 
 // Importamos el componente que renderiza la escena 3D con Three.js
 import ThreeCanvas from "../three/ThreeCanvas";
 import MainMenu from "../components/MainMenu";
 import GameView from "../components/GameView";
-import LanguageSwitcher from "../components/LanguageSwitcher";
 import Matchmaking from "../components/Matchmaking";
 import SettingsPanel from "../components/SettingsPanel";
 import { useAuth } from "../context/AuthContext";
@@ -42,13 +42,40 @@ type GameRoomStatus = {
   gameStarted: boolean;
 };
 
+type LocalControlMode = "keyboard" | "mouse";
+
+function KeyboardArrowsIcon() {
+  return (
+    <svg width="118" height="82" viewBox="0 0 118 82" role="img" aria-hidden="true" focusable="false">
+      <rect x="39" y="4" width="40" height="34" rx="8" fill="rgba(0,240,255,0.16)" stroke="currentColor" strokeWidth="2" />
+      <rect x="4" y="44" width="34" height="34" rx="8" fill="rgba(255,255,255,0.08)" stroke="currentColor" strokeWidth="2" />
+      <rect x="42" y="44" width="34" height="34" rx="8" fill="rgba(0,240,255,0.16)" stroke="currentColor" strokeWidth="2" />
+      <rect x="80" y="44" width="34" height="34" rx="8" fill="rgba(255,255,255,0.08)" stroke="currentColor" strokeWidth="2" />
+      <path d="M59 14l-9 12h18L59 14zM21 61l10-8v16l-10-8zM59 68l9-12H50l9 12zM97 61l-10-8v16l10-8z" fill="currentColor" />
+    </svg>
+  );
+}
+
+function MouseControlIcon() {
+  return (
+    <svg width="92" height="92" viewBox="0 0 92 92" role="img" aria-hidden="true" focusable="false">
+      <rect x="23" y="6" width="46" height="80" rx="23" fill="rgba(255,0,60,0.13)" stroke="currentColor" strokeWidth="3" />
+      <path d="M46 7v27" stroke="currentColor" strokeWidth="3" strokeLinecap="round" />
+      <rect x="41" y="17" width="10" height="18" rx="5" fill="currentColor" />
+      <path d="M18 74c-7-5-11-12-11-20M74 74c7-5 11-12 11-20" stroke="currentColor" strokeWidth="3" strokeLinecap="round" opacity="0.7" />
+    </svg>
+  );
+}
+
 export default function Play() {
   const [searchParams] = useSearchParams();
+  const { t } = useTranslation();
   const { token } = useAuth();
   const [roomStatus, setRoomStatus] = useState<GameRoomStatus | null>(null);
   const [isReady, setIsReady] = useState(false);
-  const [localView, setLocalView] = useState<"menu" | "game" | "lobby" | "settings">("menu");
+  const [localView, setLocalView] = useState<"menu" | "controls" | "game" | "lobby" | "settings">("menu");
   const [settings, setSettings] = useState({ targetScore: 5, difficulty: "Beginner" });
+  const [localControlMode, setLocalControlMode] = useState<LocalControlMode>("keyboard");
   const [isMatchFinished, setIsMatchFinished] = useState(false);
   const [multiplayerState, setMultiplayerState] = useState<{ roomId: string; side: "left" | "right" } | null>(null);
   const [loading, setLoading] = useState(false);
@@ -229,13 +256,12 @@ export default function Play() {
   if (!matchContext) {
     return (
       <div className="app-container">
-        <LanguageSwitcher />
         {localView === "menu" && (
           <MainMenu
             onStartGame={() => {
               setMultiplayerState(null);
               setIsMatchFinished(false);
-              setLocalView("game");
+              setLocalView("controls");
             }}
             onStartMultiplayer={() => {
               setMultiplayerState(null);
@@ -254,6 +280,51 @@ export default function Play() {
             }}
             onCancel={() => setLocalView("menu")}
           />
+        )}
+        {localView === "controls" && (
+          <div className="glass-panel" style={{ width: "min(100%, 720px)", padding: "clamp(1.25rem, 4vw, 2rem)", display: "grid", gap: "1.25rem", textAlign: "center" }}>
+            <div>
+              <h2 className="title-glow" style={{ marginBottom: 8 }}>{t("CHOOSE CONTROLS")}</h2>
+              <p style={{ color: "var(--text-muted)", margin: 0 }}>
+                {t("Choose how you want to move your paddle before starting the local match.")}
+              </p>
+            </div>
+            <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))", gap: 14 }}>
+              <button
+                className="btn-premium"
+                type="button"
+                style={{ display: "grid", justifyItems: "center", gap: 10, minHeight: 190, alignContent: "center" }}
+                onClick={() => {
+                  setLocalControlMode("keyboard");
+                  setLocalView("game");
+                }}
+              >
+                <KeyboardArrowsIcon />
+                <span>{t("ARROW KEYS")}</span>
+                <small style={{ color: "var(--text-muted)", letterSpacing: 0, textTransform: "none", fontFamily: "var(--font-main)", fontWeight: 400 }}>
+                  {t("Use the keyboard arrows to move up and down.")}
+                </small>
+              </button>
+              <button
+                className="btn-premium secondary"
+                type="button"
+                style={{ display: "grid", justifyItems: "center", gap: 10, minHeight: 190, alignContent: "center" }}
+                onClick={() => {
+                  setLocalControlMode("mouse");
+                  setLocalView("game");
+                }}
+              >
+                <MouseControlIcon />
+                <span>{t("MOUSE")}</span>
+                <small style={{ color: "var(--text-muted)", letterSpacing: 0, textTransform: "none", fontFamily: "var(--font-main)", fontWeight: 400 }}>
+                  {t("Move the mouse over the court to control the paddle.")}
+                </small>
+              </button>
+            </div>
+            <button className="btn-premium tertiary" type="button" onClick={() => setLocalView("menu")}>
+              {t("BACK")}
+            </button>
+          </div>
         )}
         {localView === "lobby" && (
           <Matchmaking
@@ -277,6 +348,7 @@ export default function Play() {
             roomId={multiplayerState?.roomId}
             onStatusChange={setIsMatchFinished}
             settings={settings}
+            localControlMode={localControlMode}
           />
         )}
       </div>

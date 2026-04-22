@@ -34,6 +34,8 @@ const activeMatches = new Map<string, {
   right: string;
   rematchLeft: boolean;
   rematchRight: boolean;
+  scoreLeft: number;
+  scoreRight: number;
   leftUserId?: number;
   rightUserId?: number;
 }>();
@@ -41,11 +43,17 @@ const activeMatches = new Map<string, {
 // ─── Match registry helpers ───────────────────────────────────────────────────
 
 function registerMatch(roomId: string, leftId: string, rightId: string, leftUserId?: number, rightUserId?: number): void {
-  activeMatches.set(roomId, { left: leftId, right: rightId, rematchLeft: false, rematchRight: false, leftUserId, rightUserId });
+  activeMatches.set(roomId, { left: leftId, right: rightId, rematchLeft: false, rematchRight: false, scoreLeft: 0, scoreRight: 0, leftUserId, rightUserId });
   console.log(`[Match] Registered: ${roomId} | left=${leftId} right=${rightId}`);
 }
 
-async function persistMatchResult(roomId: string, reason: MatchEndedPayload['reason'], winner: MatchEndedPayload['winner']): Promise<void> {
+async function persistMatchResult(
+  roomId: string,
+  reason: MatchEndedPayload['reason'],
+  winner: MatchEndedPayload['winner'],
+  scoreLeft = 0,
+  scoreRight = 0,
+): Promise<void> {
   const [room] = await query<{ room_id: string; player1_id: number; player2_id: number }>(
     `SELECT room_id, player1_id, player2_id FROM game_rooms WHERE room_id = $1 LIMIT 1`,
     [roomId]
@@ -61,12 +69,14 @@ async function persistMatchResult(roomId: string, reason: MatchEndedPayload['rea
 
   await query(
     `INSERT INTO game_matches (room_id, player1_id, player2_id, winner_id, reason, player1_score, player2_score, created_at, ended_at)
-     VALUES ($1, $2, $3, $4, $5, 0, 0, NOW(), NOW())
+     VALUES ($1, $2, $3, $4, $5, $6, $7, NOW(), NOW())
      ON CONFLICT (room_id) DO UPDATE SET
        winner_id = EXCLUDED.winner_id,
        reason = EXCLUDED.reason,
+       player1_score = EXCLUDED.player1_score,
+       player2_score = EXCLUDED.player2_score,
        ended_at = EXCLUDED.ended_at`,
-    [room.room_id, room.player1_id, room.player2_id, winnerId, reason]
+    [room.room_id, room.player1_id, room.player2_id, winnerId, reason, scoreLeft, scoreRight]
   );
 }
 
@@ -108,7 +118,7 @@ function terminateMatch(
   activeMatches.delete(roomId);
   console.log(`[Match] Removed ${roomId} from registry`);
 
-  void persistMatchResult(roomId, reason, winner).catch((error) => {
+  void persistMatchResult(roomId, reason, winner, match.scoreLeft, match.scoreRight).catch((error) => {
     console.error(`[Match] Failed to persist result for ${roomId}`, error);
   });
 }
@@ -233,15 +243,26 @@ export function registerSocketHandlers(io: IoServer): void {
     socket.on('score_update', (payload) => {
       const roomId = socket.data.roomId;
       if (!roomId) return;
+      const match = activeMatches.get(roomId);
+      if (match) {
+        match.scoreLeft = payload.left;
+        match.scoreRight = payload.right;
+      }
       socket.to(roomId).emit('score_update', payload);
     });
 
-    socket.on('game_over', (payload: { winner: 'left' | 'right' }) => {
+    socket.on('game_over', (payload) => {
       const roomId = socket.data.roomId;
       if (!roomId) return;
 
+      const match = activeMatches.get(roomId);
+      if (match) {
+        match.scoreLeft = payload.left;
+        match.scoreRight = payload.right;
+      }
+
       io.to(roomId).emit('match_ended', { reason: 'completed', winner: payload.winner });
-      void persistMatchResult(roomId, 'completed', payload.winner).catch((error) => {
+      void persistMatchResult(roomId, 'completed', payload.winner, payload.left, payload.right).catch((error) => {
         console.error(`[Match] Failed to persist completed result for ${roomId}`, error);
       });
     });

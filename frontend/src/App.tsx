@@ -10,12 +10,14 @@ import Login from "./pages/Login";
 import Register from "./pages/Register";
 import Profile from "./pages/Profile";
 import Tournament from "./pages/Tournament";
+import LanguageSwitcher from "./components/LanguageSwitcher";
 // Importamos el componente de ruta protegida
 import ProtectedRoute from "./components/ProtectedRoute";
 // Importamos el contexto de autenticación
 import { useAuth } from "./context/AuthContext";
 // Importamos hooks de React para manejar efectos y estado
 import { useEffect, useState } from "react";
+import { useTranslation } from "react-i18next";
 
 // Obtenemos la URL base de la API desde las variables de entorno de Vite
 // import.meta.env → Variables de entorno disponibles en Vite
@@ -41,6 +43,7 @@ type AppNotification = {
 
 export default function App() {
   const { user, logout, isLoading } = useAuth();
+  const { t } = useTranslation();
   // Estado para almacenar la respuesta del health check del backend
   // Inicialmente muestra "(loading)" mientras espera la respuesta
   const [health, setHealth] = useState<string>("(loading)");
@@ -74,13 +77,13 @@ export default function App() {
         if (payload?.channel !== "social") return;
 
         const messages: Record<string, string> = {
-          friend_request_received: "Nueva solicitud de amistad",
-          friend_request_accepted: "Aceptaron tu solicitud de amistad",
-          friend_request_rejected: "Rechazaron tu solicitud de amistad",
-          chat_message_received: "Nuevo mensaje de chat",
-          match_invite_received: "Nueva invitacion de partida",
-          match_invite_accepted: "Aceptaron tu invitacion de partida",
-          match_invite_rejected: "Rechazaron tu invitacion de partida",
+          friend_request_received: t("FRIEND_REQUEST_RECEIVED"),
+          friend_request_accepted: t("FRIEND_REQUEST_ACCEPTED"),
+          friend_request_rejected: t("FRIEND_REQUEST_REJECTED"),
+          chat_message_received: t("CHAT_MESSAGE_RECEIVED"),
+          match_invite_received: t("MATCH_INVITE_RECEIVED"),
+          match_invite_accepted: t("MATCH_INVITE_ACCEPTED"),
+          match_invite_rejected: t("MATCH_INVITE_REJECTED"),
         };
 
         if (!messages[payload.event]) return;
@@ -101,7 +104,7 @@ export default function App() {
     return () => {
       ws.close();
     };
-  }, [user]);
+  }, [user, t]);
 
   // Mostrar loading mientras se verifica autenticación
   if (isLoading) {
@@ -109,7 +112,7 @@ export default function App() {
       <div className="app-shell">
         <div className="app-frame">
           <div className="content-wrap">
-            <p>Cargando...</p>
+            <p>{t("LOADING")}</p>
           </div>
         </div>
       </div>
@@ -120,22 +123,22 @@ export default function App() {
     <div className="app-shell">
       <div className="app-frame">
         <header className="topbar">
-          <Link className="nav-link" to="/">Home</Link>
-          <Link className="nav-link" to="/play">Play</Link>
-          {user ? <Link className="nav-link" to="/tournament">Tournament</Link> : null}
+          <Link className="nav-link" to="/">{t("HOME")}</Link>
+          <Link className="nav-link" to="/play">{t("PLAY")}</Link>
+          {user ? <Link className="nav-link" to="/tournament">{t("TOURNAMENT")}</Link> : null}
 
           <div className="user-strip">
             {user ? (
               <>
                 <div className="notif-wrap">
                   <button className="notif-btn" onClick={() => setNotifOpen((v) => !v)} type="button">
-                    Notifs
+                    {t("NOTIFS")}
                     {notifications.length > 0 && <span className="notif-badge">{notifications.length}</span>}
                   </button>
                   {notifOpen && (
                     <div className="notif-panel">
                       {notifications.length === 0 ? (
-                        <div className="notif-item">Sin notificaciones</div>
+                        <div className="notif-item">{t("NO_NOTIFICATIONS")}</div>
                       ) : (
                         notifications.map((notif) => (
                           <div key={notif.id} className="notif-item">{notif.text}</div>
@@ -144,8 +147,9 @@ export default function App() {
                     </div>
                   )}
                 </div>
-                <Link className="nav-link" to="/profile">Perfil: {user.username}</Link>
-                <button className="btn btn-outline" onClick={logout}>Logout</button>
+                <LanguageSwitcher />
+                <Link className="nav-link" to="/profile">{t("PROFILE")}: {user.username}</Link>
+                <button className="btn btn-outline" onClick={logout}>{t("LOGOUT")}</button>
               </>
             ) : (
               <>
@@ -165,32 +169,32 @@ export default function App() {
                   <article className="hero-card">
                     <h1 className="hero-title">Trascendence Arena</h1>
                     <p>
-                      Plataforma de Pong con autenticacion, seguridad y sistema social para competir con amigos.
+                      {t("HOME_INTRO")}
                     </p>
                     <p>
-                      Estado backend:
+                      {t("BACKEND_STATUS")}:
                       {" "}
                       <span className="status-pill">{health}</span>
                     </p>
                     {user ? (
-                      <p>Bienvenido {user.username}. Puedes ir a Play o gestionar tu perfil social.</p>
+                      <p>{t("HOME_WELCOME", { username: user.username })}</p>
                     ) : (
-                      <p>Inicia sesion para desbloquear juego, perfil, amigos y notificaciones en tiempo real.</p>
+                      <p>{t("HOME_LOGIN_HINT")}</p>
                     )}
                   </article>
 
                   <aside className="grid-cards">
                     <div className="feature-card">
-                      <h3>Autenticacion segura</h3>
-                      <p>Login con JWT, 2FA opcional y gestion de sesion protegida.</p>
+                      <h3>{t("SECURE_AUTH")}</h3>
+                      <p>{t("SECURE_AUTH_DESC")}</p>
                     </div>
                     <div className="feature-card">
-                      <h3>Social realtime</h3>
-                      <p>Solicitudes de amistad y bloqueos con actualizacion en vivo.</p>
+                      <h3>{t("SOCIAL_REALTIME")}</h3>
+                      <p>{t("SOCIAL_REALTIME_DESC")}</p>
                     </div>
                     <div className="feature-card">
-                      <h3>Control de perfil</h3>
-                      <p>Edita datos personales, avatar y seguridad desde una sola vista.</p>
+                      <h3>{t("PROFILE_CONTROL")}</h3>
+                      <p>{t("PROFILE_CONTROL_DESC")}</p>
                     </div>
                   </aside>
                 </section>
@@ -232,9 +236,9 @@ export default function App() {
         <footer className="footer">
           <div>Transcendence Project</div>
           <div>
-            <Link to="/privacy">Privacy Policy</Link>
+            <Link to="/privacy">{t("Privacy Policy")}</Link>
             {" · "}
-            <Link to="/terms">Terms of Service</Link>
+            <Link to="/terms">{t("Terms of Service")}</Link>
           </div>
         </footer>
       </div>

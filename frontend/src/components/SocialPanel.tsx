@@ -1,5 +1,6 @@
 import { FormEvent, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
+import { useTranslation } from "react-i18next";
 
 const API = import.meta.env.VITE_API_BASE ?? "http://localhost:3000";
 
@@ -98,6 +99,7 @@ function displayUserName(user: PublicUser): string {
 }
 
 export default function SocialPanel({ token }: { token: string | null }) {
+  const { t } = useTranslation();
   const navigate = useNavigate();
   const [overview, setOverview] = useState<SocialOverview>(EMPTY_OVERVIEW);
   const [loading, setLoading] = useState(false);
@@ -642,7 +644,7 @@ export default function SocialPanel({ token }: { token: string | null }) {
   return (
     <div style={{ border: "1px solid rgba(255, 255, 255, 0.16)", padding: 20, marginBottom: 30, display: "grid", gap: 16 }}>
       <h2 style={{ margin: 0, fontSize: 14, textTransform: "uppercase", letterSpacing: "0.5px", color: "var(--ink-muted)" }}>
-        Social
+        {t("SOCIAL")}
       </h2>
 
       {message && (
@@ -660,7 +662,7 @@ export default function SocialPanel({ token }: { token: string | null }) {
       )}
 
       <form onSubmit={sendFriendRequest} style={{ display: "grid", gap: 8 }}>
-        <label style={{ fontSize: 13, color: "var(--ink-muted)" }}>Enviar solicitud de amistad por username</label>
+        <label style={{ fontSize: 13, color: "var(--ink-muted)" }}>{t("FRIEND_REQUEST_BY_USERNAME")}</label>
         <div style={{ display: "flex", gap: 8 }}>
           <input
             value={friendUsername}
@@ -674,13 +676,13 @@ export default function SocialPanel({ token }: { token: string | null }) {
             disabled={actionLoading || friendUsername.trim().length < 3}
             style={{ padding: "10px 14px", border: "1px solid rgba(0, 240, 255, 0.55)", backgroundColor: "rgba(0, 240, 255, 0.18)", color: "#9ef8ff", cursor: "pointer" }}
           >
-            Enviar
+            {t("SEND")}
           </button>
         </div>
       </form>
 
       <form onSubmit={blockUser} style={{ display: "grid", gap: 8 }}>
-        <label style={{ fontSize: 13, color: "var(--ink-muted)" }}>Bloquear usuario por username</label>
+        <label style={{ fontSize: 13, color: "var(--ink-muted)" }}>{t("BLOCK_USER_BY_USERNAME")}</label>
         <div style={{ display: "flex", gap: 8 }}>
           <input
             value={blockUsername}
@@ -694,13 +696,13 @@ export default function SocialPanel({ token }: { token: string | null }) {
             disabled={actionLoading || blockUsername.trim().length < 3}
             style={{ padding: "10px 14px", border: "1px solid rgba(255, 255, 255, 0.16)", backgroundColor: "rgba(8, 10, 20, 0.86)", color: "var(--ink-strong)", cursor: "pointer" }}
           >
-            Bloquear
+            {t("BLOCK")}
           </button>
         </div>
       </form>
 
       <form onSubmit={sendMatchInvite} style={{ display: "grid", gap: 8 }}>
-        <label style={{ fontSize: 13, color: "var(--ink-muted)" }}>Invitar amigo a nueva partida</label>
+        <label style={{ fontSize: 13, color: "var(--ink-muted)" }}>{t("INVITE_FRIEND_TO_MATCH")}</label>
         <div style={{ display: "flex", gap: 8 }}>
           <input
             value={inviteUsername}
@@ -714,15 +716,15 @@ export default function SocialPanel({ token }: { token: string | null }) {
             disabled={actionLoading || inviteUsername.trim().length < 3}
             style={{ padding: "10px 14px", border: "1px solid rgba(0, 240, 255, 0.55)", backgroundColor: "rgba(0, 240, 255, 0.18)", color: "#9ef8ff", cursor: "pointer" }}
           >
-            Invitar
+            {t("INVITE")}
           </button>
         </div>
       </form>
 
       <section>
-        <h3 style={{ margin: "8px 0", fontSize: 13, color: "var(--ink-strong)" }}>Notificaciones en tiempo real</h3>
+        <h3 style={{ margin: "8px 0", fontSize: 13, color: "var(--ink-strong)" }}>{t("REALTIME_NOTIFICATIONS")}</h3>
         {notifications.length === 0 ? (
-          <p style={{ margin: 0, fontSize: 13, color: "var(--ink-muted)" }}>Aun no tienes notificaciones.</p>
+          <p style={{ margin: 0, fontSize: 13, color: "var(--ink-muted)" }}>{t("NO_REALTIME_NOTIFICATIONS")}</p>
         ) : (
           <div style={{ display: "grid", gap: 6, maxHeight: 180, overflowY: "auto" }}>
             {notifications.map((item) => (
@@ -736,11 +738,11 @@ export default function SocialPanel({ token }: { token: string | null }) {
 
       <div style={{ display: "grid", gap: 12 }}>
         <section>
-          <h3 style={{ margin: "8px 0", fontSize: 13, color: "var(--ink-strong)" }}>Solicitudes recibidas</h3>
+          <h3 style={{ margin: "8px 0", fontSize: 13, color: "var(--ink-strong)" }}>{t("INCOMING_REQUESTS")}</h3>
           {loading ? (
-            <p style={{ margin: 0, fontSize: 13, color: "var(--ink-muted)" }}>Cargando...</p>
+            <p style={{ margin: 0, fontSize: 13, color: "var(--ink-muted)" }}>{t("LOADING")}</p>
           ) : overview.incomingRequests.length === 0 ? (
-            <p style={{ margin: 0, fontSize: 13, color: "var(--ink-muted)" }}>No hay solicitudes pendientes.</p>
+            <p style={{ margin: 0, fontSize: 13, color: "var(--ink-muted)" }}>{t("NO_PENDING_REQUESTS")}</p>
           ) : (
             <div style={{ display: "grid", gap: 8 }}>
               {overview.incomingRequests.map((item) => (
@@ -753,7 +755,7 @@ export default function SocialPanel({ token }: { token: string | null }) {
                       disabled={actionLoading}
                       style={{ padding: "6px 10px", border: "1px solid rgba(0, 240, 255, 0.55)", background: "rgba(0, 240, 255, 0.18)", color: "#9ef8ff", cursor: "pointer", fontSize: 12 }}
                     >
-                      Aceptar
+                      {t("ACCEPT")}
                     </button>
                     <button
                       type="button"
@@ -761,7 +763,7 @@ export default function SocialPanel({ token }: { token: string | null }) {
                       disabled={actionLoading}
                       style={{ padding: "6px 10px", border: "1px solid rgba(255, 255, 255, 0.16)", background: "rgba(8, 10, 20, 0.86)", color: "var(--ink-strong)", cursor: "pointer", fontSize: 12 }}
                     >
-                      Rechazar
+                      {t("REJECT")}
                     </button>
                   </div>
                 </div>
@@ -771,9 +773,9 @@ export default function SocialPanel({ token }: { token: string | null }) {
         </section>
 
         <section>
-          <h3 style={{ margin: "8px 0", fontSize: 13, color: "var(--ink-strong)" }}>Invitaciones de partida recibidas</h3>
+          <h3 style={{ margin: "8px 0", fontSize: 13, color: "var(--ink-strong)" }}>{t("MATCH_INVITES_RECEIVED")}</h3>
           {incomingInvites.filter((item) => item.status === "pending").length === 0 ? (
-            <p style={{ margin: 0, fontSize: 13, color: "var(--ink-muted)" }}>No hay invitaciones pendientes.</p>
+            <p style={{ margin: 0, fontSize: 13, color: "var(--ink-muted)" }}>{t("NO_PENDING_INVITES")}</p>
           ) : (
             <div style={{ display: "grid", gap: 8 }}>
               {incomingInvites.filter((item) => item.status === "pending").map((item) => (
@@ -786,7 +788,7 @@ export default function SocialPanel({ token }: { token: string | null }) {
                       disabled={actionLoading}
                       style={{ padding: "6px 10px", border: "1px solid rgba(0, 240, 255, 0.55)", background: "rgba(0, 240, 255, 0.18)", color: "#9ef8ff", cursor: "pointer", fontSize: 12 }}
                     >
-                      Aceptar
+                      {t("ACCEPT")}
                     </button>
                     <button
                       type="button"
@@ -794,7 +796,7 @@ export default function SocialPanel({ token }: { token: string | null }) {
                       disabled={actionLoading}
                       style={{ padding: "6px 10px", border: "1px solid rgba(255, 255, 255, 0.16)", background: "rgba(8, 10, 20, 0.86)", color: "var(--ink-strong)", cursor: "pointer", fontSize: 12 }}
                     >
-                      Rechazar
+                      {t("REJECT")}
                     </button>
                   </div>
                 </div>
@@ -804,9 +806,9 @@ export default function SocialPanel({ token }: { token: string | null }) {
         </section>
 
         <section>
-          <h3 style={{ margin: "8px 0", fontSize: 13, color: "var(--ink-strong)" }}>Invitaciones enviadas</h3>
+          <h3 style={{ margin: "8px 0", fontSize: 13, color: "var(--ink-strong)" }}>{t("MATCH_INVITES_SENT")}</h3>
           {outgoingInvites.filter((item) => item.status === "pending").length === 0 ? (
-            <p style={{ margin: 0, fontSize: 13, color: "var(--ink-muted)" }}>No hay invitaciones enviadas pendientes.</p>
+            <p style={{ margin: 0, fontSize: 13, color: "var(--ink-muted)" }}>{t("NO_SENT_INVITES")}</p>
           ) : (
             <div style={{ display: "grid", gap: 8 }}>
               {outgoingInvites.filter((item) => item.status === "pending").map((item) => (
@@ -819,10 +821,10 @@ export default function SocialPanel({ token }: { token: string | null }) {
         </section>
 
         <section>
-          <h3 style={{ margin: "8px 0", fontSize: 13, color: "var(--ink-strong)" }}>Chat en tiempo real</h3>
+          <h3 style={{ margin: "8px 0", fontSize: 13, color: "var(--ink-strong)" }}>{t("REALTIME_CHAT")}</h3>
           <div style={{ display: "flex", gap: 8, marginBottom: 8, flexWrap: "wrap" }}>
             {friendUsernames.length === 0 ? (
-              <span style={{ fontSize: 13, color: "var(--ink-muted)" }}>Agrega amigos para iniciar chat.</span>
+              <span style={{ fontSize: 13, color: "var(--ink-muted)" }}>{t("ADD_FRIENDS_TO_CHAT")}</span>
             ) : (
               friendUsernames.map((username) => (
                 <button
@@ -862,7 +864,7 @@ export default function SocialPanel({ token }: { token: string | null }) {
                         fontSize: 11,
                       }}
                     >
-                      👤 Perfil
+                      👤 {t("PROFILE")}
                     </button>
                     <button
                       type="button"
@@ -877,7 +879,7 @@ export default function SocialPanel({ token }: { token: string | null }) {
                         fontSize: 11,
                       }}
                     >
-                      🎮 Invitar
+                      🎮 {t("INVITE")}
                     </button>
                     <button
                       type="button"
@@ -892,7 +894,7 @@ export default function SocialPanel({ token }: { token: string | null }) {
                         fontSize: 11,
                       }}
                     >
-                      🚫 Bloquear
+                      🚫 {t("BLOCK")}
                     </button>
                   </div>
                 </div>
@@ -902,14 +904,14 @@ export default function SocialPanel({ token }: { token: string | null }) {
                     {activeChatFriend.avatarUrl ? (
                       <p style={{ margin: "4px 0 0", fontSize: 11, color: "var(--ink-muted)" }}>{activeChatFriend.avatarUrl}</p>
                     ) : (
-                      <p style={{ margin: "4px 0 0", fontSize: 11, color: "var(--ink-muted)" }}>Sin avatar configurado</p>
+                      <p style={{ margin: "4px 0 0", fontSize: 11, color: "var(--ink-muted)" }}>{t("NO_AVATAR")}</p>
                     )}
                   </div>
                 )}
                 {chatLoading ? (
-                  <p style={{ margin: 0, fontSize: 13, color: "var(--ink-muted)" }}>Cargando conversacion...</p>
+                  <p style={{ margin: 0, fontSize: 13, color: "var(--ink-muted)" }}>{t("LOADING_CONVERSATION")}</p>
                 ) : chatMessages.length === 0 ? (
-                  <p style={{ margin: 0, fontSize: 13, color: "var(--ink-muted)" }}>Sin mensajes aun.</p>
+                  <p style={{ margin: 0, fontSize: 13, color: "var(--ink-muted)" }}>{t("NO_MESSAGES")}</p>
                 ) : (
                   <div style={{ display: "grid", gap: 6 }}>
                     {chatMessages.map((msg) => {
@@ -922,7 +924,7 @@ export default function SocialPanel({ token }: { token: string | null }) {
                           </div>
                           {readInfo?.readAt ? (
                             <p style={{ margin: "4px 0 0", fontSize: 10, color: "var(--ink-muted)" }}>
-                              Leido: {new Date(readInfo.readAt).toLocaleTimeString()}
+                              {t("READ")}: {new Date(readInfo.readAt).toLocaleTimeString()}
                             </p>
                           ) : null}
                         </div>
@@ -932,7 +934,7 @@ export default function SocialPanel({ token }: { token: string | null }) {
                 )}
                 {typingUsers.has(chatTarget) && (
                   <p style={{ margin: "8px 0 0", fontSize: 11, color: "#9ef8ff", fontStyle: "italic" }}>
-                    @{chatTarget} está escribiendo...
+                    @{chatTarget} {t("IS_TYPING")}
                   </p>
                 )}
               </div>
@@ -940,7 +942,7 @@ export default function SocialPanel({ token }: { token: string | null }) {
                 <input
                   value={chatInput}
                   onChange={(e) => void handleChatInputChange(e.target.value)}
-                  placeholder={`Mensaje para @${chatTarget}`}
+                  placeholder={t("MESSAGE_FOR", { username: chatTarget })}
                   style={{ flex: 1, padding: 10, border: "1px solid rgba(255, 255, 255, 0.16)", backgroundColor: "rgba(8, 10, 20, 0.86)" }}
                 />
                 <button
@@ -948,7 +950,7 @@ export default function SocialPanel({ token }: { token: string | null }) {
                   disabled={actionLoading || !chatInput.trim()}
                   style={{ padding: "10px 14px", border: "1px solid rgba(0, 240, 255, 0.55)", backgroundColor: "rgba(0, 240, 255, 0.18)", color: "#9ef8ff", cursor: "pointer" }}
                 >
-                  Enviar
+                  {t("SEND")}
                 </button>
               </form>
             </>
@@ -956,9 +958,9 @@ export default function SocialPanel({ token }: { token: string | null }) {
         </section>
 
         <section>
-          <h3 style={{ margin: "8px 0", fontSize: 13, color: "var(--ink-strong)" }}>Solicitudes enviadas</h3>
+          <h3 style={{ margin: "8px 0", fontSize: 13, color: "var(--ink-strong)" }}>{t("OUTGOING_REQUESTS")}</h3>
           {overview.outgoingRequests.length === 0 ? (
-            <p style={{ margin: 0, fontSize: 13, color: "var(--ink-muted)" }}>No hay solicitudes enviadas pendientes.</p>
+            <p style={{ margin: 0, fontSize: 13, color: "var(--ink-muted)" }}>{t("NO_PENDING_REQUESTS")}</p>
           ) : (
             <div style={{ display: "grid", gap: 8 }}>
               {overview.outgoingRequests.map((item) => (
@@ -971,9 +973,9 @@ export default function SocialPanel({ token }: { token: string | null }) {
         </section>
 
         <section>
-          <h3 style={{ margin: "8px 0", fontSize: 13, color: "var(--ink-strong)" }}>Amigos</h3>
+          <h3 style={{ margin: "8px 0", fontSize: 13, color: "var(--ink-strong)" }}>{t("FRIENDS")}</h3>
           {overview.friends.length === 0 ? (
-            <p style={{ margin: 0, fontSize: 13, color: "var(--ink-muted)" }}>Aun no tienes amigos.</p>
+            <p style={{ margin: 0, fontSize: 13, color: "var(--ink-muted)" }}>{t("NO_FRIENDS")}</p>
           ) : (
             <div style={{ display: "grid", gap: 8 }}>
               {overview.friends.map((item) => (
@@ -985,7 +987,7 @@ export default function SocialPanel({ token }: { token: string | null }) {
                     disabled={actionLoading}
                     style={{ padding: "6px 10px", border: "1px solid rgba(255, 255, 255, 0.16)", background: "rgba(8, 10, 20, 0.86)", color: "var(--ink-strong)", cursor: "pointer", fontSize: 12 }}
                   >
-                    Bloquear
+                    {t("BLOCK")}
                   </button>
                 </div>
               ))}
@@ -994,9 +996,9 @@ export default function SocialPanel({ token }: { token: string | null }) {
         </section>
 
         <section>
-          <h3 style={{ margin: "8px 0", fontSize: 13, color: "var(--ink-strong)" }}>Bloqueados</h3>
+          <h3 style={{ margin: "8px 0", fontSize: 13, color: "var(--ink-strong)" }}>{t("BLOCKED")}</h3>
           {overview.blocks.length === 0 ? (
-            <p style={{ margin: 0, fontSize: 13, color: "var(--ink-muted)" }}>No hay usuarios bloqueados.</p>
+            <p style={{ margin: 0, fontSize: 13, color: "var(--ink-muted)" }}>{t("NO_BLOCKED_USERS")}</p>
           ) : (
             <div style={{ display: "grid", gap: 8 }}>
               {overview.blocks.map((item) => (
@@ -1008,7 +1010,7 @@ export default function SocialPanel({ token }: { token: string | null }) {
                     disabled={actionLoading}
                     style={{ padding: "6px 10px", border: "1px solid rgba(0, 240, 255, 0.55)", background: "rgba(0, 240, 255, 0.18)", color: "#9ef8ff", cursor: "pointer", fontSize: 12 }}
                   >
-                    Desbloquear
+                    {t("UNBLOCK")}
                   </button>
                 </div>
               ))}

@@ -188,32 +188,6 @@ h4 {
   margin: 0 auto;
 }
 
-.language-switcher {
-  display: flex;
-  justify-content: center;
-  gap: 0.75rem;
-  width: 100%;
-}
-
-.language-switcher button {
-  min-width: 44px;
-  min-height: 36px;
-  padding: 6px 10px;
-  border: 1px solid rgba(255, 255, 255, 0.14);
-  border-radius: 999px;
-  background: rgba(8, 10, 20, 0.72);
-  color: #ffffff;
-  cursor: pointer;
-  font-weight: 800;
-  letter-spacing: 0;
-}
-
-.language-switcher button.active {
-  border-color: var(--accent-cyan);
-  box-shadow: var(--shadow-neon);
-  color: #ffffff;
-}
-
 .matchmaking-panel {
   width: min(100%, 900px);
   min-height: 320px;
