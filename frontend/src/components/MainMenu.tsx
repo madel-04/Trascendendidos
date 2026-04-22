@@ -1,5 +1,7 @@
 import React from 'react';
+import { Link } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
+import { useAuth } from '../context/AuthContext';
 
 interface MainMenuProps {
   onStartGame: () => void;
@@ -7,6 +9,8 @@ interface MainMenuProps {
 
 const MainMenu: React.FC<MainMenuProps> = ({ onStartGame }) => {
   const { t } = useTranslation();
+  const { user } = useAuth();
+
   return (
     <div className="glass-panel main-menu">
       <h1 className="title-glow">{'42 MADRID - PONG'}</h1>
@@ -26,9 +30,15 @@ const MainMenu: React.FC<MainMenuProps> = ({ onStartGame }) => {
         <button className="btn-premium secondary" disabled style={{ opacity: 0.5, cursor: 'not-allowed' }}>
           {t('MULTIPLAYER (COMING SOON)')}
         </button>
-        <button className="btn-premium secondary" disabled style={{ opacity: 0.5, cursor: 'not-allowed' }}>
-          {t('LOGIN / REGISTER')}
-        </button>
+        {user ? (
+          <Link to="/profile" className="btn-premium secondary" style={{ textAlign: 'center', textDecoration: 'none' }}>
+            👤 {user.username} — {t('Profile')}
+          </Link>
+        ) : (
+          <Link to="/login" className="btn-premium secondary" style={{ textAlign: 'center', textDecoration: 'none' }}>
+            {t('LOGIN / REGISTER')}
+          </Link>
+        )}
       </div>
     </div>
   );
