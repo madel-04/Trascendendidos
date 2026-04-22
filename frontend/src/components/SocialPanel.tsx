@@ -1,6 +1,7 @@
 import { FormEvent, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useTranslation } from "react-i18next";
+import { useAuth } from "../context/AuthContext";
 
 const API = import.meta.env.VITE_API_BASE ?? "http://localhost:3000";
 
@@ -100,6 +101,7 @@ function displayUserName(user: PublicUser): string {
 
 export default function SocialPanel({ token }: { token: string | null }) {
   const { t } = useTranslation();
+  const { user } = useAuth();
   const navigate = useNavigate();
   const [overview, setOverview] = useState<SocialOverview>(EMPTY_OVERVIEW);
   const [loading, setLoading] = useState(false);
@@ -259,6 +261,19 @@ export default function SocialPanel({ token }: { token: string | null }) {
         }
 
         if (
+          payload.event === "match_invite_accepted" &&
+          typeof payload.data?.roomId === "string" &&
+          typeof payload.data?.opponentUsername === "string"
+        ) {
+          const params = new URLSearchParams({
+            roomId: payload.data.roomId,
+            opponent: payload.data.opponentUsername,
+            source: "invite",
+          });
+          navigate(`/play?${params.toString()}`);
+        }
+
+        if (
           payload.event === "typing_indicator" &&
           typeof payload.data?.fromUsername === "string" &&
           payload.data.fromUsername === chatTarget
@@ -315,7 +330,7 @@ export default function SocialPanel({ token }: { token: string | null }) {
     return () => {
       ws.close();
     };
-  }, [chatTarget, fetchInvites, fetchOverview, loadConversation, pushNotification, token]);
+  }, [chatTarget, fetchInvites, fetchOverview, loadConversation, navigate, pushNotification, token]);
 
   const sendFriendRequest = async (event: FormEvent) => {
     event.preventDefault();
@@ -916,8 +931,13 @@ export default function SocialPanel({ token }: { token: string | null }) {
                   <div style={{ display: "grid", gap: 6 }}>
                     {chatMessages.map((msg) => {
                       const readInfo = readReceipts.get(msg.id);
+                      const sentByMe = msg.fromUserId === user?.id;
+                      const senderLabel = sentByMe ? "Tu" : `@${chatTarget}`;
                       return (
                         <div key={msg.id} style={{ border: "1px solid rgba(0, 240, 255, 0.1)", padding: 8, fontSize: 12 }}>
+                          <div style={{ marginBottom: 4, color: sentByMe ? "#9ef8ff" : "var(--ink-muted)", fontSize: 11, fontWeight: 700 }}>
+                            {senderLabel}
+                          </div>
                           <div style={{ display: "flex", justifyContent: "space-between", gap: 8 }}>
                             <span>{msg.content}</span>
                             <span style={{ color: readInfo ? "#9ef8ff" : "var(--ink-muted)", fontSize: 10 }}>✓</span>

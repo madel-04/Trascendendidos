@@ -44,6 +44,7 @@ export interface ServerToClientEvents {
   match_ended:           (payload: MatchEndedPayload) => void; // formal match termination
   waiting_for_opponent:  () => void;
   returned_to_lobby:     () => void;       // tells client it can re-queue
+  returned_to_home:      () => void;
   restart_match:         () => void;
   matchmaking_error:     (payload: { message: string }) => void;
   // Advanced chat features
@@ -55,12 +56,14 @@ export interface ServerToClientEvents {
 // Events the CLIENT emits → SERVER
 export interface ClientToServerEvents {
   join_matchmaking:  () => void;
+  join_invite_match: (payload: { roomId: string }) => void;
   leave_matchmaking: () => void;
   paddle_move:       (payload: PaddleMovePayload) => void;
   ball_state:        (payload: BallStatePayload & { roomId: string }) => void;
   score_update:      (payload: ScorePayload & { roomId: string }) => void;
   // Voluntary match exit (intentional, not a network drop)
   leave_match:       () => void;
+  leave_completed_match: () => void;
   play_again_request: () => void;
   game_over:         (payload: GameOverPayload) => void;
   // Advanced chat features

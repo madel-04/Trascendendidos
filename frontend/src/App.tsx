@@ -1,12 +1,13 @@
 // ===== COMPONENTE PRINCIPAL DE LA APLICACIÓN =====
 
 // Importamos componentes de React Router para la navegación
-import { Link, Route, Routes, Navigate } from "react-router-dom";
+import { Link, Route, Routes, Navigate, useNavigate } from "react-router-dom";
 // Importamos las páginas de nuestra aplicación
 import Play from "./pages/Play";
 import Privacy from "./pages/Privacy";
 import Terms from "./pages/Terms";
 import Login from "./pages/Login";
+import OAuthCallback from "./pages/OAuthCallback";
 import Register from "./pages/Register";
 import Profile from "./pages/Profile";
 import Tournament from "./pages/Tournament";
@@ -43,6 +44,7 @@ type AppNotification = {
 
 export default function App() {
   const { user, logout, isLoading } = useAuth();
+  const navigate = useNavigate();
   const { t } = useTranslation();
   // Estado para almacenar la respuesta del health check del backend
   // Inicialmente muestra "(loading)" mientras espera la respuesta
@@ -96,6 +98,19 @@ export default function App() {
           },
           ...prev,
         ].slice(0, 25));
+
+        if (
+          payload.event === "match_invite_accepted" &&
+          typeof payload.data?.roomId === "string" &&
+          typeof payload.data?.opponentUsername === "string"
+        ) {
+          const params = new URLSearchParams({
+            roomId: payload.data.roomId,
+            opponent: payload.data.opponentUsername,
+            source: "invite",
+          });
+          navigate(`/play?${params.toString()}`);
+        }
       } catch (_error) {
         // Ignore malformed payloads.
       }
@@ -104,7 +119,7 @@ export default function App() {
     return () => {
       ws.close();
     };
-  }, [user, t]);
+  }, [navigate, user, t]);
 
   // Mostrar loading mientras se verifica autenticación
   if (isLoading) {
@@ -202,6 +217,7 @@ export default function App() {
             />
 
             <Route path="/login" element={user ? <Navigate to="/play" replace /> : <Login />} />
+            <Route path="/oauth/callback" element={<OAuthCallback />} />
             <Route path="/register" element={user ? <Navigate to="/play" replace /> : <Register />} />
             <Route path="/privacy" element={<Privacy />} />
             <Route path="/terms" element={<Terms />} />

@@ -121,7 +121,26 @@ const resources = {
       "MATCH_INVITE_RECEIVED": "New match invite",
       "MATCH_INVITE_ACCEPTED": "Your match invite was accepted",
       "MATCH_INVITE_REJECTED": "Your match invite was rejected",
-      "SAVE": "SAVE"
+      "SAVE": "SAVE",
+      "INVITE_MATCH": "Invite match",
+      "ROOM": "Room",
+      "OPPONENT": "Opponent",
+      "YOUR_STATUS": "Your status",
+      "OPPONENT_STATUS": "Opponent status",
+      "READY_STATUS": "Ready",
+      "WAITING_STATUS": "Waiting",
+      "PROCESSING": "Processing...",
+      "MARK_READY": "Mark Ready",
+      "MATCH_STARTED": "The match has started",
+      "JOINING_ROOM": "Joining room...",
+      "PREPARING_MATCH": "Preparing match...",
+      "NO_ACTIVE_INVITE_MATCH": "No invite match is active. Invite a friend from Social or accept an invite.",
+      "CANVAS_READY_HINT": "The game board appears when both players are ready.",
+      "JOIN_ROOM_ERROR": "Could not join the room",
+      "JOIN_ROOM_CONNECTION_ERROR": "Connection error while joining the room",
+      "READY_ERROR": "Could not mark ready",
+      "YOU_ARE_READY": "You are ready to play",
+      "CONNECTION_ERROR": "Connection error"
     }
   },
   es: {
@@ -242,7 +261,26 @@ const resources = {
       "MATCH_INVITE_RECEIVED": "Nueva invitacion de partida",
       "MATCH_INVITE_ACCEPTED": "Aceptaron tu invitacion de partida",
       "MATCH_INVITE_REJECTED": "Rechazaron tu invitacion de partida",
-      "SAVE": "GUARDAR"
+      "SAVE": "GUARDAR",
+      "INVITE_MATCH": "Partida por invitacion",
+      "ROOM": "Sala",
+      "OPPONENT": "Rival",
+      "YOUR_STATUS": "Tu estado",
+      "OPPONENT_STATUS": "Estado del rival",
+      "READY_STATUS": "Listo",
+      "WAITING_STATUS": "Esperando",
+      "PROCESSING": "Procesando...",
+      "MARK_READY": "Marcar listo",
+      "MATCH_STARTED": "La partida ha comenzado",
+      "JOINING_ROOM": "Uniendose a la sala...",
+      "PREPARING_MATCH": "Preparando la partida...",
+      "NO_ACTIVE_INVITE_MATCH": "No hay partida por invitacion activa. Invita a un amigo desde Social o acepta una invitacion.",
+      "CANVAS_READY_HINT": "El tablero aparece cuando ambos jugadores estan listos.",
+      "JOIN_ROOM_ERROR": "No se pudo entrar en la sala",
+      "JOIN_ROOM_CONNECTION_ERROR": "Error de conexion al entrar en la sala",
+      "READY_ERROR": "No se pudo marcar listo",
+      "YOU_ARE_READY": "Estas listo para jugar",
+      "CONNECTION_ERROR": "Error de conexion"
     }
   },
   it: {
@@ -363,7 +401,26 @@ const resources = {
       "MATCH_INVITE_RECEIVED": "Nuovo invito partita",
       "MATCH_INVITE_ACCEPTED": "Il tuo invito partita è stato accettato",
       "MATCH_INVITE_REJECTED": "Il tuo invito partita è stato rifiutato",
-      "SAVE": "SALVA"
+      "SAVE": "SALVA",
+      "INVITE_MATCH": "Partita su invito",
+      "ROOM": "Stanza",
+      "OPPONENT": "Avversario",
+      "YOUR_STATUS": "Il tuo stato",
+      "OPPONENT_STATUS": "Stato avversario",
+      "READY_STATUS": "Pronto",
+      "WAITING_STATUS": "In attesa",
+      "PROCESSING": "Elaborazione...",
+      "MARK_READY": "Segna pronto",
+      "MATCH_STARTED": "La partita e iniziata",
+      "JOINING_ROOM": "Accesso alla stanza...",
+      "PREPARING_MATCH": "Preparazione partita...",
+      "NO_ACTIVE_INVITE_MATCH": "Nessuna partita su invito attiva. Invita un amico da Social o accetta un invito.",
+      "CANVAS_READY_HINT": "Il campo appare quando entrambi i giocatori sono pronti.",
+      "JOIN_ROOM_ERROR": "Impossibile entrare nella stanza",
+      "JOIN_ROOM_CONNECTION_ERROR": "Errore di connessione entrando nella stanza",
+      "READY_ERROR": "Impossibile segnare pronto",
+      "YOU_ARE_READY": "Sei pronto a giocare",
+      "CONNECTION_ERROR": "Errore di connessione"
     }
   }
 };
