@@ -18,6 +18,10 @@ export interface ScorePayload {
   right: number;
 }
 
+export interface GameOverPayload extends ScorePayload {
+  winner: 'left' | 'right';
+}
+
 export interface MatchFoundPayload {
   roomId: string;
   side: 'left' | 'right';
@@ -58,7 +62,7 @@ export interface ClientToServerEvents {
   // Voluntary match exit (intentional, not a network drop)
   leave_match:       () => void;
   play_again_request: () => void;
-  game_over:         (payload: { winner: 'left' | 'right' }) => void;
+  game_over:         (payload: GameOverPayload) => void;
   // Advanced chat features
   user_typing:       (payload: { toUsername: string; fromUsername: string }) => void;
   user_stopped_typing: (payload: { toUsername: string; fromUsername: string }) => void;

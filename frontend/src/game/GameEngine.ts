@@ -29,6 +29,8 @@ export class GameEngine {
   private isMultiplayer: boolean;
   private side: 'left' | 'right' | undefined;
   private roomId: string | undefined;
+  private localControlMode: 'keyboard' | 'mouse';
+  private mouseY: number | null = null;
 
   /** Callback para notificar cuando la partida ha terminado */
   public onMatchEnded?: (winner: 'left' | 'right') => void;
@@ -54,7 +56,8 @@ export class GameEngine {
     side?: 'left' | 'right', 
     roomId?: string, 
     onMatchEnded?: (winner: 'left' | 'right') => void,
-    settings?: { targetScore: number; difficulty: string }
+    settings?: { targetScore: number; difficulty: string },
+    localControlMode: 'keyboard' | 'mouse' = 'keyboard'
   ) {
     this.canvas = canvas;
     this.onMatchEnded = onMatchEnded;
@@ -65,6 +68,7 @@ export class GameEngine {
     this.isMultiplayer = isMultiplayer;
     this.side = side;
     this.roomId = roomId;
+    this.localControlMode = localControlMode;
 
     this.keysTracker = {};
 
@@ -93,6 +97,8 @@ export class GameEngine {
     this.handlePaddleMoved = this.handlePaddleMoved.bind(this);
     this.handleBallState = this.handleBallState.bind(this);
     this.handleScoreUpdate = this.handleScoreUpdate.bind(this);
+    this.handleMouseMove = this.handleMouseMove.bind(this);
+    this.handleMouseLeave = this.handleMouseLeave.bind(this);
   }
 
   /**
@@ -102,6 +108,10 @@ export class GameEngine {
   public start(): void {
     window.addEventListener('keydown', this.handleKeyDown);
     window.addEventListener('keyup', this.handleKeyUp);
+    if (!this.isMultiplayer && this.localControlMode === 'mouse') {
+      this.canvas.addEventListener('mousemove', this.handleMouseMove);
+      this.canvas.addEventListener('mouseleave', this.handleMouseLeave);
+    }
     
     if (this.isMultiplayer) {
       socket.on('paddle_moved', this.handlePaddleMoved);
@@ -122,6 +132,8 @@ export class GameEngine {
     }
     window.removeEventListener('keydown', this.handleKeyDown);
     window.removeEventListener('keyup', this.handleKeyUp);
+    this.canvas.removeEventListener('mousemove', this.handleMouseMove);
+    this.canvas.removeEventListener('mouseleave', this.handleMouseLeave);
     
     if (this.isMultiplayer) {
       socket.off('paddle_moved', this.handlePaddleMoved);
@@ -150,6 +162,16 @@ export class GameEngine {
   private handleScoreUpdate(payload: { left: number; right: number }): void {
     this.player1.score = payload.left;
     this.player2.score = payload.right;
+  }
+
+  private handleMouseMove(e: MouseEvent): void {
+    const rect = this.canvas.getBoundingClientRect();
+    const scaleY = this.canvas.height / rect.height;
+    this.mouseY = (e.clientY - rect.top) * scaleY;
+  }
+
+  private handleMouseLeave(): void {
+    this.mouseY = null;
   }
 
   /**
@@ -208,12 +230,19 @@ export class GameEngine {
         }
       }
 
-      // Local Mode: Player 2 is Human ( controls with any keys )
-      if (upPressed) {
-        this.player2.update(-1, this.canvas.height);
-      }
-      if (downPressed) {
-        this.player2.update(1, this.canvas.height);
+      // Local Mode: Player 2 is Human
+      if (this.localControlMode === 'mouse') {
+        if (this.mouseY !== null) {
+          const centeredY = this.mouseY - this.player2.height / 2;
+          this.player2.y = Math.min(Math.max(centeredY, 0), this.canvas.height - this.player2.height);
+        }
+      } else {
+        if (upPressed) {
+          this.player2.update(-1, this.canvas.height);
+        }
+        if (downPressed) {
+          this.player2.update(1, this.canvas.height);
+        }
       }
     }
 
@@ -268,7 +297,7 @@ export class GameEngine {
       if (this.onMatchEnded) this.onMatchEnded(winner);
       // En multijugador, delegamos al host notificar al servidor para oficializar la victoria
       if (this.isMultiplayer && this.side === 'left') {
-        socket.emit('game_over', { winner });
+        socket.emit('game_over', { winner, left: this.player1.score, right: this.player2.score });
       }
     }
 

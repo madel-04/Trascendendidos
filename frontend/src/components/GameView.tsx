@@ -2,6 +2,8 @@ import React from 'react';
 import PongCanvas from './PongCanvas';
 import { socket, syncSocketAuthToken } from '../game/socket';
 import { useTranslation } from 'react-i18next';
+import { useAuth } from '../context/AuthContext';
+import { recordLocalBotMatch } from '../utils/localGameStats';
 
 interface GameViewProps {
   onExit: () => void;
@@ -10,18 +12,25 @@ interface GameViewProps {
   roomId?: string;
   onStatusChange?: (finished: boolean) => void;
   settings?: { targetScore: number; difficulty: string };
+  localControlMode?: 'keyboard' | 'mouse';
 }
 
-const GameView: React.FC<GameViewProps> = ({ onExit, isMultiplayer, multiplayerSide, roomId, onStatusChange, settings }) => {
+const GameView: React.FC<GameViewProps> = ({ onExit, isMultiplayer, multiplayerSide, roomId, onStatusChange, settings, localControlMode = 'keyboard' }) => {
   const { t } = useTranslation();
+  const { user } = useAuth();
   const [matchStatus, setMatchStatus] = React.useState<'playing' | 'finished'>('playing');
   const [winner, setWinner] = React.useState<'left' | 'right' | null>(null);
   const [rematchRequested, setRematchRequested] = React.useState(false);
   const [rematchCount, setRematchCount] = React.useState(0);
+  const localResultRecorded = React.useRef(false);
 
   const handleMatchEndedEngine = (winSide: 'left' | 'right') => {
     // Si la partida es local notificamos directamente e interrumpimos
     if (!isMultiplayer) {
+      if (!localResultRecorded.current) {
+        recordLocalBotMatch(user?.id, winSide, settings, localControlMode);
+        localResultRecorded.current = true;
+      }
       setMatchStatus('finished');
       setWinner(winSide);
       if (onStatusChange) onStatusChange(true);
@@ -78,7 +87,7 @@ const GameView: React.FC<GameViewProps> = ({ onExit, isMultiplayer, multiplayerS
   return (
     <div className="game-container" style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '1rem', width: '100%', flex: 1, padding: '10px 0' }}>
       <div className="glass-panel" style={{ position: 'relative', padding: '10px', display: 'flex', justifyContent: 'center', alignItems: 'center', width: '100%', maxWidth: '800px', overflow: 'hidden' }}>
-        <PongCanvas key={rematchCount} isMultiplayer={isMultiplayer} side={multiplayerSide} roomId={roomId} onMatchEnded={handleMatchEndedEngine} settings={settings} />
+        <PongCanvas key={rematchCount} isMultiplayer={isMultiplayer} side={multiplayerSide} roomId={roomId} onMatchEnded={handleMatchEndedEngine} settings={settings} localControlMode={localControlMode} />
         
         {matchStatus === 'finished' && winner && (
           <div style={{
@@ -111,6 +120,7 @@ const GameView: React.FC<GameViewProps> = ({ onExit, isMultiplayer, multiplayerS
                     socket.emit('play_again_request');
                     setRematchRequested(true);
                   } else {
+                    localResultRecorded.current = false;
                     setMatchStatus('playing');
                     setWinner(null);
                     setRematchCount(c => c + 1);
@@ -134,7 +144,7 @@ const GameView: React.FC<GameViewProps> = ({ onExit, isMultiplayer, multiplayerS
         </div>
         <div style={{ textAlign: 'center' }}>
           <h3>{t('PLAYER 2')}</h3>
-          <p style={{ color: 'var(--text-muted)' }}>{t('Up / Down to move')}</p>
+          <p style={{ color: 'var(--text-muted)' }}>{!isMultiplayer && localControlMode === 'mouse' ? t('Mouse to move') : t('Up / Down to move')}</p>
         </div>
       </div>
     </div>
