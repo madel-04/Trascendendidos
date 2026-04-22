@@ -41,6 +41,11 @@ export interface ServerToClientEvents {
   waiting_for_opponent:  () => void;
   returned_to_lobby:     () => void;       // tells client it can re-queue
   restart_match:         () => void;
+  matchmaking_error:     (payload: { message: string }) => void;
+  // Advanced chat features
+  typing_indicator:     (payload: { fromUsername: string; toUsername: string }) => void;
+  typing_stopped:       (payload: { fromUsername: string; toUsername: string }) => void;
+  message_marked_read:  (payload: { messageId: string; readAt: Date }) => void;
 }
 
 // Events the CLIENT emits → SERVER
@@ -48,12 +53,16 @@ export interface ClientToServerEvents {
   join_matchmaking:  () => void;
   leave_matchmaking: () => void;
   paddle_move:       (payload: PaddleMovePayload) => void;
-  ball_state:        (payload: BallStatePayload) => void;
-  score_update:      (payload: ScorePayload) => void;
+  ball_state:        (payload: BallStatePayload & { roomId: string }) => void;
+  score_update:      (payload: ScorePayload & { roomId: string }) => void;
   // Voluntary match exit (intentional, not a network drop)
   leave_match:       () => void;
   play_again_request: () => void;
   game_over:         (payload: { winner: 'left' | 'right' }) => void;
+  // Advanced chat features
+  user_typing:       (payload: { toUsername: string; fromUsername: string }) => void;
+  user_stopped_typing: (payload: { toUsername: string; fromUsername: string }) => void;
+  mark_message_read: (payload: { messageId: string; messageCreatedAt: Date }) => void;
 }
 
 // Events for server-to-server (not used here, but required by Socket.io types)
@@ -63,4 +72,6 @@ export interface InterServerEvents {}
 export interface SocketData {
   roomId?: string;
   side?: 'left' | 'right';
+  userId?: number;
+  username?: string;
 }

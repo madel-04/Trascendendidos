@@ -1,4 +1,5 @@
 import { Socket, Server } from 'socket.io';
+import { query } from '../db.js';
 import {
   ServerToClientEvents,
   ClientToServerEvents,
@@ -26,15 +27,47 @@ type IoSocket = Socket<
 // Matchmaking queue: socket IDs waiting for an opponent
 const matchmakingQueue: string[] = [];
 
-// Match registry: tracks active matches and the two participating socket IDs
-// Key: roomId  →  Value: { left: socketId, right: socketId }
-const activeMatches = new Map<string, { left: string; right: string; rematchLeft: boolean; rematchRight: boolean }>();
+// Match registry: tracks active matches, socket ids and user ids
+// Key: roomId  →  Value: { left: socketId, right: socketId, leftUserId?, rightUserId? }
+const activeMatches = new Map<string, {
+  left: string;
+  right: string;
+  rematchLeft: boolean;
+  rematchRight: boolean;
+  leftUserId?: number;
+  rightUserId?: number;
+}>();
 
 // ─── Match registry helpers ───────────────────────────────────────────────────
 
-function registerMatch(roomId: string, leftId: string, rightId: string): void {
-  activeMatches.set(roomId, { left: leftId, right: rightId, rematchLeft: false, rematchRight: false });
+function registerMatch(roomId: string, leftId: string, rightId: string, leftUserId?: number, rightUserId?: number): void {
+  activeMatches.set(roomId, { left: leftId, right: rightId, rematchLeft: false, rematchRight: false, leftUserId, rightUserId });
   console.log(`[Match] Registered: ${roomId} | left=${leftId} right=${rightId}`);
+}
+
+async function persistMatchResult(roomId: string, reason: MatchEndedPayload['reason'], winner: MatchEndedPayload['winner']): Promise<void> {
+  const [room] = await query<{ room_id: string; player1_id: number; player2_id: number }>(
+    `SELECT room_id, player1_id, player2_id FROM game_rooms WHERE room_id = $1 LIMIT 1`,
+    [roomId]
+  );
+
+  if (!room) return;
+
+  const winnerId = winner === 'left'
+    ? room.player1_id
+    : winner === 'right'
+      ? room.player2_id
+      : null;
+
+  await query(
+    `INSERT INTO game_matches (room_id, player1_id, player2_id, winner_id, reason, player1_score, player2_score, created_at, ended_at)
+     VALUES ($1, $2, $3, $4, $5, 0, 0, NOW(), NOW())
+     ON CONFLICT (room_id) DO UPDATE SET
+       winner_id = EXCLUDED.winner_id,
+       reason = EXCLUDED.reason,
+       ended_at = EXCLUDED.ended_at`,
+    [room.room_id, room.player1_id, room.player2_id, winnerId, reason]
+  );
 }
 
 /**
@@ -74,11 +107,20 @@ function terminateMatch(
   // Remove from registry — any future game-loop or timer cleanup goes here
   activeMatches.delete(roomId);
   console.log(`[Match] Removed ${roomId} from registry`);
+
+  void persistMatchResult(roomId, reason, winner).catch((error) => {
+    console.error(`[Match] Failed to persist result for ${roomId}`, error);
+  });
 }
 
 // ─── Matchmaking helpers ──────────────────────────────────────────────────────
 
 function tryMatchmake(io: IoServer, socket: IoSocket): void {
+  if (!socket.data.userId) {
+    socket.emit('matchmaking_error', { message: 'Sesion no valida. Vuelve a iniciar sesion.' });
+    return;
+  }
+
   if (!matchmakingQueue.includes(socket.id)) {
     matchmakingQueue.push(socket.id);
   }
@@ -96,6 +138,21 @@ function tryMatchmake(io: IoServer, socket: IoSocket): void {
     }
 
     const roomId = `match-${idA.slice(0, 6)}-${idB.slice(0, 6)}`;
+    const leftUserId = socketA.data.userId;
+    const rightUserId = socketB.data.userId;
+
+    if (!leftUserId || !rightUserId) {
+      console.log(`[Matchmaking] Missing authenticated user ids for ${roomId}`);
+      socketA.emit('matchmaking_error', { message: 'Sesion no valida. Vuelve a iniciar sesion.' });
+      socketB.emit('matchmaking_error', { message: 'Sesion no valida. Vuelve a iniciar sesion.' });
+      return;
+    }
+
+    if (leftUserId === rightUserId) {
+      socketA.emit('matchmaking_error', { message: 'Abre matchmaking con dos usuarios distintos.' });
+      socketB.emit('matchmaking_error', { message: 'Abre matchmaking con dos usuarios distintos.' });
+      return;
+    }
 
     socketA.data.roomId = roomId;
     socketA.data.side   = 'left';
@@ -105,7 +162,16 @@ function tryMatchmake(io: IoServer, socket: IoSocket): void {
     socketA.join(roomId);
     socketB.join(roomId);
 
-    registerMatch(roomId, idA, idB);
+    void query(
+      `INSERT INTO game_rooms (room_id, player1_id, player2_id, created_at, updated_at)
+       VALUES ($1, $2, $3, NOW(), NOW())
+       ON CONFLICT (room_id) DO NOTHING`,
+      [roomId, leftUserId, rightUserId]
+    ).catch((error) => {
+      console.error(`[Matchmaking] Failed creating game room for ${roomId}`, error);
+    });
+
+    registerMatch(roomId, idA, idB, leftUserId, rightUserId);
 
     socketA.emit('match_found', { roomId, side: 'left',  opponent: idB });
     socketB.emit('match_found', { roomId, side: 'right', opponent: idA });
@@ -152,19 +218,19 @@ export function registerSocketHandlers(io: IoServer): void {
     // ── In-game events ────────────────────────────────────────────────────────
 
     // Paddle movement: broadcast ONLY to the opponent in the same room
-    socket.on('paddle_move', (payload: any) => {
+    socket.on('paddle_move', (payload) => {
       const roomId = socket.data.roomId;
       if (!roomId) return;
       socket.to(roomId).emit('paddle_moved', payload);
     });
 
-    socket.on('ball_state', (payload: any) => {
+    socket.on('ball_state', (payload) => {
       const roomId = socket.data.roomId;
       if (!roomId) return;
       socket.to(roomId).emit('ball_state', payload);
     });
 
-    socket.on('score_update', (payload: any) => {
+    socket.on('score_update', (payload) => {
       const roomId = socket.data.roomId;
       if (!roomId) return;
       socket.to(roomId).emit('score_update', payload);
@@ -173,8 +239,11 @@ export function registerSocketHandlers(io: IoServer): void {
     socket.on('game_over', (payload: { winner: 'left' | 'right' }) => {
       const roomId = socket.data.roomId;
       if (!roomId) return;
-      // Notificamos a ambos en la room que la partida finalizó para que lancen su front a estado "finished"
+
       io.to(roomId).emit('match_ended', { reason: 'completed', winner: payload.winner });
+      void persistMatchResult(roomId, 'completed', payload.winner).catch((error) => {
+        console.error(`[Match] Failed to persist completed result for ${roomId}`, error);
+      });
     });
 
     socket.on('play_again_request', () => {
@@ -183,17 +252,16 @@ export function registerSocketHandlers(io: IoServer): void {
       if (!roomId || !side) return;
 
       const match = activeMatches.get(roomId);
-      if (match) {
-        if (side === 'left') match.rematchLeft = true;
-        if (side === 'right') match.rematchRight = true;
+      if (!match) return;
 
-        if (match.rematchLeft && match.rematchRight) {
-          // Ambos están listos
-          match.rematchLeft = false;
-          match.rematchRight = false;
-          io.to(roomId).emit('restart_match');
-          console.log(`[Match] ${roomId} is restarting a rematch.`);
-        }
+      if (side === 'left') match.rematchLeft = true;
+      if (side === 'right') match.rematchRight = true;
+
+      if (match.rematchLeft && match.rematchRight) {
+        match.rematchLeft = false;
+        match.rematchRight = false;
+        io.to(roomId).emit('restart_match');
+        console.log(`[Match] ${roomId} is restarting a rematch.`);
       }
     });
 
@@ -212,7 +280,7 @@ export function registerSocketHandlers(io: IoServer): void {
     });
 
     // ── Disconnection (unexpected: network drop, tab close, etc.) ─────────────
-    socket.on('disconnect', (reason: string) => {
+    socket.on('disconnect', (reason) => {
       console.log(`[Socket] Disconnected: ${socket.id} | reason: ${reason}`);
 
       // 1. Remove from matchmaking queue if still waiting
@@ -234,5 +302,32 @@ export function registerSocketHandlers(io: IoServer): void {
       socket.data.roomId = undefined;
       socket.data.side   = undefined;
     });
+
+     // ── Chat Advanced Features (typing indicators + read receipts) ────────────
+
+     // Broadcast typing indicator to recipient
+     socket.on('user_typing', (payload: { toUsername: string; fromUsername: string }) => {
+       io.emit('typing_indicator', {
+         fromUsername: payload.fromUsername,
+         toUsername: payload.toUsername,
+       });
+       console.log(`[Chat] ${payload.fromUsername} is typing to ${payload.toUsername}`);
+     });
+
+     // Broadcast typing stopped
+     socket.on('user_stopped_typing', (payload: { toUsername: string; fromUsername: string }) => {
+       io.emit('typing_stopped', {
+         fromUsername: payload.fromUsername,
+         toUsername: payload.toUsername,
+       });
+     });
+
+     // Mark message as read (client-side notification only; persistence is handled by REST)
+     socket.on('mark_message_read', (payload: { messageId: string; messageCreatedAt: Date }) => {
+       socket.emit('message_marked_read', {
+         messageId: payload.messageId,
+         readAt: new Date(),
+       });
+     });
   });
 }

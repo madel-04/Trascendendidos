@@ -32,8 +32,7 @@ const resources = {
       "BEGINNER": "BEGINNER",
       "INTERMEDIATE": "INTERMEDIATE",
       "EXPERT": "EXPERT",
-      "SAVE": "SAVE",
-      "CANCEL": "CANCEL"
+      "SAVE": "SAVE"
     }
   },
   es: {
@@ -65,8 +64,7 @@ const resources = {
       "BEGINNER": "PRINCIPIANTE",
       "INTERMEDIATE": "INTERMEDIO",
       "EXPERT": "EXPERTO",
-      "SAVE": "GUARDAR",
-      "CANCEL": "CANCELAR"
+      "SAVE": "GUARDAR"
     }
   },
   it: {
@@ -98,8 +96,7 @@ const resources = {
       "BEGINNER": "PRINCIPIANTE",
       "INTERMEDIATE": "INTERMEDIO",
       "EXPERT": "ESPERTO",
-      "SAVE": "SALVA",
-      "CANCEL": "ANNULLA"
+      "SAVE": "SALVA"
     }
   }
 };

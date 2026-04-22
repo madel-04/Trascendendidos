@@ -1,6 +1,6 @@
 import React from 'react';
 import PongCanvas from './PongCanvas';
-import { socket } from '../game/socket';
+import { socket, syncSocketAuthToken } from '../game/socket';
 import { useTranslation } from 'react-i18next';
 
 interface GameViewProps {
@@ -9,7 +9,7 @@ interface GameViewProps {
   multiplayerSide?: 'left' | 'right';
   roomId?: string;
   onStatusChange?: (finished: boolean) => void;
-  settings: { targetScore: number; difficulty: string };
+  settings?: { targetScore: number; difficulty: string };
 }
 
 const GameView: React.FC<GameViewProps> = ({ onExit, isMultiplayer, multiplayerSide, roomId, onStatusChange, settings }) => {
@@ -30,6 +30,8 @@ const GameView: React.FC<GameViewProps> = ({ onExit, isMultiplayer, multiplayerS
 
   React.useEffect(() => {
     if (isMultiplayer) {
+      syncSocketAuthToken();
+
       const handleOpponentDisconnected = () => {
         alert(t('Opponent disconnected or left! Match ended.'));
         onExit();
@@ -66,7 +68,12 @@ const GameView: React.FC<GameViewProps> = ({ onExit, isMultiplayer, multiplayerS
     }
   }, [isMultiplayer, onExit, t]);
 
-
+  const handleExit = () => {
+    if (isMultiplayer) {
+      socket.emit('leave_match');
+    }
+    onExit();
+  };
 
   return (
     <div className="game-container" style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '1rem', width: '100%', flex: 1, padding: '10px 0' }}>
@@ -92,10 +99,7 @@ const GameView: React.FC<GameViewProps> = ({ onExit, isMultiplayer, multiplayerS
               <button 
                 className="btn-premium secondary" 
                 onClick={() => {
-                  if (isMultiplayer) {
-                    import('../game/socket').then(m => m.socket.emit('leave_match'));
-                  }
-                  onExit();
+                  handleExit();
                 }}
               >
                 {t('EXIT TO MENU')}
@@ -104,7 +108,7 @@ const GameView: React.FC<GameViewProps> = ({ onExit, isMultiplayer, multiplayerS
                 className="btn-premium" 
                 onClick={() => {
                   if (isMultiplayer) {
-                    import('../game/socket').then(m => m.socket.emit('play_again_request'));
+                    socket.emit('play_again_request');
                     setRematchRequested(true);
                   } else {
                     setMatchStatus('playing');

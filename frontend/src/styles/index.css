@@ -29,8 +29,9 @@ body {
   font-family: var(--font-main);
   background-color: var(--bg-dark);
   color: var(--text-main);
-  height: 100vh;
-  overflow: hidden;
+  min-height: 100vh;
+  overflow-x: hidden;
+  overflow-y: auto;
   background-image:
     radial-gradient(circle at 15% 50%, rgba(0, 240, 255, 0.08) 0%, transparent 50%),
     radial-gradient(circle at 85% 30%, rgba(255, 0, 60, 0.08) 0%, transparent 50%);
@@ -58,13 +59,13 @@ h4 {
   background: var(--bg-panel);
   backdrop-filter: var(--bg-blur);
   -webkit-backdrop-filter: var(--bg-blur);
-  border: 1px solid rgba(255, 255, 255, 0.8);
+  border: 1px solid rgba(255, 255, 255, 0.14);
   border-radius: 16px;
   box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.3);
 }
 
 .title-glow {
-  font-size: 3rem;
+  font-size: clamp(2rem, 5vw, 3rem);
   font-weight: 800;
   text-transform: uppercase;
   background: linear-gradient(90deg, var(--accent-cyan), var(--accent-magenta));
@@ -145,8 +146,11 @@ h4 {
   display: flex;
   flex-direction: column;
   align-items: center;
-  padding: 1rem;
-  height: 100vh;
+  justify-content: flex-start;
+  width: 100%;
+  min-height: 0;
+  padding: clamp(0.75rem, 2vw, 1.5rem);
+  gap: 1rem;
 }
 
 /* Header & Footer */
@@ -178,10 +182,56 @@ h4 {
   align-items: center;
   justify-content: center;
   gap: 1.5rem;
-  padding: 1.5rem;
+  padding: clamp(1rem, 3vw, 1.75rem);
   width: 100%;
   max-width: 800px;
-  /* Increased from 500px to fit the long title */
-  margin: auto;
-  /* Force perfect center inside flex container */
+  margin: 0 auto;
+}
+
+.language-switcher {
+  display: flex;
+  justify-content: center;
+  gap: 0.75rem;
+  width: 100%;
+}
+
+.language-switcher button {
+  min-width: 44px;
+  min-height: 36px;
+  padding: 6px 10px;
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  border-radius: 999px;
+  background: rgba(8, 10, 20, 0.72);
+  color: #ffffff;
+  cursor: pointer;
+  font-weight: 800;
+  letter-spacing: 0;
+}
+
+.language-switcher button.active {
+  border-color: var(--accent-cyan);
+  box-shadow: var(--shadow-neon);
+  color: #ffffff;
+}
+
+.matchmaking-panel {
+  width: min(100%, 900px);
+  min-height: 320px;
+  display: grid;
+  place-items: center;
+  padding: clamp(1.25rem, 4vw, 2rem);
+  text-align: center;
+}
+
+@media (max-width: 640px) {
+  .btn-premium {
+    width: 100%;
+    font-size: 0.95rem;
+    letter-spacing: 1px;
+  }
+
+  .main-menu img {
+    max-width: 100%;
+    height: auto;
+  }
 }

@@ -4,7 +4,7 @@ import { useTranslation } from 'react-i18next';
 interface MainMenuProps {
   onStartGame: () => void;
   onStartMultiplayer: () => void;
-  onOpenSettings: () => void;
+  onOpenSettings?: () => void;
 }
 
 const MainMenu: React.FC<MainMenuProps> = ({ onStartGame, onStartMultiplayer, onOpenSettings }) => {
@@ -28,9 +28,11 @@ const MainMenu: React.FC<MainMenuProps> = ({ onStartGame, onStartMultiplayer, on
         <button className="btn-premium secondary" onClick={onStartMultiplayer}>
           {t('MULTIPLAYER')}
         </button>
-        <button className="btn-premium tertiary" onClick={onOpenSettings}>
-          ⚙️ {t('SETTINGS')}
-        </button>
+        {onOpenSettings && (
+          <button className="btn-premium tertiary" onClick={onOpenSettings}>
+            {t('SETTINGS')}
+          </button>
+        )}
       </div>
     </div>
   );

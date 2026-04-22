@@ -1,10 +1,28 @@
-import { io, Socket } from 'socket.io-client';
+import { io, Socket } from "socket.io-client";
 
-// Forzamos protocolo HTTPS ya que el servidor Fastify levanta con certificados SSL locales
-const BACKEND_URL = import.meta.env.VITE_BACKEND_URL || `https://${window.location.hostname}:3000`;
+const API_BASE = import.meta.env.VITE_API_BASE ?? "http://localhost:3000";
+let lastAuthToken = localStorage.getItem("authToken") ?? "";
 
-export const socket: Socket = io(BACKEND_URL, {
-  autoConnect: false, // Conectar solo cuando sea necesario
+export const socket: Socket = io(API_BASE, {
+  autoConnect: false,
   withCredentials: true,
-  transports: ['websocket', 'polling'],
+  transports: ["polling"],
+  upgrade: false,
+  auth: {
+    token: lastAuthToken,
+  },
 });
+
+export function syncSocketAuthToken(): void {
+  const nextToken = localStorage.getItem("authToken") ?? "";
+  socket.auth = {
+    token: nextToken,
+  };
+
+  if (socket.connected && nextToken !== lastAuthToken) {
+    socket.disconnect();
+    socket.connect();
+  }
+
+  lastAuthToken = nextToken;
+}
