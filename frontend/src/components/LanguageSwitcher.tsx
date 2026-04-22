@@ -9,7 +9,7 @@ const LanguageSwitcher: React.FC = () => {
   };
 
   return (
-    <div style={{ position: 'absolute', justifyContent: 'center', top: '20px', display: 'flex', gap: '15px', zIndex: 10 }}>
+    <div style={{ display: 'flex', justifyContent: 'center', gap: '15px' }}>
       <button
         onClick={() => changeLanguage('es')}
         style={{
@@ -33,6 +33,18 @@ const LanguageSwitcher: React.FC = () => {
         title="English"
       >
         <span role="img" aria-label="English">🇬🇧</span>
+      </button>
+      <button
+        onClick={() => changeLanguage('it')}
+        style={{
+          background: 'none', border: 'none', cursor: 'pointer', fontSize: '2rem',
+          opacity: i18n.language === 'it' ? 1 : 0.4,
+          transition: 'opacity 0.3s',
+          filter: i18n.language === 'it' ? 'drop-shadow(0 0 10px rgba(0,255,0,0.8))' : 'none'
+        }}
+        title="Italiano"
+      >
+        <span role="img" aria-label="Italiano">🇮🇹</span>
       </button>
     </div>
   );

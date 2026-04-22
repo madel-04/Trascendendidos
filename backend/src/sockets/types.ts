@@ -40,6 +40,7 @@ export interface ServerToClientEvents {
   match_ended:           (payload: MatchEndedPayload) => void; // formal match termination
   waiting_for_opponent:  () => void;
   returned_to_lobby:     () => void;       // tells client it can re-queue
+  restart_match:         () => void;
 }
 
 // Events the CLIENT emits → SERVER
@@ -47,8 +48,12 @@ export interface ClientToServerEvents {
   join_matchmaking:  () => void;
   leave_matchmaking: () => void;
   paddle_move:       (payload: PaddleMovePayload) => void;
+  ball_state:        (payload: BallStatePayload) => void;
+  score_update:      (payload: ScorePayload) => void;
   // Voluntary match exit (intentional, not a network drop)
   leave_match:       () => void;
+  play_again_request: () => void;
+  game_over:         (payload: { winner: 'left' | 'right' }) => void;
 }
 
 // Events for server-to-server (not used here, but required by Socket.io types)

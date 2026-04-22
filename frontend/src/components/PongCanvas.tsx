@@ -1,7 +1,15 @@
 import React, { useEffect, useRef } from 'react';
 import { GameEngine } from '../game/GameEngine';
 
-const PongCanvas: React.FC = () => {
+interface PongCanvasProps {
+  isMultiplayer?: boolean;
+  side?: 'left' | 'right';
+  roomId?: string;
+  onMatchEnded?: (winner: 'left' | 'right') => void;
+  settings?: { targetScore: number; difficulty: string };
+}
+
+const PongCanvas: React.FC<PongCanvasProps> = ({ isMultiplayer, side, roomId, onMatchEnded, settings }) => {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const engineRef = useRef<GameEngine | null>(null);
 
@@ -15,19 +23,23 @@ const PongCanvas: React.FC = () => {
     canvas.width = 800;
     canvas.height = 600;
 
-    engineRef.current = new GameEngine(canvas);
+    engineRef.current = new GameEngine(canvas, isMultiplayer, side, roomId, onMatchEnded, settings);
     engineRef.current.start();
 
     // Clean up on unmount
     return () => {
       engineRef.current?.stop();
     };
-  }, []);
+  }, [isMultiplayer, side, roomId]);
 
   return (
     <canvas 
       ref={canvasRef} 
       style={{ 
+        width: '100%',
+        maxWidth: '800px',
+        maxHeight: '55vh',
+        aspectRatio: '4 / 3',
         background: '#0a0a14', 
         borderRadius: '8px',
         boxShadow: 'inset 0 0 20px rgba(0,0,0,0.8)',

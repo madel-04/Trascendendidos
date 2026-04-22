@@ -28,12 +28,12 @@ const matchmakingQueue: string[] = [];
 
 // Match registry: tracks active matches and the two participating socket IDs
 // Key: roomId  →  Value: { left: socketId, right: socketId }
-const activeMatches = new Map<string, { left: string; right: string }>();
+const activeMatches = new Map<string, { left: string; right: string; rematchLeft: boolean; rematchRight: boolean }>();
 
 // ─── Match registry helpers ───────────────────────────────────────────────────
 
 function registerMatch(roomId: string, leftId: string, rightId: string): void {
-  activeMatches.set(roomId, { left: leftId, right: rightId });
+  activeMatches.set(roomId, { left: leftId, right: rightId, rematchLeft: false, rematchRight: false });
   console.log(`[Match] Registered: ${roomId} | left=${leftId} right=${rightId}`);
 }
 
@@ -152,10 +152,49 @@ export function registerSocketHandlers(io: IoServer): void {
     // ── In-game events ────────────────────────────────────────────────────────
 
     // Paddle movement: broadcast ONLY to the opponent in the same room
-    socket.on('paddle_move', (payload) => {
+    socket.on('paddle_move', (payload: any) => {
       const roomId = socket.data.roomId;
       if (!roomId) return;
       socket.to(roomId).emit('paddle_moved', payload);
+    });
+
+    socket.on('ball_state', (payload: any) => {
+      const roomId = socket.data.roomId;
+      if (!roomId) return;
+      socket.to(roomId).emit('ball_state', payload);
+    });
+
+    socket.on('score_update', (payload: any) => {
+      const roomId = socket.data.roomId;
+      if (!roomId) return;
+      socket.to(roomId).emit('score_update', payload);
+    });
+
+    socket.on('game_over', (payload: { winner: 'left' | 'right' }) => {
+      const roomId = socket.data.roomId;
+      if (!roomId) return;
+      // Notificamos a ambos en la room que la partida finalizó para que lancen su front a estado "finished"
+      io.to(roomId).emit('match_ended', { reason: 'completed', winner: payload.winner });
+    });
+
+    socket.on('play_again_request', () => {
+      const roomId = socket.data.roomId;
+      const side = socket.data.side;
+      if (!roomId || !side) return;
+
+      const match = activeMatches.get(roomId);
+      if (match) {
+        if (side === 'left') match.rematchLeft = true;
+        if (side === 'right') match.rematchRight = true;
+
+        if (match.rematchLeft && match.rematchRight) {
+          // Ambos están listos
+          match.rematchLeft = false;
+          match.rematchRight = false;
+          io.to(roomId).emit('restart_match');
+          console.log(`[Match] ${roomId} is restarting a rematch.`);
+        }
+      }
     });
 
     // Voluntary match exit (e.g. player clicks "Leave Match" in the UI)
@@ -173,7 +212,7 @@ export function registerSocketHandlers(io: IoServer): void {
     });
 
     // ── Disconnection (unexpected: network drop, tab close, etc.) ─────────────
-    socket.on('disconnect', (reason) => {
+    socket.on('disconnect', (reason: string) => {
       console.log(`[Socket] Disconnected: ${socket.id} | reason: ${reason}`);
 
       // 1. Remove from matchmaking queue if still waiting

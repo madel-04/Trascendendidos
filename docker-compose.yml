@@ -1,50 +1,6 @@
 version: '3.8'
 
 services:
-  # ─── PostgreSQL Database ───────────────────────────────────────────────────
-  db:
-    image: postgres:16
-    environment:
-      POSTGRES_DB: ${POSTGRES_DB:-transcendence}
-      POSTGRES_USER: ${POSTGRES_USER:-transcendence}
-      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-transcendence}
-    ports:
-      - "5432:5432"
-    volumes:
-      - db_data:/var/lib/postgresql/data
-    healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-transcendence} -d ${POSTGRES_DB:-transcendence}"]
-      interval: 5s
-      timeout: 5s
-      retries: 10
-    networks:
-      - pong-network
-
-  # ─── Backend ──────────────────────────────────────────────────────────────
-  backend:
-    build:
-      context: ./backend
-      dockerfile: Dockerfile
-    ports:
-      - "3000:3000"
-    volumes:
-      - ./backend/src:/app/src
-      - certs:/certs
-    environment:
-      PORT: ${PORT:-3000}
-      FRONTEND_URL: ${FRONTEND_URL:-http://localhost:5173}
-      DATABASE_URL: ${DATABASE_URL:-postgresql://transcendence:transcendence@db:5432/transcendence}
-      JWT_SECRET: ${JWT_SECRET}
-      JWT_EXPIRES_IN: ${JWT_EXPIRES_IN:-7d}
-      CERT_PATH: /certs/server.cert
-      KEY_PATH: /certs/server.key
-    depends_on:
-      db:
-        condition: service_healthy
-    networks:
-      - pong-network
-
-  # ─── Frontend ─────────────────────────────────────────────────────────────
   frontend:
     build:
       context: ./frontend
@@ -55,10 +11,24 @@ services:
       - ./frontend:/app
       - /app/node_modules
     environment:
-      # Used by vite.config.ts proxy to forward /api/* to the backend container
-      BACKEND_URL: http://backend:3000
-    depends_on:
-      - backend
+      - VITE_API_URL=https://localhost:3000
+    networks:
+      - pong-network
+
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    ports:
+      - "3000:3000"
+    volumes:
+      - ./backend/src:/app/src
+      - certs:/certs
+    environment:
+      - FRONTEND_URL=https://localhost:5173
+      - PORT=3000
+      - CERT_PATH=/certs/server.cert
+      - KEY_PATH=/certs/server.key
     networks:
       - pong-network
 
@@ -67,5 +37,5 @@ networks:
     driver: bridge
 
 volumes:
-  db_data:
   certs:
+

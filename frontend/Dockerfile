@@ -2,17 +2,12 @@ FROM node:20-alpine
 
 WORKDIR /app
 
-# Copy .npmrc first so npm settings apply during install
-COPY .npmrc ./
+COPY package*.json ./
 
-# Copy package manifest only — no lock file to avoid stale-lock conflicts
-COPY package.json ./
-
-# Install with minimal network overhead
-RUN npm install --no-audit --no-fund
+RUN npm install
 
 COPY . .
 
 EXPOSE 5173
 
-CMD ["npm", "run", "dev"]
+CMD [ "npm", "run", "dev", "--", "--host" ]

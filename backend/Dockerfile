@@ -5,14 +5,8 @@ RUN apk add --no-cache openssl
 
 WORKDIR /app
 
-# Copy .npmrc first so npm settings apply during install
-COPY .npmrc ./
-
-# Copy package manifest only — npm install will generate a fresh lock file
-COPY package.json ./
-
-# Install with minimal network overhead (no audit, no fund calls)
-RUN npm install --no-audit --no-fund
+COPY package*.json ./
+RUN npm install
 
 # Copy source and static assets
 COPY tsconfig.json ./

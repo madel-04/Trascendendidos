@@ -15,8 +15,10 @@ export class Ball {
   public vx: number;
   /** La velocidad en el eje Y (vertical). */
   public vy: number;
-  /** La velocidad base de la pelota, que aumenta con el tiempo. */
+  /** La velocidad de la pelota, que aumenta con el tiempo. */
   public speed: number;
+  /** La velocidad base inicial de la pelota. */
+  public baseSpeed: number;
   
   /** Referencia a la anchura del canvas para gestionar reinicios. */
   private canvasWidth: number;
@@ -29,17 +31,19 @@ export class Ball {
    * @param canvasWidth - La anchura del canvas del juego.
    * @param canvasHeight - La altura del canvas del juego.
    */
-  constructor(canvasWidth: number, canvasHeight: number) {
+  constructor(canvasWidth: number, canvasHeight: number, baseSpeed: number = 7) {
     this.canvasWidth = canvasWidth;
     this.canvasHeight = canvasHeight;
     this.radius = 10;
     this.x = canvasWidth / 2;
     this.y = canvasHeight / 2;
-    this.speed = 7;
+    this.baseSpeed = baseSpeed;
+    this.speed = baseSpeed;
     
-    // Dirección de velocidad inicial
-    this.vx = 5 * (Math.random() > 0.5 ? 1 : -1);
-    this.vy = 5 * (Math.random() > 0.5 ? 1 : -1);
+    // Dirección de velocidad inicial proporcionada a la base
+    const proportion = baseSpeed / 7;
+    this.vx = (5 * proportion) * (Math.random() > 0.5 ? 1 : -1);
+    this.vy = (5 * proportion) * (Math.random() > 0.5 ? 1 : -1);
   }
 
   /**
@@ -70,15 +74,15 @@ export class Ball {
    */
   public checkPlayerCollision(player: Player): boolean {
     // 1. Calcula los límites de la pala y de la pelota
-    let playerTop = player.y;
-    let playerBottom = player.y + player.height;
-    let playerLeft = player.x;
-    let playerRight = player.x + player.width;
+    const playerTop = player.y;
+    const playerBottom = player.y + player.height;
+    const playerLeft = player.x;
+    const playerRight = player.x + player.width;
 
-    let ballTop = this.y - this.radius;
-    let ballBottom = this.y + this.radius;
-    let ballLeft = this.x - this.radius;
-    let ballRight = this.x + this.radius;
+    const ballTop = this.y - this.radius;
+    const ballBottom = this.y + this.radius;
+    const ballLeft = this.x - this.radius;
+    const ballRight = this.x + this.radius;
 
     // 2. Realiza una comprobación simple de colisión AABB (Caja delimitadora alineada a los ejes)
     if (
@@ -93,10 +97,10 @@ export class Ball {
       collidePoint = collidePoint / (player.height / 2);
       
       // Calcula el ángulo en radianes (Reflexión máxima de 45 grados -> PI/4)
-      let angleRad = collidePoint * (Math.PI / 4);
+      const angleRad = collidePoint * (Math.PI / 4);
 
       // 4. Actualiza las direcciones de velocidad basándose en el golpe de la pala
-      let direction = (this.x < this.canvasWidth / 2) ? 1 : -1;
+      const direction = (this.x < this.canvasWidth / 2) ? 1 : -1;
       
       this.vx = direction * this.speed * Math.cos(angleRad);
       this.vy = this.speed * Math.sin(angleRad);
@@ -137,9 +141,10 @@ export class Ball {
   public reset(): void {
     this.x = this.canvasWidth / 2;
     this.y = this.canvasHeight / 2;
-    this.speed = 7;
+    this.speed = this.baseSpeed;
     // Invierte la dirección para servir la pelota al jugador que perdió el punto
-    this.vx = (this.vx > 0 ? -1 : 1) * 5;
-    this.vy = 5 * (Math.random() > 0.5 ? 1 : -1);
+    const proportion = this.baseSpeed / 7;
+    this.vx = (this.vx > 0 ? -1 : 1) * (5 * proportion);
+    this.vy = (5 * proportion) * (Math.random() > 0.5 ? 1 : -1);
   }
 }
