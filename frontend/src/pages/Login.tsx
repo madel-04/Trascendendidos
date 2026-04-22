@@ -1,7 +1,14 @@
 // ===== PÁGINA DE LOGIN =====
-import { useState, FormEvent } from "react";
+import { useEffect, useState, FormEvent } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
+
+const API = import.meta.env.VITE_API_BASE ?? "http://localhost:3000";
+
+type OAuthProvider = {
+  id: string;
+  label: string;
+};
 
 export default function Login() {
   const { login } = useAuth();
@@ -13,6 +20,14 @@ export default function Login() {
   const [requires2FA, setRequires2FA] = useState(false);
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
+  const [oauthProviders, setOauthProviders] = useState<OAuthProvider[]>([]);
+
+  useEffect(() => {
+    fetch(`${API}/api/auth/oauth/providers`)
+      .then((response) => response.ok ? response.json() : { providers: [] })
+      .then((data) => setOauthProviders(Array.isArray(data.providers) ? data.providers : []))
+      .catch(() => setOauthProviders([]));
+  }, []);
 
   const handleSubmit = async (e: FormEvent) => {
     e.preventDefault();
@@ -33,6 +48,10 @@ export default function Login() {
     } finally {
       setLoading(false);
     }
+  };
+
+  const startOAuthLogin = (providerId: string) => {
+    window.location.href = `${API}/api/auth/oauth/${encodeURIComponent(providerId)}`;
   };
 
   return (
@@ -98,6 +117,24 @@ export default function Login() {
           {loading ? "Loading..." : "Login"}
         </button>
       </form>
+
+      {oauthProviders.length > 0 && (
+        <div className="oauth-section">
+          <div className="oauth-divider">or</div>
+          <div className="oauth-buttons">
+            {oauthProviders.map((provider) => (
+              <button
+                key={provider.id}
+                className="btn btn-outline oauth-btn"
+                type="button"
+                onClick={() => startOAuthLogin(provider.id)}
+              >
+                Continue with {provider.label}
+              </button>
+            ))}
+          </div>
+        </div>
+      )}
 
       <p className="auth-linkline">
         Don&apos;t have an account? <Link to="/register">Register here</Link>

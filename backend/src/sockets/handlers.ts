@@ -225,6 +225,59 @@ export function registerSocketHandlers(io: IoServer): void {
       socket.emit('returned_to_lobby');
     });
 
+    socket.on('join_invite_match', async (payload) => {
+      const roomId = String(payload?.roomId ?? '').trim();
+      const userId = socket.data.userId;
+
+      if (!userId || !roomId) {
+        socket.emit('matchmaking_error', { message: 'Sesion no valida. Vuelve a iniciar sesion.' });
+        return;
+      }
+
+      const [room] = await query<{ room_id: string; player1_id: number; player2_id: number }>(
+        `SELECT room_id, player1_id, player2_id
+         FROM game_rooms
+         WHERE room_id = $1
+           AND game_started = TRUE
+         LIMIT 1`,
+        [roomId]
+      );
+
+      if (!room || (room.player1_id !== userId && room.player2_id !== userId)) {
+        socket.emit('matchmaking_error', { message: 'No tienes permiso para entrar en esta partida.' });
+        return;
+      }
+
+      const side = room.player1_id === userId ? 'left' : 'right';
+      const existingMatch = activeMatches.get(roomId);
+      socket.data.roomId = roomId;
+      socket.data.side = side;
+      socket.join(roomId);
+
+      if (existingMatch) {
+        if (side === 'left') {
+          existingMatch.left = socket.id;
+          existingMatch.leftUserId = userId;
+        } else {
+          existingMatch.right = socket.id;
+          existingMatch.rightUserId = userId;
+        }
+      } else {
+        activeMatches.set(roomId, {
+          left: side === 'left' ? socket.id : '',
+          right: side === 'right' ? socket.id : '',
+          rematchLeft: false,
+          rematchRight: false,
+          scoreLeft: 0,
+          scoreRight: 0,
+          leftUserId: room.player1_id,
+          rightUserId: room.player2_id,
+        });
+      }
+
+      console.log(`[InviteMatch] ${socket.id} joined ${roomId} as ${side}`);
+    });
+
     // ── In-game events ────────────────────────────────────────────────────────
 
     // Paddle movement: broadcast ONLY to the opponent in the same room
@@ -265,6 +318,27 @@ export function registerSocketHandlers(io: IoServer): void {
       void persistMatchResult(roomId, 'completed', payload.winner, payload.left, payload.right).catch((error) => {
         console.error(`[Match] Failed to persist completed result for ${roomId}`, error);
       });
+    });
+
+    socket.on('leave_completed_match', () => {
+      const roomId = socket.data.roomId;
+      if (!roomId) return;
+
+      console.log(`[Match] ${socket.id} left completed match ${roomId}`);
+      io.to(roomId).emit('returned_to_home');
+
+      const match = activeMatches.get(roomId);
+      const socketIds = match ? [match.left, match.right] : Array.from(io.sockets.adapter.rooms.get(roomId) ?? []);
+      for (const socketId of socketIds) {
+        if (!socketId) continue;
+        const s = io.sockets.sockets.get(socketId);
+        if (s) {
+          s.leave(roomId);
+          s.data.roomId = undefined;
+          s.data.side = undefined;
+        }
+      }
+      activeMatches.delete(roomId);
     });
 
     socket.on('play_again_request', () => {

@@ -10,12 +10,13 @@ interface GameViewProps {
   isMultiplayer?: boolean;
   multiplayerSide?: 'left' | 'right';
   roomId?: string;
+  joinInviteRoom?: boolean;
   onStatusChange?: (finished: boolean) => void;
   settings?: { targetScore: number; difficulty: string };
   localControlMode?: 'keyboard' | 'mouse';
 }
 
-const GameView: React.FC<GameViewProps> = ({ onExit, isMultiplayer, multiplayerSide, roomId, onStatusChange, settings, localControlMode = 'keyboard' }) => {
+const GameView: React.FC<GameViewProps> = ({ onExit, isMultiplayer, multiplayerSide, roomId, joinInviteRoom, onStatusChange, settings, localControlMode = 'keyboard' }) => {
   const { t } = useTranslation();
   const { user } = useAuth();
   const [matchStatus, setMatchStatus] = React.useState<'playing' | 'finished'>('playing');
@@ -40,13 +41,24 @@ const GameView: React.FC<GameViewProps> = ({ onExit, isMultiplayer, multiplayerS
   React.useEffect(() => {
     if (isMultiplayer) {
       syncSocketAuthToken();
+      if (!socket.connected) {
+        socket.connect();
+      }
+      if (joinInviteRoom && roomId) {
+        socket.emit('join_invite_match', { roomId });
+      }
 
       const handleOpponentDisconnected = () => {
         alert(t('Opponent disconnected or left! Match ended.'));
         onExit();
       };
+
+      const handleReturnHome = () => {
+        onExit();
+      };
       
       socket.on('opponent_disconnected', handleOpponentDisconnected);
+      socket.on('returned_to_home', handleReturnHome);
 
       const handleMatchEndedPayload = (payload: { reason: string; winner: 'left' | 'right' | null }) => {
         if (payload.reason === 'completed') {
@@ -71,15 +83,16 @@ const GameView: React.FC<GameViewProps> = ({ onExit, isMultiplayer, multiplayerS
       
       return () => {
         socket.off('opponent_disconnected', handleOpponentDisconnected);
+        socket.off('returned_to_home', handleReturnHome);
         socket.off('match_ended', handleMatchEndedPayload);
         socket.off('restart_match', handleRestartMatch);
       };
     }
-  }, [isMultiplayer, onExit, t]);
+  }, [isMultiplayer, joinInviteRoom, onExit, roomId, t]);
 
   const handleExit = () => {
     if (isMultiplayer) {
-      socket.emit('leave_match');
+      socket.emit(matchStatus === 'finished' ? 'leave_completed_match' : 'leave_match');
     }
     onExit();
   };

@@ -25,7 +25,17 @@ const EnvSchema = z.object({
   JWT_SECRET: z.string().min(32, "JWT_SECRET debe tener al menos 32 caracteres"),
   
   // JWT_EXPIRES_IN: Duración de validez del token (ej: "7d", "24h", "30m")
-  JWT_EXPIRES_IN: z.string().default("7d")
+  JWT_EXPIRES_IN: z.string().default("7d"),
+
+  // OAuth: origen publico del frontend y backend, y credenciales por proveedor.
+  FRONTEND_ORIGIN: z.string().optional(),
+  PUBLIC_BACKEND_URL: z.string().optional(),
+  GOOGLE_CLIENT_ID: z.string().optional(),
+  GOOGLE_CLIENT_SECRET: z.string().optional(),
+  GITHUB_CLIENT_ID: z.string().optional(),
+  GITHUB_CLIENT_SECRET: z.string().optional(),
+  FORTYTWO_CLIENT_ID: z.string().optional(),
+  FORTYTWO_CLIENT_SECRET: z.string().optional(),
 });
 
 // Validamos las variables de entorno contra el esquema

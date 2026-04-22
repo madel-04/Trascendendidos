@@ -394,19 +394,27 @@ export async function gameRoutes(app: FastifyInstance) {
         return reply.code(404).send({ error: "Sala no encontrada" });
       }
 
-      const opponentId = invite.sender_id === userId ? invite.receiver_id : invite.sender_id;
-
-      if (opponentId !== userId && invite.sender_id !== userId && invite.receiver_id !== userId) {
+      if (invite.sender_id !== userId && invite.receiver_id !== userId) {
         return reply.code(403).send({ error: "No tienes permiso para acceder a esta sala" });
       }
 
-      // Create new game room
+      const opponentId = invite.sender_id === userId ? invite.receiver_id : invite.sender_id;
       const [newRoom] = await query<GameRoom>(
         `INSERT INTO game_rooms (room_id, player1_id, player2_id, created_at, updated_at)
          VALUES ($1, $2, $3, NOW(), NOW())
+         ON CONFLICT (room_id) DO NOTHING
          RETURNING *`,
-        [roomId, userId, opponentId]
+        [roomId, invite.sender_id, invite.receiver_id]
       );
+
+      const room = newRoom ?? (await query<GameRoom>(
+        `SELECT * FROM game_rooms WHERE room_id = $1 LIMIT 1`,
+        [roomId]
+      ))[0];
+
+      if (!room) {
+        return reply.code(500).send({ error: "No se pudo preparar la sala" });
+      }
 
       const opponentUser = await query<UserRow>(
         `SELECT id, username FROM users WHERE id = $1`,
@@ -417,20 +425,20 @@ export async function gameRoutes(app: FastifyInstance) {
 
       // Notify opponent that room was created
       app.notifySocialUser(opponentId, "game_room_created", {
-        roomId: newRoom.room_id,
+        roomId: room.room_id,
         creatorId: userId,
         creatorUsername: (request.user as any).username,
       });
 
       return reply.code(201).send({
-        message: "Sala creada",
-        roomId: newRoom.room_id,
+        message: newRoom ? "Sala creada" : "Sala encontrada",
+        roomId: room.room_id,
         room: {
-          id: newRoom.id,
-          roomId: newRoom.room_id,
-          player1Ready: newRoom.player1_ready,
-          player2Ready: newRoom.player2_ready,
-          gameStarted: newRoom.game_started,
+          id: room.id,
+          roomId: room.room_id,
+          player1Ready: room.player1_ready,
+          player2Ready: room.player2_ready,
+          gameStarted: room.game_started,
         },
         opponent: opponentUsername,
       });
@@ -479,6 +487,7 @@ export async function gameRoutes(app: FastifyInstance) {
         players: {
           you: {
             playerId: userId,
+            side: isPlayer1 ? "left" : "right",
             ready: isPlayer1 ? room.player1_ready : room.player2_ready,
           },
           opponent: {

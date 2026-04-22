@@ -337,6 +337,38 @@ textarea {
   text-align: center;
 }
 
+.oauth-section {
+  display: grid;
+  gap: 12px;
+  margin-top: 18px;
+}
+
+.oauth-divider {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  color: var(--ink-muted);
+  font-size: 0.84rem;
+  text-transform: uppercase;
+}
+
+.oauth-divider::before,
+.oauth-divider::after {
+  content: "";
+  height: 1px;
+  flex: 1;
+  background: rgba(255, 255, 255, 0.14);
+}
+
+.oauth-buttons {
+  display: grid;
+  gap: 10px;
+}
+
+.oauth-btn {
+  width: 100%;
+}
+
 .profile-tabs {
   display: flex;
   gap: 8px;
