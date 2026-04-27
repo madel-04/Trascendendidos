@@ -11,18 +11,22 @@ interface GameViewProps {
   multiplayerSide?: 'left' | 'right';
   roomId?: string;
   joinInviteRoom?: boolean;
+  waitForRealtimeReady?: boolean;
+  allowRematch?: boolean;
+  exitLabel?: string;
   onStatusChange?: (finished: boolean) => void;
   settings?: { targetScore: number; difficulty: string };
   localControlMode?: 'keyboard' | 'mouse';
 }
 
-const GameView: React.FC<GameViewProps> = ({ onExit, isMultiplayer, multiplayerSide, roomId, joinInviteRoom, onStatusChange, settings, localControlMode = 'keyboard' }) => {
+const GameView: React.FC<GameViewProps> = ({ onExit, isMultiplayer, multiplayerSide, roomId, joinInviteRoom, waitForRealtimeReady, allowRematch = true, exitLabel, onStatusChange, settings, localControlMode = 'keyboard' }) => {
   const { t } = useTranslation();
   const { user } = useAuth();
   const [matchStatus, setMatchStatus] = React.useState<'playing' | 'finished'>('playing');
   const [winner, setWinner] = React.useState<'left' | 'right' | null>(null);
   const [rematchRequested, setRematchRequested] = React.useState(false);
   const [rematchCount, setRematchCount] = React.useState(0);
+  const [realtimeReady, setRealtimeReady] = React.useState(!waitForRealtimeReady);
   const localResultRecorded = React.useRef(false);
 
   const handleMatchEndedEngine = (winSide: 'left' | 'right') => {
@@ -37,6 +41,10 @@ const GameView: React.FC<GameViewProps> = ({ onExit, isMultiplayer, multiplayerS
       if (onStatusChange) onStatusChange(true);
     }
   };
+
+  React.useEffect(() => {
+    setRealtimeReady(!waitForRealtimeReady);
+  }, [waitForRealtimeReady, roomId]);
 
   React.useEffect(() => {
     if (isMultiplayer) {
@@ -56,9 +64,14 @@ const GameView: React.FC<GameViewProps> = ({ onExit, isMultiplayer, multiplayerS
       const handleReturnHome = () => {
         onExit();
       };
+
+      const handleInviteMatchReady = () => {
+        setRealtimeReady(true);
+      };
       
       socket.on('opponent_disconnected', handleOpponentDisconnected);
       socket.on('returned_to_home', handleReturnHome);
+      socket.on('invite_match_ready', handleInviteMatchReady);
 
       const handleMatchEndedPayload = (payload: { reason: string; winner: 'left' | 'right' | null }) => {
         if (payload.reason === 'completed') {
@@ -84,6 +97,7 @@ const GameView: React.FC<GameViewProps> = ({ onExit, isMultiplayer, multiplayerS
       return () => {
         socket.off('opponent_disconnected', handleOpponentDisconnected);
         socket.off('returned_to_home', handleReturnHome);
+        socket.off('invite_match_ready', handleInviteMatchReady);
         socket.off('match_ended', handleMatchEndedPayload);
         socket.off('restart_match', handleRestartMatch);
       };
@@ -100,7 +114,13 @@ const GameView: React.FC<GameViewProps> = ({ onExit, isMultiplayer, multiplayerS
   return (
     <div className="game-container" style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '1rem', width: '100%', flex: 1, padding: '10px 0' }}>
       <div className="glass-panel" style={{ position: 'relative', padding: '10px', display: 'flex', justifyContent: 'center', alignItems: 'center', width: '100%', maxWidth: '800px', overflow: 'hidden' }}>
-        <PongCanvas key={rematchCount} isMultiplayer={isMultiplayer} side={multiplayerSide} roomId={roomId} onMatchEnded={handleMatchEndedEngine} settings={settings} localControlMode={localControlMode} />
+        {realtimeReady ? (
+          <PongCanvas key={rematchCount} isMultiplayer={isMultiplayer} side={multiplayerSide} roomId={roomId} onMatchEnded={handleMatchEndedEngine} settings={settings} localControlMode={localControlMode} />
+        ) : (
+          <div style={{ minHeight: 520, width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--text-muted)', textAlign: 'center' }}>
+            <span>Esperando a que ambos jugadores sincronicen la partida...</span>
+          </div>
+        )}
         
         {matchStatus === 'finished' && winner && (
           <div style={{
@@ -124,27 +144,29 @@ const GameView: React.FC<GameViewProps> = ({ onExit, isMultiplayer, multiplayerS
                   handleExit();
                 }}
               >
-                {t('EXIT TO MENU')}
+                {exitLabel ?? t('EXIT TO MENU')}
               </button>
-              <button 
-                className="btn-premium" 
-                onClick={() => {
-                  if (isMultiplayer) {
-                    socket.emit('play_again_request');
-                    setRematchRequested(true);
-                  } else {
-                    localResultRecorded.current = false;
-                    setMatchStatus('playing');
-                    setWinner(null);
-                    setRematchCount(c => c + 1);
-                    if (onStatusChange) onStatusChange(false);
-                  }
-                }}
-                disabled={rematchRequested}
-                style={{ opacity: rematchRequested ? 0.6 : 1 }}
-              >
-                {rematchRequested ? t('WAITING FOR OPPONENT') : t('NEW GAME')}
-              </button>
+              {allowRematch ? (
+                <button 
+                  className="btn-premium" 
+                  onClick={() => {
+                    if (isMultiplayer) {
+                      socket.emit('play_again_request');
+                      setRematchRequested(true);
+                    } else {
+                      localResultRecorded.current = false;
+                      setMatchStatus('playing');
+                      setWinner(null);
+                      setRematchCount(c => c + 1);
+                      if (onStatusChange) onStatusChange(false);
+                    }
+                  }}
+                  disabled={rematchRequested}
+                  style={{ opacity: rematchRequested ? 0.6 : 1 }}
+                >
+                  {rematchRequested ? t('WAITING FOR OPPONENT') : t('NEW GAME')}
+                </button>
+              ) : null}
             </div>
           </div>
         )}

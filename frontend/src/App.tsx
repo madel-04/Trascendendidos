@@ -86,6 +86,7 @@ export default function App() {
           match_invite_received: t("MATCH_INVITE_RECEIVED"),
           match_invite_accepted: t("MATCH_INVITE_ACCEPTED"),
           match_invite_rejected: t("MATCH_INVITE_REJECTED"),
+          tournament_match_ready: "Tu partida de torneo esta lista",
         };
 
         if (!messages[payload.event]) return;
@@ -111,6 +112,7 @@ export default function App() {
           });
           navigate(`/play?${params.toString()}`);
         }
+
       } catch (_error) {
         // Ignore malformed payloads.
       }
