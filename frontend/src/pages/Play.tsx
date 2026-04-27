@@ -85,13 +85,26 @@ export default function Play() {
     const roomId = searchParams.get("roomId")?.trim() || "";
     const opponent = searchParams.get("opponent")?.trim() || "";
     const source = searchParams.get("source")?.trim() || "";
+    const tournamentId = searchParams.get("tournamentId")?.trim() || "";
+    const matchId = searchParams.get("matchId")?.trim() || "";
 
-    if (!roomId || source !== "invite") {
+    if (!roomId || (source !== "invite" && source !== "tournament")) {
       return null;
     }
 
-    return { roomId, opponent };
+    return { roomId, opponent, source, tournamentId, matchId };
   }, [searchParams]);
+
+  const leaveMatchDestination = useMemo(() => {
+    if (!matchContext) return "/";
+    if (matchContext.source === "tournament" && matchContext.tournamentId) {
+      const params = new URLSearchParams({ tournamentId: matchContext.tournamentId });
+      return `/tournament?${params.toString()}`;
+    }
+    return "/";
+  }, [matchContext]);
+
+  const isTournamentMatch = matchContext?.source === "tournament";
 
   // Join game room when component mounts or roomId changes
   const joinRoom = useCallback(async () => {
@@ -393,7 +406,7 @@ export default function Play() {
             >
               <div>
                 <strong style={{ display: "block", marginBottom: 4 }}>
-                  {t("INVITE_MATCH")}
+                  {isTournamentMatch ? "Sala de torneo" : t("INVITE_MATCH")}
                 </strong>
                 <span style={{ display: "block", fontSize: 13, color: "var(--ink-muted)" }}>
                   {t("ROOM")}: {roomStatus.roomId}
@@ -508,12 +521,15 @@ export default function Play() {
           onExit={() => {
             setRoomStatus(null);
             setIsReady(false);
-            navigate("/");
+            navigate(leaveMatchDestination);
           }}
           isMultiplayer
           multiplayerSide={roomStatus.players.you.side}
           roomId={roomStatus.roomId}
           joinInviteRoom
+          waitForRealtimeReady
+          allowRematch={!isTournamentMatch}
+          exitLabel={isTournamentMatch ? "Volver al torneo" : undefined}
           onStatusChange={setIsMatchFinished}
           settings={settings}
           localControlMode={localControlMode}

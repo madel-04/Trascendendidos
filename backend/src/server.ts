@@ -217,7 +217,7 @@ io.use(async (socket, next) => {
   }
 });
 
-registerSocketHandlers(io);
+registerSocketHandlers(io, app);
 app.log.info("Socket.io attached and ready");
 
 // ===== INICIAR SERVIDOR =====

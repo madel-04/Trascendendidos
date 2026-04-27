@@ -18,6 +18,10 @@ export interface ScorePayload {
   right: number;
 }
 
+export interface InviteMatchReadyPayload extends ScorePayload {
+  roomId: string;
+}
+
 export interface GameOverPayload extends ScorePayload {
   winner: 'left' | 'right';
 }
@@ -46,6 +50,7 @@ export interface ServerToClientEvents {
   returned_to_lobby:     () => void;       // tells client it can re-queue
   returned_to_home:      () => void;
   restart_match:         () => void;
+  invite_match_ready:    (payload: InviteMatchReadyPayload) => void;
   matchmaking_error:     (payload: { message: string }) => void;
   // Advanced chat features
   typing_indicator:     (payload: { fromUsername: string; toUsername: string }) => void;

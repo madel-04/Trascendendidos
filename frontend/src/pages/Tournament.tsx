@@ -1,15 +1,32 @@
 import { FormEvent, useCallback, useEffect, useMemo, useState } from "react";
+import { useNavigate } from "react-router-dom";
+import { useSearchParams } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
 
 const API = import.meta.env.VITE_API_BASE ?? "http://localhost:3000";
 
+type TournamentPermissions = {
+  canManage: boolean;
+  canEdit: boolean;
+  canCancel: boolean;
+  canStart: boolean;
+};
+
+type TournamentCreator = {
+  id: number;
+  username: string;
+  role: "host";
+};
+
 type TournamentListItem = {
   id: number;
   name: string;
+  description: string;
   status: "open" | "in_progress" | "completed" | "cancelled";
   maxPlayers: number;
   participantsCount: number;
-  creator: { id: number; username: string };
+  creator: TournamentCreator;
+  permissions: TournamentPermissions;
   championUsername: string | null;
   createdAt: string;
   startedAt: string | null;
@@ -20,9 +37,11 @@ type TournamentDetail = {
   tournament: {
     id: number;
     name: string;
+    description: string;
     status: "open" | "in_progress" | "completed" | "cancelled";
     maxPlayers: number;
-    creator: { id: number; username: string };
+    creator: TournamentCreator;
+    permissions: TournamentPermissions;
     championUsername: string | null;
     createdAt: string;
     startedAt: string | null;
@@ -40,8 +59,9 @@ type TournamentDetail = {
     round: number;
     order: number;
     status: "pending" | "completed";
+    gameRoomId: string | null;
     player1: { id: number; username: string };
-    player2: { id: number; username: string };
+    player2: { id: number; username: string } | null;
     winner: { id: number; username: string } | null;
     completedAt: string | null;
   }>;
@@ -56,6 +76,8 @@ function formatDate(value: string | null): string {
 
 export default function Tournament() {
   const { token, user } = useAuth();
+  const navigate = useNavigate();
+  const [searchParams, setSearchParams] = useSearchParams();
 
   const [tournaments, setTournaments] = useState<TournamentListItem[]>([]);
   const [selectedTournamentId, setSelectedTournamentId] = useState<number | null>(null);
@@ -65,16 +87,26 @@ export default function Tournament() {
   const [creating, setCreating] = useState(false);
   const [actionBusy, setActionBusy] = useState(false);
   const [name, setName] = useState("");
+  const [description, setDescription] = useState("");
   const [maxPlayers, setMaxPlayers] = useState<4 | 8 | 16>(4);
+  const [editing, setEditing] = useState(false);
+  const [editName, setEditName] = useState("");
+  const [editDescription, setEditDescription] = useState("");
   const [message, setMessage] = useState<{ type: "success" | "error"; text: string } | null>(null);
 
   const authHeaders = useMemo(() => {
     if (!token) return null;
     return {
       Authorization: `Bearer ${token}`,
-      "Content-Type": "application/json",
     };
   }, [token]);
+
+  const requestedTournamentId = useMemo(() => {
+    const raw = searchParams.get("tournamentId");
+    if (!raw) return null;
+    const value = Number(raw);
+    return Number.isInteger(value) && value > 0 ? value : null;
+  }, [searchParams]);
 
   const loadList = useCallback(async () => {
     if (!token || !authHeaders) return;
@@ -89,6 +121,9 @@ export default function Tournament() {
       setTournaments(data.tournaments ?? []);
 
       setSelectedTournamentId((current) => {
+        if (requestedTournamentId && (data.tournaments ?? []).some((t: TournamentListItem) => t.id === requestedTournamentId)) {
+          return requestedTournamentId;
+        }
         if (current && (data.tournaments ?? []).some((t: TournamentListItem) => t.id === current)) {
           return current;
         }
@@ -99,7 +134,7 @@ export default function Tournament() {
     } finally {
       setLoadingList(false);
     }
-  }, [authHeaders, token]);
+  }, [authHeaders, token, requestedTournamentId]);
 
   const loadDetail = useCallback(async (tournamentId: number) => {
     if (!token || !authHeaders) return;
@@ -126,16 +161,23 @@ export default function Tournament() {
   useEffect(() => {
     if (!selectedTournamentId) {
       setDetail(null);
+      setEditing(false);
       return;
     }
+    setSearchParams((current) => {
+      const next = new URLSearchParams(current);
+      next.set("tournamentId", String(selectedTournamentId));
+      return next;
+    }, { replace: true });
     void loadDetail(selectedTournamentId);
-  }, [selectedTournamentId, loadDetail]);
+  }, [selectedTournamentId, loadDetail, setSearchParams]);
 
   const handleCreate = async (event: FormEvent) => {
     event.preventDefault();
     if (!token || !authHeaders) return;
 
     const trimmedName = name.trim();
+    const trimmedDescription = description.trim();
     if (trimmedName.length < 3) {
       setMessage({ type: "error", text: "El nombre del torneo debe tener al menos 3 caracteres" });
       return;
@@ -147,8 +189,11 @@ export default function Tournament() {
     try {
       const response = await fetch(`${API}/api/tournament`, {
         method: "POST",
-        headers: authHeaders,
-        body: JSON.stringify({ name: trimmedName, maxPlayers }),
+        headers: {
+          ...authHeaders,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ name: trimmedName, description: trimmedDescription, maxPlayers }),
       });
       const data = await response.json();
       if (!response.ok) {
@@ -157,6 +202,7 @@ export default function Tournament() {
       }
 
       setName("");
+      setDescription("");
       setMessage({ type: "success", text: "Torneo creado correctamente" });
       await loadList();
       if (data?.tournament?.id) {
@@ -175,10 +221,16 @@ export default function Tournament() {
     setMessage(null);
 
     try {
+      const hasPayload = payload !== undefined;
       const response = await fetch(`${API}${path}`, {
         method: "POST",
-        headers: authHeaders,
-        body: payload ? JSON.stringify(payload) : undefined,
+        headers: hasPayload
+          ? {
+              ...authHeaders,
+              "Content-Type": "application/json",
+            }
+          : authHeaders,
+        body: hasPayload ? JSON.stringify(payload) : undefined,
       });
       const data = await response.json();
       if (!response.ok) {
@@ -186,6 +238,7 @@ export default function Tournament() {
         return;
       }
 
+      setEditing(false);
       setMessage({ type: "success", text: data.message ?? "Accion completada" });
       await loadList();
       await loadDetail(selectedTournamentId);
@@ -196,10 +249,70 @@ export default function Tournament() {
     }
   };
 
+  const handleSaveTournament = async (event: FormEvent) => {
+    event.preventDefault();
+    if (!detail || !token || !authHeaders) return;
+
+    const trimmedName = editName.trim();
+    const trimmedDescription = editDescription.trim();
+    if (trimmedName.length < 3) {
+      setMessage({ type: "error", text: "El nombre del torneo debe tener al menos 3 caracteres" });
+      return;
+    }
+
+    setActionBusy(true);
+    setMessage(null);
+
+    try {
+      const response = await fetch(`${API}/api/tournament/${detail.tournament.id}`, {
+        method: "PUT",
+        headers: {
+          ...authHeaders,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ name: trimmedName, description: trimmedDescription }),
+      });
+      const data = await response.json();
+      if (!response.ok) {
+        setMessage({ type: "error", text: data.error ?? "No se pudo actualizar el torneo" });
+        return;
+      }
+
+      setEditing(false);
+      setMessage({ type: "success", text: data.message ?? "Torneo actualizado" });
+      await loadList();
+      await loadDetail(detail.tournament.id);
+    } catch (_error) {
+      setMessage({ type: "error", text: "Error de conexion actualizando el torneo" });
+    } finally {
+      setActionBusy(false);
+    }
+  };
+
+  const beginEditing = () => {
+    if (!detail) return;
+    setEditName(detail.tournament.name);
+    setEditDescription(detail.tournament.description ?? "");
+    setEditing(true);
+    setMessage(null);
+  };
+
   const isParticipant = Boolean(detail?.participants.some((p) => p.userId === user?.id));
-  const isCreator = detail?.tournament.creator.id === user?.id;
   const canJoin = detail?.tournament.status === "open" && !isParticipant && (detail?.participants.length ?? 0) < (detail?.tournament.maxPlayers ?? 0);
-  const canStart = Boolean(isCreator && detail?.tournament.status === "open" && (detail?.participants.length ?? 0) === (detail?.tournament.maxPlayers ?? 0));
+  const canStart = Boolean(detail?.tournament.permissions.canStart && (detail?.participants.length ?? 0) >= 2);
+  const canEditTournament = Boolean(detail?.tournament.permissions.canEdit);
+  const canCancelTournament = Boolean(detail?.tournament.permissions.canCancel);
+  const groupedMatches = useMemo(() => {
+    const rounds = new Map<number, TournamentDetail["matches"]>();
+    for (const match of detail?.matches ?? []) {
+      const current = rounds.get(match.round) ?? [];
+      current.push(match);
+      rounds.set(match.round, current);
+    }
+    return Array.from(rounds.entries())
+      .sort((a, b) => a[0] - b[0])
+      .map(([round, matches]) => ({ round, matches }));
+  }, [detail?.matches]);
 
   return (
     <section className="tournament-shell">
@@ -217,6 +330,17 @@ export default function Tournament() {
               onChange={(e) => setName(e.target.value)}
               placeholder="Ej: Weekend Cup"
               maxLength={120}
+            />
+
+            <label className="auth-label" htmlFor="tournamentDescription">Descripcion</label>
+            <textarea
+              id="tournamentDescription"
+              className="auth-input"
+              value={description}
+              onChange={(e) => setDescription(e.target.value)}
+              placeholder="Reglas, formato o notas para los participantes"
+              maxLength={500}
+              rows={4}
             />
 
             <label className="auth-label" htmlFor="tournamentSize">Tamano del cuadro</label>
@@ -248,7 +372,7 @@ export default function Tournament() {
               >
                 <div>
                   <strong>{item.name}</strong>
-                  <span className="muted">{item.creator.username}</span>
+                  <span className="muted">{item.creator.username} · {item.creator.role}</span>
                 </div>
                 <div>
                   <span className="status-pill">{item.status}</span>
@@ -269,8 +393,9 @@ export default function Tournament() {
                 <div>
                   <h2 className="page-title">{detail.tournament.name}</h2>
                   <p className="page-subtitle">
-                    Creador: {detail.tournament.creator.username} · Estado: {detail.tournament.status}
+                    Anfitrion: {detail.tournament.creator.username} · Estado: {detail.tournament.status}
                   </p>
+                  <p className="muted">{detail.tournament.description || "Sin descripcion."}</p>
                 </div>
                 <div className="tournament-actions">
                   <button
@@ -289,8 +414,61 @@ export default function Tournament() {
                   >
                     Iniciar
                   </button>
+                  <button
+                    type="button"
+                    className="btn btn-outline"
+                    disabled={!canEditTournament || actionBusy}
+                    onClick={beginEditing}
+                  >
+                    Editar
+                  </button>
+                  <button
+                    type="button"
+                    className="btn btn-outline"
+                    disabled={!canCancelTournament || actionBusy}
+                    onClick={() => performAction(`/api/tournament/${detail.tournament.id}/cancel`)}
+                  >
+                    Cancelar
+                  </button>
                 </div>
               </div>
+
+              {editing ? (
+                <form className="tournament-create" onSubmit={handleSaveTournament}>
+                  <label className="auth-label" htmlFor="editTournamentName">Nombre del torneo</label>
+                  <input
+                    id="editTournamentName"
+                    className="auth-input"
+                    value={editName}
+                    onChange={(e) => setEditName(e.target.value)}
+                    maxLength={120}
+                  />
+
+                  <label className="auth-label" htmlFor="editTournamentDescription">Descripcion</label>
+                  <textarea
+                    id="editTournamentDescription"
+                    className="auth-input"
+                    value={editDescription}
+                    onChange={(e) => setEditDescription(e.target.value)}
+                    maxLength={500}
+                    rows={4}
+                  />
+
+                  <div className="tournament-actions">
+                    <button className="btn btn-primary" type="submit" disabled={actionBusy}>
+                      Guardar cambios
+                    </button>
+                    <button
+                      className="btn btn-outline"
+                      type="button"
+                      disabled={actionBusy}
+                      onClick={() => setEditing(false)}
+                    >
+                      Cerrar
+                    </button>
+                  </div>
+                </form>
+              ) : null}
 
               <div className="tournament-meta-grid">
                 <div className="feature-card">
@@ -322,53 +500,70 @@ export default function Tournament() {
               <section>
                 <h3>Bracket</h3>
                 {detail.matches.length === 0 ? <p className="muted">Aun no hay partidas generadas.</p> : null}
-                <div className="tournament-matches">
-                  {detail.matches.map((match) => {
-                    const canReport =
-                      detail.tournament.status === "in_progress" &&
-                      match.status === "pending" &&
-                      (user?.id === detail.tournament.creator.id || user?.id === match.player1.id || user?.id === match.player2.id);
+                <div className="tournament-bracket">
+                  {groupedMatches.map((roundGroup) => (
+                    <div key={roundGroup.round} className="tournament-round">
+                      <div className="tournament-round-title">Ronda {roundGroup.round}</div>
+                      <div className="tournament-round-stack">
+                        {roundGroup.matches.map((match) => {
+                          const isCurrentPlayerMatch = user?.id === match.player1.id || user?.id === match.player2?.id;
+                          const canEnterMatch = Boolean(match.gameRoomId && isCurrentPlayerMatch && match.status === "pending");
 
-                    return (
-                      <div key={match.id} className="feature-card">
-                        <h4>Ronda {match.round} · Match {match.order}</h4>
-                        <p>{match.player1.username} vs {match.player2.username}</p>
-                        <p>Estado: {match.status}</p>
-                        <p>Ganador: {match.winner?.username ?? "Pendiente"}</p>
+                          return (
+                            <div
+                              key={match.id}
+                              className={`tournament-match-card ${match.winner ? "is-complete" : ""} ${canEnterMatch ? "is-active" : ""}`}
+                            >
+                              <div className="tournament-match-head">
+                                <span>Match {match.order}</span>
+                                <span className="status-pill">{match.status}</span>
+                              </div>
 
-                        {canReport ? (
-                          <div className="tournament-actions">
-                            <button
-                              type="button"
-                              className="btn btn-outline"
-                              disabled={actionBusy}
-                              onClick={() =>
-                                performAction(
-                                  `/api/tournament/${detail.tournament.id}/matches/${match.id}/report`,
-                                  { winnerUserId: match.player1.id }
-                                )
-                              }
-                            >
-                              Gana {match.player1.username}
-                            </button>
-                            <button
-                              type="button"
-                              className="btn btn-outline"
-                              disabled={actionBusy}
-                              onClick={() =>
-                                performAction(
-                                  `/api/tournament/${detail.tournament.id}/matches/${match.id}/report`,
-                                  { winnerUserId: match.player2.id }
-                                )
-                              }
-                            >
-                              Gana {match.player2.username}
-                            </button>
-                          </div>
+                              <div className="tournament-duel">
+                                <div className={`tournament-player-row ${match.winner?.id === match.player1.id ? "is-winner" : ""}`}>
+                                  <span>{match.player1.username}</span>
+                                  {match.winner?.id === match.player1.id ? <strong>WIN</strong> : null}
+                                </div>
+                                <div className="tournament-vs">VS</div>
+                                <div className={`tournament-player-row ${match.winner?.id === match.player2?.id ? "is-winner" : ""}`}>
+                                  <span>{match.player2?.username ?? "Bye"}</span>
+                                  {match.winner?.id === match.player2?.id ? <strong>WIN</strong> : null}
+                                </div>
+                              </div>
+
+                        <p className="muted">
+                          {match.player2 ? `Ganador: ${match.winner?.username ?? "Pendiente"}` : `${match.player1.username} pasa de ronda`}
+                        </p>
+
+                        {match.player2 && match.status === "pending" ? (
+                          <p className="muted">El ganador se registrara automaticamente al terminar la partida.</p>
+                        ) : null}
+
+                        {canEnterMatch ? (
+                          <button
+                                  type="button"
+                                  className="btn btn-primary"
+                                  disabled={actionBusy}
+                                  onClick={() => {
+                                    const params = new URLSearchParams({
+                                      roomId: match.gameRoomId!,
+                                      opponent: match.player1.id === user?.id ? match.player2?.username ?? "" : match.player1.username,
+                                      source: "tournament",
+                                      tournamentId: String(detail.tournament.id),
+                                      matchId: String(match.id),
+                                    });
+                                    navigate(`/play?${params.toString()}`);
+                                  }}
+                                >
+                            Unirme a la sala
+                          </button>
                         ) : null}
                       </div>
                     );
                   })}
+                      </div>
+                    </div>
+                  ))}
                 </div>
               </section>
             </div>

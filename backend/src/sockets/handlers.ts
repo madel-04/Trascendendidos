@@ -1,5 +1,7 @@
+import type { FastifyInstance } from "fastify";
 import { Socket, Server } from 'socket.io';
 import { query } from '../db.js';
+import { finalizeTournamentMatchFromRoom } from "../services/tournament.js";
 import {
   ServerToClientEvents,
   ClientToServerEvents,
@@ -48,6 +50,7 @@ function registerMatch(roomId: string, leftId: string, rightId: string, leftUser
 }
 
 async function persistMatchResult(
+  app: FastifyInstance,
   roomId: string,
   reason: MatchEndedPayload['reason'],
   winner: MatchEndedPayload['winner'],
@@ -78,6 +81,8 @@ async function persistMatchResult(
        ended_at = EXCLUDED.ended_at`,
     [room.room_id, room.player1_id, room.player2_id, winnerId, reason, scoreLeft, scoreRight]
   );
+
+  await finalizeTournamentMatchFromRoom(app, roomId, winnerId);
 }
 
 /**
@@ -87,6 +92,7 @@ async function persistMatchResult(
  * and removes the entry from the registry.
  */
 function terminateMatch(
+  app: FastifyInstance,
   io: IoServer,
   roomId: string,
   reason: MatchEndedPayload['reason'],
@@ -118,7 +124,7 @@ function terminateMatch(
   activeMatches.delete(roomId);
   console.log(`[Match] Removed ${roomId} from registry`);
 
-  void persistMatchResult(roomId, reason, winner, match.scoreLeft, match.scoreRight).catch((error) => {
+  void persistMatchResult(app, roomId, reason, winner, match.scoreLeft, match.scoreRight).catch((error) => {
     console.error(`[Match] Failed to persist result for ${roomId}`, error);
   });
 }
@@ -203,7 +209,7 @@ function removeFromQueue(socketId: string): void {
 
 // ─── Main Socket Handler ──────────────────────────────────────────────────────
 
-export function registerSocketHandlers(io: IoServer): void {
+export function registerSocketHandlers(io: IoServer, app: FastifyInstance): void {
   io.on('connection', (socket: IoSocket) => {
     console.log(`[Socket] Connected: ${socket.id}`);
 
@@ -275,6 +281,22 @@ export function registerSocketHandlers(io: IoServer): void {
         });
       }
 
+      const syncedMatch = activeMatches.get(roomId);
+      if (syncedMatch) {
+        socket.emit('score_update', {
+          left: syncedMatch.scoreLeft,
+          right: syncedMatch.scoreRight,
+        });
+
+        if (syncedMatch.left && syncedMatch.right) {
+          io.to(roomId).emit('invite_match_ready', {
+            roomId,
+            left: syncedMatch.scoreLeft,
+            right: syncedMatch.scoreRight,
+          });
+        }
+      }
+
       console.log(`[InviteMatch] ${socket.id} joined ${roomId} as ${side}`);
     });
 
@@ -315,7 +337,7 @@ export function registerSocketHandlers(io: IoServer): void {
       }
 
       io.to(roomId).emit('match_ended', { reason: 'completed', winner: payload.winner });
-      void persistMatchResult(roomId, 'completed', payload.winner, payload.left, payload.right).catch((error) => {
+      void persistMatchResult(app, roomId, 'completed', payload.winner, payload.left, payload.right).catch((error) => {
         console.error(`[Match] Failed to persist completed result for ${roomId}`, error);
       });
     });
@@ -371,7 +393,7 @@ export function registerSocketHandlers(io: IoServer): void {
 
       // The opponent wins by forfeit
       const winner: MatchEndedPayload['winner'] = side === 'left' ? 'right' : 'left';
-      terminateMatch(io, roomId, 'forfeit', winner);
+      terminateMatch(app, io, roomId, 'forfeit', winner);
     });
 
     // ── Disconnection (unexpected: network drop, tab close, etc.) ─────────────
@@ -390,7 +412,7 @@ export function registerSocketHandlers(io: IoServer): void {
         socket.to(roomId).emit('opponent_disconnected');
 
         const winner: MatchEndedPayload['winner'] = side === 'left' ? 'right' : 'left';
-        terminateMatch(io, roomId, 'disconnect', winner);
+        terminateMatch(app, io, roomId, 'disconnect', winner);
       }
 
       // 3. Clear this socket's own state (tidiness — socket is being destroyed)
