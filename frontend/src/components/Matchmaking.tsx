@@ -67,31 +67,31 @@ export default function Matchmaking({ onMatchFound, onCancel }: MatchmakingProps
 
   return (
     <div className="glass-panel matchmaking-panel">
-      <div>
-      <h2 className="title-glow">{t("MATCHMAKING...")}</h2>
-      <p>{t("Searching for an opponent in the queue")}</p>
-      {connectionError && (
-        <p style={{ color: "var(--accent-magenta)", marginTop: "0.75rem" }}>
-          {connectionError}
-        </p>
-      )}
-      <div style={{ marginTop: "2rem" }}>
-        <div
-          className="spinner"
-          style={{
-            margin: "0 auto 2rem",
-            width: "40px",
-            height: "40px",
-            borderRadius: "50%",
-            border: "4px solid var(--accent-cyan)",
-            borderTopColor: "transparent",
-            animation: "spin 1s linear infinite",
-          }}
-        />
-        <button className="btn-premium secondary" onClick={handleLeave}>
-          {t("CANCEL")}
-        </button>
-      </div>
+      <div style={{ width: "100%", maxWidth: 960, display: "grid", justifyItems: "center", textAlign: "center" }}>
+        <h2 className="title-glow" style={{ width: "100%", textAlign: "center" }}>{t("MATCHMAKING...")}</h2>
+        <p style={{ textAlign: "center" }}>{t("Searching for an opponent in the queue")}</p>
+        {connectionError && (
+          <p style={{ color: "var(--accent-magenta)", marginTop: "0.75rem", textAlign: "center" }}>
+            {connectionError}
+          </p>
+        )}
+        <div style={{ marginTop: "2rem", width: "min(100%, 320px)", display: "grid", justifyItems: "center" }}>
+          <div
+            className="spinner"
+            style={{
+              margin: "0 auto 2rem",
+              width: "40px",
+              height: "40px",
+              borderRadius: "50%",
+              border: "4px solid var(--accent-cyan)",
+              borderTopColor: "transparent",
+              animation: "spin 1s linear infinite",
+            }}
+          />
+          <button className="btn-premium secondary" onClick={handleLeave}>
+            {t("CANCEL")}
+          </button>
+        </div>
       </div>
       <style>{"@keyframes spin { 100% { transform: rotate(360deg); } }"}</style>
     </div>

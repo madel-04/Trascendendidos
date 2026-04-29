@@ -81,6 +81,11 @@ textarea {
   padding: 0;
 }
 
+.app-shell-play {
+  width: min(100% - 16px, 1680px);
+  margin: 8px auto;
+}
+
 .app-frame {
   border: 1px solid var(--line);
   border-radius: var(--radius-lg);
@@ -88,6 +93,12 @@ textarea {
   backdrop-filter: blur(12px);
   box-shadow: var(--shadow-soft);
   overflow: visible;
+}
+
+.app-frame-play {
+  min-height: calc(100vh - 16px);
+  display: flex;
+  flex-direction: column;
 }
 
 .topbar {
@@ -182,6 +193,18 @@ textarea {
   padding: clamp(14px, 3vw, 24px);
 }
 
+.content-wrap-play {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  padding: clamp(12px, 2vw, 24px);
+}
+
+.content-wrap-play > * {
+  width: 100%;
+}
+
 .hero {
   display: grid;
   grid-template-columns: 1.3fr 1fr;
@@ -274,6 +297,22 @@ textarea {
   justify-content: space-between;
   flex-wrap: wrap;
   gap: 8px;
+}
+
+.play-route-shell {
+  width: 100%;
+  flex: 1;
+  min-height: 0;
+}
+
+.play-route-shell-center {
+  justify-content: center;
+}
+
+.play-route-shell .main-menu,
+.play-route-shell .play-card,
+.play-route-shell .settings-panel {
+  margin-block: auto;
 }
 
 .auth-card,

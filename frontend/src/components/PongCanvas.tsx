@@ -46,16 +46,7 @@ const PongCanvas = forwardRef<PongCanvasHandle, PongCanvasProps>(function PongCa
   return (
     <canvas
       ref={canvasRef}
-      style={{
-        width: '100%',
-        maxWidth: '800px',
-        maxHeight: '55vh',
-        aspectRatio: '4 / 3',
-        background: '#0a0a14',
-        borderRadius: '8px',
-        boxShadow: 'inset 0 0 20px rgba(0,0,0,0.8)',
-        border: '1px solid rgba(255,255,255,0.1)'
-      }}
+      className="game-canvas"
     />
   );
 });

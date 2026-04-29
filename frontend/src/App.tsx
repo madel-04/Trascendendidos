@@ -1,7 +1,7 @@
 // ===== COMPONENTE PRINCIPAL DE LA APLICACIÓN =====
 
 // Importamos componentes de React Router para la navegación
-import { Link, Route, Routes, Navigate, useNavigate } from "react-router-dom";
+import { Link, Route, Routes, Navigate, useLocation, useNavigate } from "react-router-dom";
 // Importamos las páginas de nuestra aplicación
 import Play from "./pages/Play";
 import Privacy from "./pages/Privacy";
@@ -46,12 +46,14 @@ type AppNotification = {
 export default function App() {
   const { user, logout, isLoading } = useAuth();
   const navigate = useNavigate();
+  const location = useLocation();
   const { t } = useTranslation();
   // Estado para almacenar la respuesta del health check del backend
   // Inicialmente muestra "(loading)" mientras espera la respuesta
   const [health, setHealth] = useState<string>("(loading)");
   const [notifOpen, setNotifOpen] = useState(false);
   const [notifications, setNotifications] = useState<AppNotification[]>([]);
+  const isPlayRoute = location.pathname.startsWith("/play");
 
   // useEffect: Hook que ejecuta código cuando el componente se monta
   // [] → Array vacío significa que solo se ejecuta una vez al montar
@@ -127,9 +129,9 @@ export default function App() {
   // Mostrar loading mientras se verifica autenticación
   if (isLoading) {
     return (
-      <div className="app-shell">
-        <div className="app-frame">
-          <div className="content-wrap">
+      <div className={`app-shell${isPlayRoute ? " app-shell-play" : ""}`}>
+        <div className={`app-frame${isPlayRoute ? " app-frame-play" : ""}`}>
+          <div className={`content-wrap${isPlayRoute ? " content-wrap-play" : ""}`}>
             <p>{t("LOADING")}</p>
           </div>
         </div>
@@ -138,8 +140,8 @@ export default function App() {
   }
 
   return (
-    <div className="app-shell">
-      <div className="app-frame">
+    <div className={`app-shell${isPlayRoute ? " app-shell-play" : ""}`}>
+      <div className={`app-frame${isPlayRoute ? " app-frame-play" : ""}`}>
         <header className="topbar">
           <Link className="nav-link" to="/">{t("HOME")}</Link>
           <Link className="nav-link" to="/play">{t("PLAY")}</Link>
@@ -179,7 +181,7 @@ export default function App() {
           </div>
         </header>
 
-        <main className="content-wrap">
+        <main className={`content-wrap${isPlayRoute ? " content-wrap-play" : ""}`}>
           <Routes>
             <Route
               path="/"

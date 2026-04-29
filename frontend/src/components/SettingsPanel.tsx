@@ -13,16 +13,16 @@ const SettingsPanel: React.FC<SettingsPanelProps> = ({ currentSettings, onSave, 
   const [difficulty, setDifficulty] = useState(currentSettings.difficulty);
 
   return (
-    <div className="glass-panel" style={{ padding: '2rem', maxWidth: '500px', width: '100%', display: 'flex', flexDirection: 'column', gap: '2rem', margin: 'auto' }}>
+    <div className="glass-panel settings-panel">
       <h2 className="title-glow" style={{ textAlign: 'center', marginBottom: '1rem' }}>{t('SETTINGS')}</h2>
       
-      <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
+      <div className="settings-fields">
         <label>
           <h3 style={{ margin: '0 0 10px 0' }}>{t('TARGET SCORE')}</h3>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+          <div className="settings-stepper">
             <button 
-              className="btn-premium secondary" 
-              style={{ width: '50px', height: '50px', fontSize: '1.5rem', padding: 0 }}
+              type="button"
+              className="btn-premium secondary settings-stepper-btn"
               onClick={() => setTargetScore(s => Math.max(3, s - 1))}
             >-</button>
             <input 
@@ -33,11 +33,11 @@ const SettingsPanel: React.FC<SettingsPanelProps> = ({ currentSettings, onSave, 
                 if (!isNaN(val)) setTargetScore(Math.min(25, Math.max(3, val)));
               }}
               min={3} max={25}
-              style={{ flex: 1, textAlign: 'center', padding: '12px', background: 'rgba(0,0,0,0.6)', color: 'white', border: '1px solid var(--accent-cyan)', borderRadius: '8px', fontSize: '1.5rem' }}
+              className="settings-input"
             />
             <button 
-              className="btn-premium secondary" 
-              style={{ width: '50px', height: '50px', fontSize: '1.5rem', padding: 0 }}
+              className="btn-premium secondary settings-stepper-btn"
+              type="button"
               onClick={() => setTargetScore(s => Math.min(25, s + 1))}
             >+</button>
           </div>
@@ -48,7 +48,7 @@ const SettingsPanel: React.FC<SettingsPanelProps> = ({ currentSettings, onSave, 
           <select 
             value={difficulty} 
             onChange={(e) => setDifficulty(e.target.value)}
-            style={{ width: '100%', padding: '12px', background: 'rgba(0,0,0,0.6)', color: 'white', border: '1px solid var(--accent)', borderRadius: '8px', fontSize: '1.2rem', cursor: 'pointer' }}
+            className="settings-select"
           >
             <option value="Beginner">{t('BEGINNER')}</option>
             <option value="Intermediate">{t('INTERMEDIATE')}</option>
@@ -57,7 +57,7 @@ const SettingsPanel: React.FC<SettingsPanelProps> = ({ currentSettings, onSave, 
         </label>
       </div>
 
-      <div style={{ display: 'flex', justifyContent: 'space-between', gap: '1rem', marginTop: '1rem' }}>
+      <div className="settings-actions">
         <button className="btn-premium secondary" style={{ flex: 1 }} onClick={onCancel}>{t('CANCEL')}</button>
         <button className="btn-premium" style={{ flex: 1 }} onClick={() => onSave({ targetScore, difficulty })}>{t('SAVE')}</button>
       </div>

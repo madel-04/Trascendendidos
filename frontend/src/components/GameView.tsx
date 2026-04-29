@@ -19,22 +19,6 @@ interface GameViewProps {
   localControlMode?: 'keyboard' | 'mouse';
 }
 
-const overlayStyle: React.CSSProperties = {
-  position: 'absolute',
-  top: 0,
-  left: 0,
-  width: '100%',
-  height: '100%',
-  background: 'rgba(0,0,0,0.85)',
-  display: 'flex',
-  flexDirection: 'column',
-  justifyContent: 'center',
-  alignItems: 'center',
-  zIndex: 10,
-  borderRadius: '16px',
-  backdropFilter: 'blur(5px)',
-};
-
 const GameView: React.FC<GameViewProps> = ({ onExit, isMultiplayer, multiplayerSide, roomId, joinInviteRoom, waitForRealtimeReady, allowRematch = true, exitLabel, onStatusChange, settings, localControlMode = 'keyboard' }) => {
   const { t } = useTranslation();
   const { user } = useAuth();
@@ -181,8 +165,8 @@ const GameView: React.FC<GameViewProps> = ({ onExit, isMultiplayer, multiplayerS
   };
 
   return (
-    <div className="game-container" style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '1rem', width: '100%', flex: 1, padding: '10px 0' }}>
-      <div className="glass-panel" style={{ position: 'relative', padding: '10px', display: 'flex', justifyContent: 'center', alignItems: 'center', width: '100%', maxWidth: '800px', overflow: 'hidden' }}>
+    <div className="game-container">
+      <div className="glass-panel game-stage">
         {realtimeReady ? (
           <PongCanvas
             key={rematchCount}
@@ -195,7 +179,7 @@ const GameView: React.FC<GameViewProps> = ({ onExit, isMultiplayer, multiplayerS
             localControlMode={localControlMode}
           />
         ) : (
-          <div style={{ minHeight: 520, width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--text-muted)', textAlign: 'center' }}>
+          <div className="game-sync-wait">
             <span>Esperando a que ambos jugadores sincronicen la partida...</span>
           </div>
         )}
@@ -203,23 +187,22 @@ const GameView: React.FC<GameViewProps> = ({ onExit, isMultiplayer, multiplayerS
         {isLocalMatch && matchStatus === 'playing' && realtimeReady && (
           <button
             type="button"
-            className="btn-premium secondary"
             onClick={togglePauseMenu}
-            style={{ position: 'absolute', top: 20, right: 20, zIndex: 9, minWidth: 110 }}
+            className="btn-premium secondary game-pause-button"
           >
             {t('PAUSE')}
           </button>
         )}
 
         {isPaused && matchStatus === 'playing' && (
-          <div style={overlayStyle}>
-            <div style={{ textAlign: 'center', marginBottom: '1.5rem' }}>
-              <h2 className="title-glow" style={{ fontSize: '3rem', margin: '0 0 10px 0', letterSpacing: '4px' }}>
+          <div className="game-overlay">
+            <div className="game-overlay-content">
+              <h2 className="title-glow game-overlay-title">
                 {t('PAUSED')}
               </h2>
-              <p style={{ margin: 0, color: 'var(--text-muted)' }}>{t('Press ESC to continue')}</p>
+              <p className="game-overlay-text">{t('Press ESC to continue')}</p>
             </div>
-            <div style={{ display: 'flex', gap: '20px', flexWrap: 'wrap', justifyContent: 'center' }}>
+            <div className="game-overlay-actions">
               <button className="btn-premium" onClick={closePauseMenu}>
                 {t('RESUME')}
               </button>
@@ -231,16 +214,16 @@ const GameView: React.FC<GameViewProps> = ({ onExit, isMultiplayer, multiplayerS
         )}
 
         {matchStatus === 'finished' && winner && (
-          <div style={overlayStyle}>
-            <div style={{ textAlign: 'center', marginBottom: '2rem' }}>
-              <h2 className="title-glow" style={{ fontSize: '3.5rem', margin: '0 0 10px 0', letterSpacing: '4px' }}>
+          <div className="game-overlay">
+            <div className="game-overlay-content" style={{ marginBottom: '2rem' }}>
+              <h2 className="title-glow game-overlay-title game-winner-title">
                 {t('WINNER')}
               </h2>
               <h3 style={{ fontSize: '2.5rem', margin: 0, color: 'var(--text-main)', fontWeight: 600 }}>
                 {winner === 'left' ? t('PLAYER 1') : t('PLAYER 2')}
               </h3>
             </div>
-            <div style={{ display: 'flex', gap: '20px' }}>
+            <div className="game-overlay-actions">
               <button
                 className="btn-premium secondary"
                 onClick={() => {
@@ -276,12 +259,12 @@ const GameView: React.FC<GameViewProps> = ({ onExit, isMultiplayer, multiplayerS
         )}
       </div>
 
-      <div style={{ display: 'flex', justifyContent: 'space-between', width: '100%', maxWidth: '800px', marginTop: '0.5rem', padding: '0 10px' }}>
-        <div style={{ textAlign: 'center' }}>
+      <div className="game-meta">
+        <div className="game-meta-card">
           <h3>{isMultiplayer ? t('PLAYER 1') : t('PLAYER 1') + ' (AI)'}</h3>
           <p style={{ color: 'var(--text-muted)' }}>{isMultiplayer ? t('W / S to move') : ''}</p>
         </div>
-        <div style={{ textAlign: 'center' }}>
+        <div className="game-meta-card">
           <h3>{t('PLAYER 2')}</h3>
           <p style={{ color: 'var(--text-muted)' }}>{!isMultiplayer && localControlMode === 'mouse' ? t('Mouse to move') : t('Up / Down to move')}</p>
         </div>
