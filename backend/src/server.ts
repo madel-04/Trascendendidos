@@ -26,6 +26,7 @@ import { chatRoutes } from "./routes/chat.js";
 import { matchRoutes } from "./routes/match.js";
 import { gameRoutes } from "./routes/game.js";
 import { tournamentRoutes } from "./routes/tournament.js";
+import { organizationRoutes } from "./routes/organizations.js";
 import { registerSocketHandlers } from "./sockets/handlers.js";
 
 import type { SocialRealtimeEvent, SocialRealtimePayload, WsConnection } from "./types.js";
@@ -125,6 +126,7 @@ await app.register(chatRoutes);
 await app.register(matchRoutes);
 await app.register(gameRoutes);
 await app.register(tournamentRoutes);
+await app.register(organizationRoutes);
 
 // ===== ENDPOINT WEBSOCKET =====
 // Configuramos un endpoint WebSocket en /ws para comunicación en tiempo real

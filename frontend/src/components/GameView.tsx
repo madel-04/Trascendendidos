@@ -1,5 +1,5 @@
 import React from 'react';
-import PongCanvas from './PongCanvas';
+import PongCanvas, { type PongCanvasHandle } from './PongCanvas';
 import { socket, syncSocketAuthToken } from '../game/socket';
 import { useTranslation } from 'react-i18next';
 import { useAuth } from '../context/AuthContext';
@@ -17,45 +17,123 @@ interface GameViewProps {
   onStatusChange?: (finished: boolean) => void;
   settings?: { targetScore: number; difficulty: string };
   localControlMode?: 'keyboard' | 'mouse';
+  localPlayerSide?: 'left' | 'right';
 }
 
-const GameView: React.FC<GameViewProps> = ({ onExit, isMultiplayer, multiplayerSide, roomId, joinInviteRoom, waitForRealtimeReady, allowRematch = true, exitLabel, onStatusChange, settings, localControlMode = 'keyboard' }) => {
+const GameView: React.FC<GameViewProps> = ({ onExit, isMultiplayer, multiplayerSide, roomId, joinInviteRoom, waitForRealtimeReady, allowRematch = true, exitLabel, onStatusChange, settings, localControlMode = 'keyboard', localPlayerSide = 'right' }) => {
   const { t } = useTranslation();
   const { user } = useAuth();
+  const canvasRef = React.useRef<PongCanvasHandle | null>(null);
   const [matchStatus, setMatchStatus] = React.useState<'playing' | 'finished'>('playing');
   const [winner, setWinner] = React.useState<'left' | 'right' | null>(null);
   const [rematchRequested, setRematchRequested] = React.useState(false);
   const [rematchCount, setRematchCount] = React.useState(0);
   const [realtimeReady, setRealtimeReady] = React.useState(!waitForRealtimeReady);
+  const [isPaused, setIsPaused] = React.useState(false);
   const localResultRecorded = React.useRef(false);
+  const isLocalMatch = !isMultiplayer;
+  const playerUsername = user?.username ?? t('PLAYER');
+  const localHumanSide = localPlayerSide;
+  const leftPlayerLabel = isMultiplayer ? t('PLAYER 1') : localHumanSide === 'left' ? playerUsername : t('BOT');
+  const rightPlayerLabel = isMultiplayer ? t('PLAYER 2') : localHumanSide === 'right' ? playerUsername : t('BOT');
+  const leftPlayerHint = isMultiplayer
+    ? t('W / S to move')
+    : localHumanSide === 'left'
+      ? (localControlMode === 'mouse' ? t('Mouse to move') : t('Up / Down to move'))
+      : t('AI_OPPONENT_HINT');
+  const rightPlayerHint = isMultiplayer
+    ? t('Up / Down to move')
+    : localHumanSide === 'right'
+      ? (localControlMode === 'mouse' ? t('Mouse to move') : t('Up / Down to move'))
+      : t('AI_OPPONENT_HINT');
+  const winnerLabel = winner === 'left' ? leftPlayerLabel : rightPlayerLabel;
 
-  const handleMatchEndedEngine = (winSide: 'left' | 'right') => {
-    // Si la partida es local notificamos directamente e interrumpimos
+  const closePauseMenu = React.useCallback(() => {
+    if (!isLocalMatch || matchStatus !== 'playing') {
+      return;
+    }
+
+    canvasRef.current?.resume();
+    setIsPaused(false);
+  }, [isLocalMatch, matchStatus]);
+
+  const openPauseMenu = React.useCallback(() => {
+    if (!isLocalMatch || matchStatus !== 'playing') {
+      return;
+    }
+
+    canvasRef.current?.pause();
+    setIsPaused(true);
+  }, [isLocalMatch, matchStatus]);
+
+  const togglePauseMenu = React.useCallback(() => {
+    if (isPaused) {
+      closePauseMenu();
+    } else {
+      openPauseMenu();
+    }
+  }, [closePauseMenu, isPaused, openPauseMenu]);
+
+  const handleMatchEndedEngine = React.useCallback((winSide: 'left' | 'right') => {
     if (!isMultiplayer) {
       if (!localResultRecorded.current) {
         recordLocalBotMatch(user?.id, winSide, settings, localControlMode);
         localResultRecorded.current = true;
       }
+      setIsPaused(false);
       setMatchStatus('finished');
       setWinner(winSide);
       if (onStatusChange) onStatusChange(true);
     }
-  };
+  }, [isMultiplayer, localControlMode, onStatusChange, settings, user?.id]);
 
   React.useEffect(() => {
     setRealtimeReady(!waitForRealtimeReady);
   }, [waitForRealtimeReady, roomId]);
 
   React.useEffect(() => {
-    if (isMultiplayer) {
-      syncSocketAuthToken();
-      if (!socket.connected) {
-        socket.connect();
-      }
-      if (joinInviteRoom && roomId) {
-        socket.emit('join_invite_match', { roomId });
+    if (!isLocalMatch || matchStatus !== 'playing') {
+      return;
+    }
+
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.key !== 'Escape') {
+        return;
       }
 
+      event.preventDefault();
+      togglePauseMenu();
+    };
+
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [isLocalMatch, matchStatus, togglePauseMenu]);
+
+  React.useEffect(() => {
+    if (matchStatus === 'finished' && isPaused) {
+      setIsPaused(false);
+    }
+  }, [isPaused, matchStatus]);
+
+  React.useEffect(() => {
+    if (!isMultiplayer) {
+      return;
+    }
+
+    setIsPaused(false);
+
+    const handleEscapeDisabled = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') {
+        event.preventDefault();
+      }
+    };
+
+    window.addEventListener('keydown', handleEscapeDisabled, true);
+    return () => window.removeEventListener('keydown', handleEscapeDisabled, true);
+  }, [isMultiplayer]);
+
+  React.useEffect(() => {
+    if (isMultiplayer) {
       const handleOpponentDisconnected = () => {
         alert(t('Opponent disconnected or left! Match ended.'));
         onExit();
@@ -68,10 +146,6 @@ const GameView: React.FC<GameViewProps> = ({ onExit, isMultiplayer, multiplayerS
       const handleInviteMatchReady = () => {
         setRealtimeReady(true);
       };
-      
-      socket.on('opponent_disconnected', handleOpponentDisconnected);
-      socket.on('returned_to_home', handleReturnHome);
-      socket.on('invite_match_ready', handleInviteMatchReady);
 
       const handleMatchEndedPayload = (payload: { reason: string; winner: 'left' | 'right' | null }) => {
         if (payload.reason === 'completed') {
@@ -91,9 +165,20 @@ const GameView: React.FC<GameViewProps> = ({ onExit, isMultiplayer, multiplayerS
         if (onStatusChange) onStatusChange(false);
       };
 
+      socket.on('opponent_disconnected', handleOpponentDisconnected);
+      socket.on('returned_to_home', handleReturnHome);
+      socket.on('invite_match_ready', handleInviteMatchReady);
       socket.on('match_ended', handleMatchEndedPayload);
       socket.on('restart_match', handleRestartMatch);
-      
+
+      syncSocketAuthToken();
+      if (!socket.connected) {
+        socket.connect();
+      }
+      if (joinInviteRoom && roomId) {
+        socket.emit('join_invite_match', { roomId });
+      }
+
       return () => {
         socket.off('opponent_disconnected', handleOpponentDisconnected);
         socket.off('returned_to_home', handleReturnHome);
@@ -102,7 +187,7 @@ const GameView: React.FC<GameViewProps> = ({ onExit, isMultiplayer, multiplayerS
         socket.off('restart_match', handleRestartMatch);
       };
     }
-  }, [isMultiplayer, joinInviteRoom, onExit, roomId, t]);
+  }, [isMultiplayer, joinInviteRoom, onExit, roomId, t, onStatusChange]);
 
   const handleExit = () => {
     if (isMultiplayer) {
@@ -112,34 +197,86 @@ const GameView: React.FC<GameViewProps> = ({ onExit, isMultiplayer, multiplayerS
   };
 
   return (
-    <div className="game-container" style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '1rem', width: '100%', flex: 1, padding: '10px 0' }}>
-      <div className="glass-panel" style={{ position: 'relative', padding: '10px', display: 'flex', justifyContent: 'center', alignItems: 'center', width: '100%', maxWidth: '800px', overflow: 'hidden' }}>
+    <div className="game-container">
+      <div className="glass-panel game-player-bar">
+        <div className="game-player-card">
+          <span className="game-player-side">{t('LEFT SIDE')}</span>
+          <strong>{leftPlayerLabel}</strong>
+          <small>{leftPlayerHint}</small>
+        </div>
+        <div className="game-player-card game-player-card-center">
+          <span className="game-player-side">{isMultiplayer ? t('ONLINE MATCH') : t('LOCAL MATCH')}</span>
+          <strong>NEON PONG</strong>
+          <small>{isMultiplayer ? t('WAITING FOR OPPONENT') : t('BOT')}</small>
+        </div>
+        <div className="game-player-card">
+          <span className="game-player-side">{t('RIGHT SIDE')}</span>
+          <strong>{rightPlayerLabel}</strong>
+          <small>{rightPlayerHint}</small>
+        </div>
+      </div>
+
+      <div className="glass-panel game-stage">
         {realtimeReady ? (
-          <PongCanvas key={rematchCount} isMultiplayer={isMultiplayer} side={multiplayerSide} roomId={roomId} onMatchEnded={handleMatchEndedEngine} settings={settings} localControlMode={localControlMode} />
+          <PongCanvas
+            key={rematchCount}
+            ref={canvasRef}
+            isMultiplayer={isMultiplayer}
+            side={multiplayerSide}
+            roomId={roomId}
+            onMatchEnded={handleMatchEndedEngine}
+            settings={settings}
+            localControlMode={localControlMode}
+            localPlayerSide={localPlayerSide}
+          />
         ) : (
-          <div style={{ minHeight: 520, width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--text-muted)', textAlign: 'center' }}>
+          <div className="game-sync-wait">
             <span>Esperando a que ambos jugadores sincronicen la partida...</span>
           </div>
         )}
-        
+
+        {isLocalMatch && matchStatus === 'playing' && realtimeReady && (
+          <button
+            type="button"
+            onClick={togglePauseMenu}
+            className="btn-premium secondary game-pause-button"
+          >
+            {t('PAUSE')}
+          </button>
+        )}
+
+        {isPaused && matchStatus === 'playing' && (
+          <div className="game-overlay">
+            <div className="game-overlay-content">
+              <h2 className="title-glow game-overlay-title">
+                {t('PAUSED')}
+              </h2>
+              <p className="game-overlay-text">{t('Press ESC to continue')}</p>
+            </div>
+            <div className="game-overlay-actions">
+              <button className="btn-premium" onClick={closePauseMenu}>
+                {t('RESUME')}
+              </button>
+              <button className="btn-premium secondary" onClick={handleExit}>
+                {exitLabel ?? t('EXIT TO MENU')}
+              </button>
+            </div>
+          </div>
+        )}
+
         {matchStatus === 'finished' && winner && (
-          <div style={{
-            position: 'absolute', top: 0, left: 0, width: '100%', height: '100%',
-            background: 'rgba(0,0,0,0.85)', display: 'flex', flexDirection: 'column',
-            justifyContent: 'center', alignItems: 'center', zIndex: 10, borderRadius: '16px',
-            backdropFilter: 'blur(5px)'
-          }}>
-            <div style={{ textAlign: 'center', marginBottom: '2rem' }}>
-              <h2 className="title-glow" style={{ fontSize: '3.5rem', margin: '0 0 10px 0', letterSpacing: '4px' }}>
-                🏆 {t('WINNER')} 🏆
+          <div className="game-overlay">
+            <div className="game-overlay-content" style={{ marginBottom: '2rem' }}>
+              <h2 className="title-glow game-overlay-title game-winner-title">
+                {t('WINNER')}
               </h2>
               <h3 style={{ fontSize: '2.5rem', margin: 0, color: 'var(--text-main)', fontWeight: 600 }}>
-                {winner === 'left' ? t('PLAYER 1') : t('PLAYER 2')}
+                {winnerLabel}
               </h3>
             </div>
-            <div style={{ display: 'flex', gap: '20px' }}>
-              <button 
-                className="btn-premium secondary" 
+            <div className="game-overlay-actions">
+              <button
+                className="btn-premium secondary"
                 onClick={() => {
                   handleExit();
                 }}
@@ -147,9 +284,10 @@ const GameView: React.FC<GameViewProps> = ({ onExit, isMultiplayer, multiplayerS
                 {exitLabel ?? t('EXIT TO MENU')}
               </button>
               {allowRematch ? (
-                <button 
-                  className="btn-premium" 
+                <button
+                  className="btn-premium"
                   onClick={() => {
+                    setIsPaused(false);
                     if (isMultiplayer) {
                       socket.emit('play_again_request');
                       setRematchRequested(true);
@@ -157,7 +295,7 @@ const GameView: React.FC<GameViewProps> = ({ onExit, isMultiplayer, multiplayerS
                       localResultRecorded.current = false;
                       setMatchStatus('playing');
                       setWinner(null);
-                      setRematchCount(c => c + 1);
+                      setRematchCount((c) => c + 1);
                       if (onStatusChange) onStatusChange(false);
                     }
                   }}
@@ -172,16 +310,6 @@ const GameView: React.FC<GameViewProps> = ({ onExit, isMultiplayer, multiplayerS
         )}
       </div>
 
-      <div style={{ display: 'flex', justifyContent: 'space-between', width: '100%', maxWidth: '800px', marginTop: '0.5rem', padding: '0 10px' }}>
-        <div style={{ textAlign: 'center' }}>
-          <h3>{isMultiplayer ? t('PLAYER 1') : t('PLAYER 1') + ' (AI)'}</h3>
-          <p style={{ color: 'var(--text-muted)' }}>{isMultiplayer ? t('W / S to move') : ''}</p>
-        </div>
-        <div style={{ textAlign: 'center' }}>
-          <h3>{t('PLAYER 2')}</h3>
-          <p style={{ color: 'var(--text-muted)' }}>{!isMultiplayer && localControlMode === 'mouse' ? t('Mouse to move') : t('Up / Down to move')}</p>
-        </div>
-      </div>
     </div>
   );
 };

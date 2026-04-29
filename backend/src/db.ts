@@ -279,6 +279,52 @@ export async function initDatabase() {
     `);
 
     await client.query(`
+      CREATE TABLE IF NOT EXISTS organizations (
+        id BIGSERIAL PRIMARY KEY,
+        name VARCHAR(120) NOT NULL,
+        description VARCHAR(400),
+        owner_id INT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+        created_at TIMESTAMP DEFAULT NOW(),
+        updated_at TIMESTAMP DEFAULT NOW(),
+        deleted_at TIMESTAMP
+      );
+    `);
+
+    await client.query(`
+      CREATE UNIQUE INDEX IF NOT EXISTS idx_organizations_name_active
+      ON organizations (LOWER(name))
+      WHERE deleted_at IS NULL;
+      CREATE INDEX IF NOT EXISTS idx_organizations_owner_created
+      ON organizations(owner_id, created_at DESC);
+    `);
+
+    await client.query(`
+      CREATE TABLE IF NOT EXISTS organization_members (
+        id BIGSERIAL PRIMARY KEY,
+        org_id BIGINT NOT NULL REFERENCES organizations(id) ON DELETE CASCADE,
+        user_id INT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+        role VARCHAR(16) NOT NULL DEFAULT 'member',
+        created_at TIMESTAMP DEFAULT NOW(),
+        updated_at TIMESTAMP DEFAULT NOW(),
+        UNIQUE(org_id, user_id),
+        CHECK (role IN ('owner', 'admin', 'member'))
+      );
+    `);
+
+    await client.query(`
+      CREATE TABLE IF NOT EXISTS organization_join_requests (
+        id BIGSERIAL PRIMARY KEY,
+        org_id BIGINT NOT NULL REFERENCES organizations(id) ON DELETE CASCADE,
+        user_id INT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+        status VARCHAR(16) NOT NULL DEFAULT 'pending',
+        created_at TIMESTAMP DEFAULT NOW(),
+        updated_at TIMESTAMP DEFAULT NOW(),
+        UNIQUE(org_id, user_id),
+        CHECK (status IN ('pending', 'approved', 'rejected', 'cancelled'))
+      );
+    `);
+
+    await client.query(`
       CREATE INDEX IF NOT EXISTS idx_direct_messages_sender_created
       ON direct_messages(sender_id, created_at DESC);
       CREATE INDEX IF NOT EXISTS idx_direct_messages_receiver_created
@@ -305,6 +351,14 @@ export async function initDatabase() {
       ON tournament_participants(tournament_id, joined_at ASC);
       CREATE INDEX IF NOT EXISTS idx_tournament_matches_tournament_round
       ON tournament_matches(tournament_id, round, match_order);
+      CREATE INDEX IF NOT EXISTS idx_organization_members_org_role
+      ON organization_members(org_id, role, created_at ASC);
+      CREATE INDEX IF NOT EXISTS idx_organization_members_user
+      ON organization_members(user_id, created_at DESC);
+      CREATE INDEX IF NOT EXISTS idx_organization_join_requests_org_status
+      ON organization_join_requests(org_id, status, created_at ASC);
+      CREATE INDEX IF NOT EXISTS idx_organization_join_requests_user_status
+      ON organization_join_requests(user_id, status, updated_at DESC);
     `);
 
     console.log("Database tables initialized");

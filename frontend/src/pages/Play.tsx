@@ -42,6 +42,7 @@ type GameRoomStatus = {
 };
 
 type LocalControlMode = "keyboard" | "mouse";
+type LocalPlayerSide = "left" | "right";
 
 function KeyboardArrowsIcon() {
   return (
@@ -76,10 +77,12 @@ export default function Play() {
   const [localView, setLocalView] = useState<"menu" | "controls" | "game" | "lobby" | "settings">("menu");
   const [settings, setSettings] = useState({ targetScore: 5, difficulty: "Beginner" });
   const [localControlMode, setLocalControlMode] = useState<LocalControlMode>("keyboard");
+  const [localPlayerSide, setLocalPlayerSide] = useState<LocalPlayerSide>("right");
   const [isMatchFinished, setIsMatchFinished] = useState(false);
   const [multiplayerState, setMultiplayerState] = useState<{ roomId: string; side: "left" | "right" } | null>(null);
   const [loading, setLoading] = useState(false);
   const [message, setMessage] = useState<{ type: "error" | "success"; text: string } | null>(null);
+  const isActiveMatchView = localView === "game" || !!roomStatus?.gameStarted;
 
   const matchContext = useMemo(() => {
     const roomId = searchParams.get("roomId")?.trim() || "";
@@ -224,6 +227,14 @@ export default function Play() {
     };
   }, [token, matchContext]);
 
+  useEffect(() => {
+    document.body.classList.toggle("play-active-session", isActiveMatchView);
+
+    return () => {
+      document.body.classList.remove("play-active-session");
+    };
+  }, [isActiveMatchView]);
+
   const markReady = async () => {
     if (!matchContext || !token || isReady) return;
 
@@ -267,8 +278,13 @@ export default function Play() {
   };
 
   if (!matchContext) {
+    const localShellClassName =
+      localView === "lobby" || localView === "menu" || localView === "settings" || localView === "controls"
+        ? "app-container play-route-shell play-route-shell-center"
+        : "app-container play-route-shell";
+
     return (
-      <div className="app-container">
+      <div className={localShellClassName}>
         {localView === "menu" && (
           <MainMenu
             onStartGame={() => {
@@ -295,18 +311,31 @@ export default function Play() {
           />
         )}
         {localView === "controls" && (
-          <div className="glass-panel" style={{ width: "min(100%, 720px)", padding: "clamp(1.25rem, 4vw, 2rem)", display: "grid", gap: "1.25rem", textAlign: "center" }}>
+          <div className="glass-panel play-hub-panel play-hub-panel-enter">
+            <div className="play-card">
             <div>
               <h2 className="title-glow" style={{ marginBottom: 8 }}>{t("CHOOSE CONTROLS")}</h2>
-              <p style={{ color: "var(--text-muted)", margin: 0 }}>
-                {t("Choose how you want to move your paddle before starting the local match.")}
-              </p>
             </div>
-            <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))", gap: 14 }}>
+            <div className="play-side-picker">
               <button
-                className="btn-premium"
+                className={`btn-premium play-side-option${localPlayerSide === "left" ? " is-active" : ""}`}
                 type="button"
-                style={{ display: "grid", justifyItems: "center", gap: 10, minHeight: 190, alignContent: "center" }}
+                onClick={() => setLocalPlayerSide("left")}
+              >
+                <span>{t("LEFT SIDE")}</span>
+              </button>
+              <button
+                className={`btn-premium secondary play-side-option${localPlayerSide === "right" ? " is-active" : ""}`}
+                type="button"
+                onClick={() => setLocalPlayerSide("right")}
+              >
+                <span>{t("RIGHT SIDE")}</span>
+              </button>
+            </div>
+            <div className="play-controls-grid">
+              <button
+                className="btn-premium play-control-option"
+                type="button"
                 onClick={() => {
                   setLocalControlMode("keyboard");
                   setLocalView("game");
@@ -314,14 +343,10 @@ export default function Play() {
               >
                 <KeyboardArrowsIcon />
                 <span>{t("ARROW KEYS")}</span>
-                <small style={{ color: "var(--text-muted)", letterSpacing: 0, textTransform: "none", fontFamily: "var(--font-main)", fontWeight: 400 }}>
-                  {t("Use the keyboard arrows to move up and down.")}
-                </small>
               </button>
               <button
-                className="btn-premium secondary"
+                className="btn-premium secondary play-control-option"
                 type="button"
-                style={{ display: "grid", justifyItems: "center", gap: 10, minHeight: 190, alignContent: "center" }}
                 onClick={() => {
                   setLocalControlMode("mouse");
                   setLocalView("game");
@@ -329,14 +354,12 @@ export default function Play() {
               >
                 <MouseControlIcon />
                 <span>{t("MOUSE")}</span>
-                <small style={{ color: "var(--text-muted)", letterSpacing: 0, textTransform: "none", fontFamily: "var(--font-main)", fontWeight: 400 }}>
-                  {t("Move the mouse over the court to control the paddle.")}
-                </small>
               </button>
             </div>
             <button className="btn-premium tertiary" type="button" onClick={() => setLocalView("menu")}>
               {t("BACK")}
             </button>
+            </div>
           </div>
         )}
         {localView === "lobby" && (
@@ -366,6 +389,7 @@ export default function Play() {
             onStatusChange={setIsMatchFinished}
             settings={settings}
             localControlMode={localControlMode}
+            localPlayerSide={localPlayerSide}
           />
         )}
       </div>
@@ -373,7 +397,7 @@ export default function Play() {
   }
 
   return (
-    <div>
+    <div className="app-container play-route-shell">
       {matchContext ? (
         <>
           {message && (
@@ -393,17 +417,7 @@ export default function Play() {
           )}
 
           {roomStatus ? (
-            <div
-              style={{
-                marginBottom: 12,
-                padding: 12,
-                border: "1px solid rgba(255, 255, 255, 0.16)",
-                borderRadius: 10,
-                background: "rgba(10, 12, 24, 0.86)",
-                display: "grid",
-                gap: 8,
-              }}
-            >
+            <div className="play-status-card">
               <div>
                 <strong style={{ display: "block", marginBottom: 4 }}>
                   {isTournamentMatch ? "Sala de torneo" : t("INVITE_MATCH")}
@@ -416,16 +430,8 @@ export default function Play() {
                 </span>
               </div>
 
-              <div
-                style={{
-                  display: "grid",
-                  gap: 6,
-                  fontSize: 13,
-                  borderTop: "1px solid rgba(255, 255, 255, 0.12)",
-                  paddingTop: 8,
-                }}
-              >
-                <div style={{ display: "flex", justifyContent: "space-between" }}>
+              <div className="play-status-list">
+                <div className="play-status-row">
                   <span>{t("YOUR_STATUS")}:</span>
                   <span
                     style={{
@@ -436,7 +442,7 @@ export default function Play() {
                     {roomStatus.players.you.ready ? t("READY_STATUS") : t("WAITING_STATUS")}
                   </span>
                 </div>
-                <div style={{ display: "flex", justifyContent: "space-between" }}>
+                <div className="play-status-row">
                   <span>{t("OPPONENT_STATUS")}:</span>
                   <span
                     style={{
@@ -453,43 +459,24 @@ export default function Play() {
                 <button
                   onClick={() => void markReady()}
                   disabled={loading}
-                  style={{
-                    padding: "10px 16px",
-                    border: "1px solid rgba(0, 240, 255, 0.55)",
-                    backgroundColor: "rgba(0, 240, 255, 0.16)",
-                    color: "#9ef8ff",
-                    cursor: loading ? "not-allowed" : "pointer",
-                    borderRadius: 6,
-                    fontWeight: "bold",
-                    opacity: loading ? 0.6 : 1,
-                  }}
+                  className="play-ready-button"
+                  style={{ cursor: loading ? "not-allowed" : "pointer", opacity: loading ? 0.6 : 1 }}
                 >
                   {loading ? t("PROCESSING") : t("MARK_READY")}
                 </button>
               )}
 
               {roomStatus.gameStarted && (
-                <div
-                  style={{
-                    padding: 10,
-                    backgroundColor: "rgba(34, 197, 94, 0.22)",
-                    color: "#9bf2bd",
-                    borderRadius: 6,
-                    textAlign: "center",
-                    fontWeight: "bold",
-                  }}
-                >
+                <div className="play-ready-state">
                   {t("MATCH_STARTED")}
                 </div>
               )}
             </div>
           ) : (
             <div
+              className="play-status-card"
               style={{
-                marginBottom: 12,
-                padding: 12,
                 border: "1px solid rgba(255, 156, 51, 0.7)",
-                borderRadius: 10,
                 background: "rgba(255, 156, 51, 0.12)",
                 color: "#ffb866",
                 fontSize: 13,
@@ -500,16 +487,7 @@ export default function Play() {
           )}
         </>
       ) : (
-        <div
-          style={{
-            marginBottom: 12,
-            padding: 12,
-            border: "1px solid rgba(255, 255, 255, 0.14)",
-            borderRadius: 10,
-            background: "rgba(8, 10, 20, 0.78)",
-            color: "var(--ink-muted)",
-          }}
-        >
+        <div className="play-status-empty">
           <p style={{ margin: 0, fontSize: 13 }}>
             {t("NO_ACTIVE_INVITE_MATCH")}
           </p>
@@ -533,21 +511,10 @@ export default function Play() {
           onStatusChange={setIsMatchFinished}
           settings={settings}
           localControlMode={localControlMode}
+          localPlayerSide={localPlayerSide}
         />
       ) : (
-        <div
-          style={{
-            height: 520,
-            borderRadius: 12,
-            overflow: "hidden",
-            border: "1px solid rgba(255, 255, 255, 0.14)",
-            background: "rgba(8, 10, 20, 0.86)",
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "center",
-            color: "var(--ink-muted)",
-          }}
-        >
+        <div className="play-wait-canvas">
           <span style={{ fontSize: 14, textAlign: "center" }}>
             {t("CANVAS_READY_HINT")}
           </span>
