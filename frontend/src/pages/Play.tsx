@@ -42,6 +42,7 @@ type GameRoomStatus = {
 };
 
 type LocalControlMode = "keyboard" | "mouse";
+type LocalPlayerSide = "left" | "right";
 
 function KeyboardArrowsIcon() {
   return (
@@ -76,6 +77,7 @@ export default function Play() {
   const [localView, setLocalView] = useState<"menu" | "controls" | "game" | "lobby" | "settings">("menu");
   const [settings, setSettings] = useState({ targetScore: 5, difficulty: "Beginner" });
   const [localControlMode, setLocalControlMode] = useState<LocalControlMode>("keyboard");
+  const [localPlayerSide, setLocalPlayerSide] = useState<LocalPlayerSide>("right");
   const [isMatchFinished, setIsMatchFinished] = useState(false);
   const [multiplayerState, setMultiplayerState] = useState<{ roomId: string; side: "left" | "right" } | null>(null);
   const [loading, setLoading] = useState(false);
@@ -300,12 +302,31 @@ export default function Play() {
           />
         )}
         {localView === "controls" && (
-          <div className="glass-panel play-card">
+          <div className="glass-panel play-hub-panel play-hub-panel-enter">
+            <div className="play-card">
             <div>
               <h2 className="title-glow" style={{ marginBottom: 8 }}>{t("CHOOSE CONTROLS")}</h2>
               <p style={{ color: "var(--text-muted)", margin: 0 }}>
                 {t("Choose how you want to move your paddle before starting the local match.")}
               </p>
+            </div>
+            <div className="play-side-picker">
+              <button
+                className={`btn-premium play-side-option${localPlayerSide === "left" ? " is-active" : ""}`}
+                type="button"
+                onClick={() => setLocalPlayerSide("left")}
+              >
+                <span>{t("LEFT SIDE")}</span>
+                <small>{t("Play as the cyan paddle on the left.")}</small>
+              </button>
+              <button
+                className={`btn-premium secondary play-side-option${localPlayerSide === "right" ? " is-active" : ""}`}
+                type="button"
+                onClick={() => setLocalPlayerSide("right")}
+              >
+                <span>{t("RIGHT SIDE")}</span>
+                <small>{t("Play as the magenta paddle on the right.")}</small>
+              </button>
             </div>
             <div className="play-controls-grid">
               <button
@@ -340,6 +361,7 @@ export default function Play() {
             <button className="btn-premium tertiary" type="button" onClick={() => setLocalView("menu")}>
               {t("BACK")}
             </button>
+            </div>
           </div>
         )}
         {localView === "lobby" && (
@@ -369,6 +391,7 @@ export default function Play() {
             onStatusChange={setIsMatchFinished}
             settings={settings}
             localControlMode={localControlMode}
+            localPlayerSide={localPlayerSide}
           />
         )}
       </div>
@@ -490,6 +513,7 @@ export default function Play() {
           onStatusChange={setIsMatchFinished}
           settings={settings}
           localControlMode={localControlMode}
+          localPlayerSide={localPlayerSide}
         />
       ) : (
         <div className="play-wait-canvas">

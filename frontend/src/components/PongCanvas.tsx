@@ -8,6 +8,7 @@ interface PongCanvasProps {
   onMatchEnded?: (winner: 'left' | 'right') => void;
   settings?: { targetScore: number; difficulty: string };
   localControlMode?: 'keyboard' | 'mouse';
+  localPlayerSide?: 'left' | 'right';
 }
 
 export interface PongCanvasHandle {
@@ -16,7 +17,7 @@ export interface PongCanvasHandle {
 }
 
 const PongCanvas = forwardRef<PongCanvasHandle, PongCanvasProps>(function PongCanvas(
-  { isMultiplayer, side, roomId, onMatchEnded, settings, localControlMode = 'keyboard' },
+  { isMultiplayer, side, roomId, onMatchEnded, settings, localControlMode = 'keyboard', localPlayerSide = 'right' },
   ref
 ) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
@@ -31,17 +32,17 @@ const PongCanvas = forwardRef<PongCanvasHandle, PongCanvasProps>(function PongCa
     if (!canvasRef.current) return;
 
     const canvas = canvasRef.current;
-    canvas.width = 800;
-    canvas.height = 600;
+    canvas.width = 1440;
+    canvas.height = 900;
 
-    engineRef.current = new GameEngine(canvas, isMultiplayer, side, roomId, onMatchEnded, settings, localControlMode);
+    engineRef.current = new GameEngine(canvas, isMultiplayer, side, roomId, onMatchEnded, settings, localControlMode, localPlayerSide);
     engineRef.current.start();
 
     return () => {
       engineRef.current?.stop();
       engineRef.current = null;
     };
-  }, [isMultiplayer, side, roomId, onMatchEnded, settings, localControlMode]);
+  }, [isMultiplayer, side, roomId, onMatchEnded, settings, localControlMode, localPlayerSide]);
 
   return (
     <canvas

@@ -30,6 +30,7 @@ export class GameEngine {
   private side: 'left' | 'right' | undefined;
   private roomId: string | undefined;
   private localControlMode: 'keyboard' | 'mouse';
+  private localPlayerSide: 'left' | 'right';
   private mouseY: number | null = null;
   private isPaused = false;
   private isGameOver = false;
@@ -59,7 +60,8 @@ export class GameEngine {
     roomId?: string, 
     onMatchEnded?: (winner: 'left' | 'right') => void,
     settings?: { targetScore: number; difficulty: string },
-    localControlMode: 'keyboard' | 'mouse' = 'keyboard'
+    localControlMode: 'keyboard' | 'mouse' = 'keyboard',
+    localPlayerSide: 'left' | 'right' = 'right'
   ) {
     this.canvas = canvas;
     this.onMatchEnded = onMatchEnded;
@@ -71,6 +73,7 @@ export class GameEngine {
     this.side = side;
     this.roomId = roomId;
     this.localControlMode = localControlMode;
+    this.localPlayerSide = localPlayerSide;
 
     this.keysTracker = {};
 
@@ -247,29 +250,31 @@ export class GameEngine {
         if (downPressed) { this.player2.update(1, this.canvas.height); moved = true; newY = this.player2.y; }
       }
     } else {
-      // Local Mode: Player 1 is an AI 
-      // Si la pelota va hacia la paleta izquierda, intentamos seguirla.
-      const paddleCenter = this.player1.y + this.player1.height / 2;
-      if (this.ball.vx < 0) {
+      const humanPlayer = this.localPlayerSide === 'left' ? this.player1 : this.player2;
+      const botPlayer = this.localPlayerSide === 'left' ? this.player2 : this.player1;
+      const isBotOnLeft = this.localPlayerSide === 'right';
+      const botIsTargeted = isBotOnLeft ? this.ball.vx < 0 : this.ball.vx > 0;
+      const paddleCenter = botPlayer.y + botPlayer.height / 2;
+
+      if (botIsTargeted) {
         if (this.ball.y < paddleCenter - 10) {
-          this.player1.update(-this.aiSpeedMod, this.canvas.height);
+          botPlayer.update(-this.aiSpeedMod, this.canvas.height);
         } else if (this.ball.y > paddleCenter + 10) {
-          this.player1.update(this.aiSpeedMod, this.canvas.height);
+          botPlayer.update(this.aiSpeedMod, this.canvas.height);
         }
       }
 
-      // Local Mode: Player 2 is Human
       if (this.localControlMode === 'mouse') {
         if (this.mouseY !== null) {
-          const centeredY = this.mouseY - this.player2.height / 2;
-          this.player2.y = Math.min(Math.max(centeredY, 0), this.canvas.height - this.player2.height);
+          const centeredY = this.mouseY - humanPlayer.height / 2;
+          humanPlayer.y = Math.min(Math.max(centeredY, 0), this.canvas.height - humanPlayer.height);
         }
       } else {
         if (upPressed) {
-          this.player2.update(-1, this.canvas.height);
+          humanPlayer.update(-1, this.canvas.height);
         }
         if (downPressed) {
-          this.player2.update(1, this.canvas.height);
+          humanPlayer.update(1, this.canvas.height);
         }
       }
     }

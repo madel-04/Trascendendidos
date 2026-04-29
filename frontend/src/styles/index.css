@@ -177,50 +177,288 @@ h4 {
 
 /* Main Menu View */
 .main-menu {
+  position: relative;
   display: flex;
   flex-direction: column;
   align-items: center;
   justify-content: center;
   gap: 1.5rem;
-  padding: clamp(1rem, 3vw, 1.75rem);
+  padding: clamp(1.25rem, 3vw, 2rem);
   width: 100%;
-  max-width: 800px;
+  max-width: 1100px;
+  min-height: min(72vh, 760px);
   margin: 0 auto;
+  overflow: hidden;
+}
+
+.main-menu-options-shell {
+  width: min(100%, 1120px);
+  max-width: 1120px;
+  min-height: min(68vh, 700px);
+}
+
+.play-hub-panel {
+  position: relative;
+  isolation: isolate;
+  width: min(100%, 1120px);
+  min-height: min(68vh, 700px);
+  padding: clamp(1rem, 2.6vw, 1.6rem);
+  overflow: hidden;
+  border-radius: 28px;
+  background:
+    radial-gradient(circle at 20% 24%, rgba(0, 240, 255, 0.12), transparent 30%),
+    radial-gradient(circle at 82% 22%, rgba(255, 0, 60, 0.12), transparent 28%),
+    rgba(20, 20, 30, 0.72);
+}
+
+.play-hub-panel::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  background:
+    linear-gradient(180deg, rgba(7, 11, 24, 0.22), rgba(9, 9, 19, 0.44)),
+    repeating-linear-gradient(
+      90deg,
+      transparent 0 118px,
+      rgba(255, 255, 255, 0.024) 118px 119px
+    );
+  z-index: -1;
+}
+
+.play-hub-panel > * {
+  position: relative;
+  z-index: 1;
+}
+
+.play-hub-panel-enter {
+  animation: play-hub-enter 360ms ease both;
+}
+
+@keyframes play-hub-enter {
+  0% {
+    opacity: 0;
+    transform: translateY(18px) scale(0.985);
+    filter: blur(6px);
+  }
+  100% {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+    filter: blur(0);
+  }
 }
 
 .matchmaking-panel {
-  width: min(100%, 1500px);
-  min-height: min(62vh, 560px);
   display: grid;
   place-items: center;
   padding: clamp(1.25rem, 4vw, 2rem);
   text-align: center;
 }
 
-.menu-cover-wrap {
-  width: 100%;
-  display: flex;
-  justify-content: center;
-  margin-bottom: 1.5rem;
-}
-
-.menu-cover {
-  width: min(100%, 250px);
-  height: auto;
-  border-radius: 12px;
-  box-shadow: 0 0 20px rgba(0, 240, 255, 0.4);
-  border: 2px solid rgba(255, 255, 255, 0.1);
-}
-
 .menu-buttons {
   display: flex;
   flex-direction: column;
   gap: 1rem;
-  width: 100%;
+  width: min(100%, 420px);
+}
+
+.main-menu-landing::before,
+.main-menu-options::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background:
+    radial-gradient(circle at 20% 25%, rgba(0, 240, 255, 0.16), transparent 32%),
+    radial-gradient(circle at 80% 22%, rgba(255, 0, 60, 0.18), transparent 30%),
+    linear-gradient(180deg, rgba(7, 11, 24, 0.72), rgba(9, 9, 19, 0.88));
+  z-index: 0;
+}
+
+.main-menu-arcade {
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  pointer-events: none;
+}
+
+.main-menu-arcade-board {
+  position: absolute;
+  inset: 4%;
+  border-radius: 28px;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  overflow: hidden;
+  background:
+    linear-gradient(90deg, rgba(0, 240, 255, 0.04), transparent 25%, transparent 75%, rgba(255, 0, 60, 0.05)),
+    rgba(7, 10, 22, 0.78);
+}
+
+.main-menu-arcade-centerline {
+  position: absolute;
+  top: 7%;
+  bottom: 7%;
+  left: 50%;
+  width: 2px;
+  transform: translateX(-50%);
+  background: repeating-linear-gradient(
+    to bottom,
+    rgba(255, 255, 255, 0.42) 0 18px,
+    transparent 18px 36px
+  );
+  opacity: 0.5;
+}
+
+.main-menu-arcade-paddle {
+  position: absolute;
+  width: 14px;
+  height: 120px;
+  top: 50%;
+  border-radius: 999px;
+  transform: translateY(-50%);
+  box-shadow: 0 0 18px currentColor;
+}
+
+.main-menu-arcade-paddle-left {
+  left: 5.5%;
+  color: var(--accent-cyan);
+  background: linear-gradient(180deg, rgba(0, 240, 255, 0.95), rgba(0, 240, 255, 0.4));
+  animation: neon-pong-left-paddle 3.4s ease-in-out infinite alternate;
+}
+
+.main-menu-arcade-paddle-right {
+  right: 5.5%;
+  color: var(--accent-magenta);
+  background: linear-gradient(180deg, rgba(255, 0, 60, 0.95), rgba(255, 0, 60, 0.45));
+  animation: neon-pong-right-paddle 3.1s ease-in-out infinite alternate;
+}
+
+.main-menu-arcade-ball {
+  position: absolute;
+  width: 18px;
+  aspect-ratio: 1;
+  border-radius: 50%;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  background: #f7fbff;
+  box-shadow:
+    0 0 16px rgba(255, 255, 255, 0.88),
+    0 0 34px rgba(0, 240, 255, 0.28);
+  animation: neon-pong-ball 4.8s linear infinite;
+}
+
+.main-menu-arcade-glow {
+  position: absolute;
+  inset: auto;
+  width: 34%;
+  height: 48%;
+  border-radius: 50%;
+  filter: blur(60px);
+  opacity: 0.25;
+}
+
+.main-menu-arcade-glow-left {
+  left: -6%;
+  top: 12%;
+  background: rgba(0, 240, 255, 0.35);
+}
+
+.main-menu-arcade-glow-right {
+  right: -8%;
+  bottom: 10%;
+  background: rgba(255, 0, 60, 0.32);
+}
+
+.main-menu-options-content {
+  position: relative;
+  z-index: 2;
+  width: min(100%, 860px);
+  display: grid;
+  justify-items: center;
+  text-align: center;
+}
+
+.main-menu-options-content {
+  gap: 1.4rem;
+}
+
+.main-menu-kicker {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.55rem;
+  padding: 0.45rem 0.9rem;
+  border-radius: 999px;
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  background: rgba(10, 12, 24, 0.58);
+  font-size: 0.82rem;
+  text-transform: uppercase;
+  letter-spacing: 0.24em;
+  color: rgba(255, 255, 255, 0.78);
+}
+
+.main-menu-options-title {
+  margin-bottom: 0;
+  font-size: clamp(2.4rem, 6vw, 4.4rem);
+}
+
+@keyframes neon-pong-ball {
+  0% {
+    left: 17%;
+    top: 56%;
+  }
+  18% {
+    left: 40%;
+    top: 30%;
+  }
+  35% {
+    left: 73%;
+    top: 62%;
+  }
+  52% {
+    left: 58%;
+    top: 72%;
+  }
+  71% {
+    left: 25%;
+    top: 36%;
+  }
+  100% {
+    left: 17%;
+    top: 56%;
+  }
+}
+
+@keyframes neon-pong-left-paddle {
+  0% {
+    top: 58%;
+  }
+  35% {
+    top: 35%;
+  }
+  70% {
+    top: 67%;
+  }
+  100% {
+    top: 44%;
+  }
+}
+
+@keyframes neon-pong-right-paddle {
+  0% {
+    top: 34%;
+  }
+  30% {
+    top: 63%;
+  }
+  68% {
+    top: 42%;
+  }
+  100% {
+    top: 59%;
+  }
 }
 
 .settings-panel {
-  width: min(100%, 500px);
+  width: min(100%, 520px);
   padding: clamp(1.25rem, 4vw, 2rem);
   display: flex;
   flex-direction: column;
@@ -278,30 +516,81 @@ h4 {
 .game-container {
   display: flex;
   flex-direction: column;
-  align-items: center;
+  align-items: stretch;
   gap: 1rem;
   width: 100%;
   flex: 1;
-  padding: 10px 0;
+  min-height: 0;
+  padding: 0;
+}
+
+.game-player-bar {
+  width: 100%;
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 12px;
+  padding: 0.85rem 1rem;
+}
+
+.game-player-card {
+  min-width: 0;
+  padding: 0.95rem 1rem;
+  border-radius: 16px;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  background: rgba(5, 8, 18, 0.58);
+  display: grid;
+  gap: 0.2rem;
+}
+
+.game-player-card strong,
+.game-player-card small,
+.game-player-card span {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.game-player-card strong {
+  font-family: var(--font-display);
+  font-size: clamp(1rem, 2vw, 1.25rem);
+}
+
+.game-player-card small {
+  color: var(--text-muted);
+}
+
+.game-player-card-center {
+  text-align: center;
+  justify-items: center;
+}
+
+.game-player-side {
+  font-size: 0.72rem;
+  text-transform: uppercase;
+  letter-spacing: 0.18em;
+  color: rgba(255, 255, 255, 0.62);
 }
 
 .game-stage {
   position: relative;
-  padding: clamp(0.5rem, 1.5vw, 0.75rem);
+  flex: 1;
+  min-height: 0;
+  padding: clamp(0.5rem, 1vw, 0.75rem);
   display: flex;
   justify-content: center;
   align-items: center;
-  width: min(100%, 800px);
+  width: 100%;
   overflow: hidden;
 }
 
 .game-canvas {
   width: 100%;
-  max-width: 800px;
-  max-height: min(55vh, 600px);
-  aspect-ratio: 4 / 3;
+  height: 100%;
+  min-height: min(68vh, 760px);
+  max-height: calc(100vh - 270px);
+  aspect-ratio: 16 / 10;
   background: #0a0a14;
-  border-radius: 8px;
+  border-radius: 14px;
   box-shadow: inset 0 0 20px rgba(0,0,0,0.8);
   border: 1px solid rgba(255,255,255,0.1);
 }
@@ -394,6 +683,7 @@ h4 {
 
 .play-card {
   width: min(100%, 720px);
+  margin: auto;
   padding: clamp(1.25rem, 4vw, 2rem);
   display: grid;
   gap: 1.25rem;
@@ -420,6 +710,39 @@ h4 {
   text-transform: none;
   font-family: var(--font-main);
   font-weight: 400;
+}
+
+.play-side-picker {
+  width: 100%;
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 14px;
+}
+
+.play-side-option {
+  min-height: 118px;
+  display: grid;
+  gap: 0.5rem;
+  align-content: center;
+  justify-items: center;
+}
+
+.play-side-option.is-active {
+  box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.22), var(--shadow-neon);
+  transform: translateY(-2px);
+}
+
+.play-side-option.secondary.is-active {
+  box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.22), var(--shadow-neon-magenta);
+}
+
+.play-side-option small {
+  color: var(--text-muted);
+  text-transform: none;
+  letter-spacing: 0;
+  font-family: var(--font-main);
+  font-weight: 400;
+  text-align: center;
 }
 
 .play-status-card,
@@ -514,14 +837,19 @@ h4 {
   }
 
   .settings-actions,
-  .game-meta,
   .play-status-row {
     flex-direction: column;
   }
 
-  .game-meta {
+  .game-player-bar {
+    grid-template-columns: 1fr;
     gap: 0.75rem;
     padding: 0;
+  }
+
+  .play-side-picker,
+  .play-controls-grid {
+    grid-template-columns: 1fr;
   }
 
   .game-pause-button {
@@ -535,16 +863,31 @@ h4 {
     padding-bottom: 1.5rem;
   }
 
-  .play-controls-grid {
-    grid-template-columns: 1fr;
-  }
-
   .play-control-option {
     min-height: 0;
   }
 
-  .main-menu img {
-    max-width: 100%;
-    height: auto;
+  .main-menu {
+    min-height: min(76vh, 760px);
+    padding: 1rem;
+  }
+
+  .main-menu-arcade-board {
+    inset: 3%;
+    border-radius: 22px;
+  }
+
+  .menu-buttons {
+    width: 100%;
+  }
+
+  .main-menu-kicker {
+    font-size: 0.72rem;
+    letter-spacing: 0.18em;
+  }
+
+  .main-menu-arcade-paddle {
+    width: 10px;
+    height: 88px;
   }
 }

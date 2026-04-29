@@ -66,7 +66,7 @@ export default function Matchmaking({ onMatchFound, onCancel }: MatchmakingProps
   };
 
   return (
-    <div className="glass-panel matchmaking-panel">
+    <div className="glass-panel matchmaking-panel play-hub-panel play-hub-panel-enter">
       <div style={{ width: "100%", maxWidth: 960, display: "grid", justifyItems: "center", textAlign: "center" }}>
         <h2 className="title-glow" style={{ width: "100%", textAlign: "center" }}>{t("MATCHMAKING...")}</h2>
         <p style={{ textAlign: "center" }}>{t("Searching for an opponent in the queue")}</p>

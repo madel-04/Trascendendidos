@@ -1,7 +1,7 @@
 // ===== COMPONENTE PRINCIPAL DE LA APLICACIÓN =====
 
 // Importamos componentes de React Router para la navegación
-import { Link, Route, Routes, Navigate, useLocation, useNavigate } from "react-router-dom";
+import { Link, NavLink, Route, Routes, Navigate, useLocation, useNavigate } from "react-router-dom";
 // Importamos las páginas de nuestra aplicación
 import Play from "./pages/Play";
 import Privacy from "./pages/Privacy";
@@ -13,6 +13,8 @@ import Profile from "./pages/Profile";
 import Tournament from "./pages/Tournament";
 import Organizations from "./pages/Organizations";
 import LanguageSwitcher from "./components/LanguageSwitcher";
+import HomeShowcase from "./components/HomeShowcase";
+import PlayAccessGate from "./components/PlayAccessGate";
 // Importamos el componente de ruta protegida
 import ProtectedRoute from "./components/ProtectedRoute";
 // Importamos el contexto de autenticación
@@ -48,12 +50,11 @@ export default function App() {
   const navigate = useNavigate();
   const location = useLocation();
   const { t } = useTranslation();
-  // Estado para almacenar la respuesta del health check del backend
-  // Inicialmente muestra "(loading)" mientras espera la respuesta
-  const [health, setHealth] = useState<string>("(loading)");
+  const [, setHealth] = useState<string>("(loading)");
   const [notifOpen, setNotifOpen] = useState(false);
   const [notifications, setNotifications] = useState<AppNotification[]>([]);
   const isPlayRoute = location.pathname.startsWith("/play");
+  const isHomeRoute = location.pathname === "/";
 
   // useEffect: Hook que ejecuta código cuando el componente se monta
   // [] → Array vacío significa que solo se ejecuta una vez al montar
@@ -129,9 +130,9 @@ export default function App() {
   // Mostrar loading mientras se verifica autenticación
   if (isLoading) {
     return (
-      <div className={`app-shell${isPlayRoute ? " app-shell-play" : ""}`}>
-        <div className={`app-frame${isPlayRoute ? " app-frame-play" : ""}`}>
-          <div className={`content-wrap${isPlayRoute ? " content-wrap-play" : ""}`}>
+      <div className={`app-shell${isPlayRoute ? " app-shell-play" : ""}${isHomeRoute ? " app-shell-home" : ""}`}>
+        <div className={`app-frame${isPlayRoute ? " app-frame-play" : ""}${isHomeRoute ? " app-frame-home" : ""}`}>
+          <div className={`content-wrap${isPlayRoute ? " content-wrap-play" : ""}${isHomeRoute ? " content-wrap-home" : ""}`}>
             <p>{t("LOADING")}</p>
           </div>
         </div>
@@ -140,86 +141,54 @@ export default function App() {
   }
 
   return (
-    <div className={`app-shell${isPlayRoute ? " app-shell-play" : ""}`}>
-      <div className={`app-frame${isPlayRoute ? " app-frame-play" : ""}`}>
-        <header className="topbar">
-          <Link className="nav-link" to="/">{t("HOME")}</Link>
-          <Link className="nav-link" to="/play">{t("PLAY")}</Link>
-          {user ? <Link className="nav-link" to="/tournament">{t("TOURNAMENT")}</Link> : null}
-          {user ? <Link className="nav-link" to="/organizations">{t("ORG_NAV")}</Link> : null}
+    <div className={`app-shell${isPlayRoute ? " app-shell-play" : ""}${isHomeRoute ? " app-shell-home" : ""}`}>
+      <div className={`app-frame${isPlayRoute ? " app-frame-play" : ""}${isHomeRoute ? " app-frame-home" : ""}`}>
+        {!isHomeRoute ? (
+          <header className="topbar">
+            <NavLink className={({ isActive }) => `nav-link${isActive ? " nav-link-active" : ""}`} to="/">{t("HOME")}</NavLink>
+            <NavLink className={({ isActive }) => `nav-link${isActive ? " nav-link-active" : ""}`} to="/play">{t("MENU")}</NavLink>
+            {user ? <NavLink className={({ isActive }) => `nav-link${isActive ? " nav-link-active" : ""}`} to="/tournament">{t("TOURNAMENT")}</NavLink> : null}
+            {user ? <NavLink className={({ isActive }) => `nav-link${isActive ? " nav-link-active" : ""}`} to="/organizations">{t("ORG_NAV")}</NavLink> : null}
 
-          <div className="user-strip">
-            {user ? (
-              <>
-                <div className="notif-wrap">
-                  <button className="notif-btn" onClick={() => setNotifOpen((v) => !v)} type="button">
-                    {t("NOTIFS")}
-                    {notifications.length > 0 && <span className="notif-badge">{notifications.length}</span>}
-                  </button>
-                  {notifOpen && (
-                    <div className="notif-panel">
-                      {notifications.length === 0 ? (
-                        <div className="notif-item">{t("NO_NOTIFICATIONS")}</div>
-                      ) : (
-                        notifications.map((notif) => (
-                          <div key={notif.id} className="notif-item">{notif.text}</div>
-                        ))
-                      )}
-                    </div>
-                  )}
-                </div>
-                <LanguageSwitcher />
-                <Link className="nav-link" to="/profile">{t("PROFILE")}: {user.username}</Link>
-                <button className="btn btn-outline" onClick={logout}>{t("LOGOUT")}</button>
-              </>
-            ) : (
-              <>
-                <Link className="nav-link" to="/login">Login</Link>
-                <Link className="nav-link" to="/register">Register</Link>
-              </>
-            )}
-          </div>
-        </header>
+            <div className="user-strip">
+              {user ? (
+                <>
+                  <div className="notif-wrap">
+                    <button className="notif-btn" onClick={() => setNotifOpen((v) => !v)} type="button">
+                      {t("NOTIFS")}
+                      {notifications.length > 0 && <span className="notif-badge">{notifications.length}</span>}
+                    </button>
+                    {notifOpen && (
+                      <div className="notif-panel">
+                        {notifications.length === 0 ? (
+                          <div className="notif-item">{t("NO_NOTIFICATIONS")}</div>
+                        ) : (
+                          notifications.map((notif) => (
+                            <div key={notif.id} className="notif-item">{notif.text}</div>
+                          ))
+                        )}
+                      </div>
+                    )}
+                  </div>
+                  <LanguageSwitcher />
+                  <NavLink className={({ isActive }) => `nav-link${isActive ? " nav-link-active" : ""}`} to="/profile">{t("PROFILE")}: {user.username}</NavLink>
+                  <button className="btn btn-outline" onClick={logout}>{t("LOGOUT")}</button>
+                </>
+              ) : (
+                <>
+                  <NavLink className={({ isActive }) => `nav-link${isActive ? " nav-link-active" : ""}`} to="/login">{t("LOGIN")}</NavLink>
+                  <NavLink className={({ isActive }) => `nav-link${isActive ? " nav-link-active" : ""}`} to="/register">{t("REGISTER")}</NavLink>
+                </>
+              )}
+            </div>
+          </header>
+        ) : null}
 
-        <main className={`content-wrap${isPlayRoute ? " content-wrap-play" : ""}`}>
+        <main className={`content-wrap${isPlayRoute ? " content-wrap-play" : ""}${isHomeRoute ? " content-wrap-home" : ""}`}>
           <Routes>
             <Route
               path="/"
-              element={
-                <section className="hero">
-                  <article className="hero-card">
-                    <h1 className="hero-title">Trascendence Arena</h1>
-                    <p>
-                      {t("HOME_INTRO")}
-                    </p>
-                    <p>
-                      {t("BACKEND_STATUS")}:
-                      {" "}
-                      <span className="status-pill">{health}</span>
-                    </p>
-                    {user ? (
-                      <p>{t("HOME_WELCOME", { username: user.username })}</p>
-                    ) : (
-                      <p>{t("HOME_LOGIN_HINT")}</p>
-                    )}
-                  </article>
-
-                  <aside className="grid-cards">
-                    <div className="feature-card">
-                      <h3>{t("SECURE_AUTH")}</h3>
-                      <p>{t("SECURE_AUTH_DESC")}</p>
-                    </div>
-                    <div className="feature-card">
-                      <h3>{t("SOCIAL_REALTIME")}</h3>
-                      <p>{t("SOCIAL_REALTIME_DESC")}</p>
-                    </div>
-                    <div className="feature-card">
-                      <h3>{t("PROFILE_CONTROL")}</h3>
-                      <p>{t("PROFILE_CONTROL_DESC")}</p>
-                    </div>
-                  </aside>
-                </section>
-              }
+              element={<HomeShowcase />}
             />
 
             <Route path="/login" element={user ? <Navigate to="/play" replace /> : <Login />} />
@@ -230,11 +199,7 @@ export default function App() {
 
             <Route
               path="/play"
-              element={
-                <ProtectedRoute>
-                  <Play />
-                </ProtectedRoute>
-              }
+              element={user ? <Play /> : <PlayAccessGate />}
             />
             <Route
               path="/profile"
@@ -263,7 +228,7 @@ export default function App() {
           </Routes>
         </main>
 
-        <footer className="footer">
+        <footer className={`footer${isHomeRoute ? " footer-home" : ""}`}>
           <div>Transcendence Project</div>
           <div>
             <Link to="/privacy">{t("Privacy Policy")}</Link>

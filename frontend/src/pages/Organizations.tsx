@@ -624,7 +624,8 @@ export default function Organizations() {
   }
 
   return (
-    <section className="page-stack">
+    <section className="glass-panel play-hub-panel play-hub-panel-enter page-hub-panel">
+      <div className="page-hub-layout page-stack">
       <div className="hero-card">
         <h1>{t("ORG_PAGE_TITLE")}</h1>
         <p>{t("ORG_PAGE_SUBTITLE")}</p>
@@ -841,6 +842,7 @@ export default function Organizations() {
           )}
         </>
       ) : null}
+      </div>
     </section>
   );
 }

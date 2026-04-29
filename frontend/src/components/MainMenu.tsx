@@ -9,30 +9,28 @@ interface MainMenuProps {
 
 const MainMenu: React.FC<MainMenuProps> = ({ onStartGame, onStartMultiplayer, onOpenSettings }) => {
   const { t } = useTranslation();
+
   return (
-    <div className="glass-panel main-menu">
-      <h1 className="title-glow">{'42 MADRID - PONG'}</h1>
+    <div className="glass-panel main-menu main-menu-options-shell play-hub-panel play-hub-panel-enter">
+      <div className="main-menu-options-content">
+        <div className="main-menu-options-header">
+          <div className="main-menu-kicker">{t("CHOOSE YOUR MODE")}</div>
+          <h1 className="title-glow main-menu-options-title">NEON PONG</h1>
+        </div>
 
-      <div className="menu-cover-wrap">
-        <img
-          src="/pong_cover_art.png"
-          alt="Pong Arcade Cover"
-          className="menu-cover"
-        />
-      </div>
-
-      <div className="menu-buttons">
-        <button className="btn-premium" onClick={onStartGame}>
-          {t('PLAY LOCAL (2P)')}
-        </button>
-        <button className="btn-premium secondary" onClick={onStartMultiplayer}>
-          {t('MULTIPLAYER')}
-        </button>
-        {onOpenSettings && (
-          <button className="btn-premium tertiary" onClick={onOpenSettings}>
-            {t('SETTINGS')}
+        <div className="menu-buttons">
+          <button className="btn-premium" onClick={onStartGame}>
+            {t('PLAY LOCAL (2P)')}
           </button>
-        )}
+          <button className="btn-premium secondary" onClick={onStartMultiplayer}>
+            {t('MULTIPLAYER')}
+          </button>
+          {onOpenSettings && (
+            <button className="btn-premium tertiary" onClick={onOpenSettings}>
+              {t('SETTINGS')}
+            </button>
+          )}
+        </div>
       </div>
     </div>
   );

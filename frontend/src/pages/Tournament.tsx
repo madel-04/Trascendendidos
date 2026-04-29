@@ -315,8 +315,8 @@ export default function Tournament() {
   }, [detail?.matches]);
 
   return (
-    <section className="tournament-shell">
-      <div className="tournament-grid">
+    <section className="glass-panel play-hub-panel play-hub-panel-enter page-hub-panel tournament-shell">
+      <div className="page-hub-layout tournament-grid">
         <article className="tournament-column">
           <h2 className="page-title">Torneos</h2>
           <p className="page-subtitle">Sistema de eliminacion directa para 4, 8 o 16 jugadores.</p>

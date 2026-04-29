@@ -17,9 +17,10 @@ interface GameViewProps {
   onStatusChange?: (finished: boolean) => void;
   settings?: { targetScore: number; difficulty: string };
   localControlMode?: 'keyboard' | 'mouse';
+  localPlayerSide?: 'left' | 'right';
 }
 
-const GameView: React.FC<GameViewProps> = ({ onExit, isMultiplayer, multiplayerSide, roomId, joinInviteRoom, waitForRealtimeReady, allowRematch = true, exitLabel, onStatusChange, settings, localControlMode = 'keyboard' }) => {
+const GameView: React.FC<GameViewProps> = ({ onExit, isMultiplayer, multiplayerSide, roomId, joinInviteRoom, waitForRealtimeReady, allowRematch = true, exitLabel, onStatusChange, settings, localControlMode = 'keyboard', localPlayerSide = 'right' }) => {
   const { t } = useTranslation();
   const { user } = useAuth();
   const canvasRef = React.useRef<PongCanvasHandle | null>(null);
@@ -31,6 +32,21 @@ const GameView: React.FC<GameViewProps> = ({ onExit, isMultiplayer, multiplayerS
   const [isPaused, setIsPaused] = React.useState(false);
   const localResultRecorded = React.useRef(false);
   const isLocalMatch = !isMultiplayer;
+  const playerUsername = user?.username ?? t('PLAYER');
+  const localHumanSide = localPlayerSide;
+  const leftPlayerLabel = isMultiplayer ? t('PLAYER 1') : localHumanSide === 'left' ? playerUsername : t('BOT');
+  const rightPlayerLabel = isMultiplayer ? t('PLAYER 2') : localHumanSide === 'right' ? playerUsername : t('BOT');
+  const leftPlayerHint = isMultiplayer
+    ? t('W / S to move')
+    : localHumanSide === 'left'
+      ? (localControlMode === 'mouse' ? t('Mouse to move') : t('Up / Down to move'))
+      : t('AI_OPPONENT_HINT');
+  const rightPlayerHint = isMultiplayer
+    ? t('Up / Down to move')
+    : localHumanSide === 'right'
+      ? (localControlMode === 'mouse' ? t('Mouse to move') : t('Up / Down to move'))
+      : t('AI_OPPONENT_HINT');
+  const winnerLabel = winner === 'left' ? leftPlayerLabel : rightPlayerLabel;
 
   const closePauseMenu = React.useCallback(() => {
     if (!isLocalMatch || matchStatus !== 'playing') {
@@ -166,6 +182,24 @@ const GameView: React.FC<GameViewProps> = ({ onExit, isMultiplayer, multiplayerS
 
   return (
     <div className="game-container">
+      <div className="glass-panel game-player-bar">
+        <div className="game-player-card">
+          <span className="game-player-side">{t('LEFT SIDE')}</span>
+          <strong>{leftPlayerLabel}</strong>
+          <small>{leftPlayerHint}</small>
+        </div>
+        <div className="game-player-card game-player-card-center">
+          <span className="game-player-side">{isMultiplayer ? t('ONLINE MATCH') : t('LOCAL MATCH')}</span>
+          <strong>NEON PONG</strong>
+          <small>{isMultiplayer ? t('WAITING FOR OPPONENT') : t('BOT')}</small>
+        </div>
+        <div className="game-player-card">
+          <span className="game-player-side">{t('RIGHT SIDE')}</span>
+          <strong>{rightPlayerLabel}</strong>
+          <small>{rightPlayerHint}</small>
+        </div>
+      </div>
+
       <div className="glass-panel game-stage">
         {realtimeReady ? (
           <PongCanvas
@@ -177,6 +211,7 @@ const GameView: React.FC<GameViewProps> = ({ onExit, isMultiplayer, multiplayerS
             onMatchEnded={handleMatchEndedEngine}
             settings={settings}
             localControlMode={localControlMode}
+            localPlayerSide={localPlayerSide}
           />
         ) : (
           <div className="game-sync-wait">
@@ -220,7 +255,7 @@ const GameView: React.FC<GameViewProps> = ({ onExit, isMultiplayer, multiplayerS
                 {t('WINNER')}
               </h2>
               <h3 style={{ fontSize: '2.5rem', margin: 0, color: 'var(--text-main)', fontWeight: 600 }}>
-                {winner === 'left' ? t('PLAYER 1') : t('PLAYER 2')}
+                {winnerLabel}
               </h3>
             </div>
             <div className="game-overlay-actions">
@@ -259,16 +294,6 @@ const GameView: React.FC<GameViewProps> = ({ onExit, isMultiplayer, multiplayerS
         )}
       </div>
 
-      <div className="game-meta">
-        <div className="game-meta-card">
-          <h3>{isMultiplayer ? t('PLAYER 1') : t('PLAYER 1') + ' (AI)'}</h3>
-          <p style={{ color: 'var(--text-muted)' }}>{isMultiplayer ? t('W / S to move') : ''}</p>
-        </div>
-        <div className="game-meta-card">
-          <h3>{t('PLAYER 2')}</h3>
-          <p style={{ color: 'var(--text-muted)' }}>{!isMultiplayer && localControlMode === 'mouse' ? t('Mouse to move') : t('Up / Down to move')}</p>
-        </div>
-      </div>
     </div>
   );
 };
