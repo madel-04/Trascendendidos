@@ -47,10 +47,23 @@ services:
       JWT_SECRET: ${JWT_SECRET}
       # Expiración del JWT
       JWT_EXPIRES_IN: ${JWT_EXPIRES_IN:-7d}
+      FRONTEND_ORIGIN: ${FRONTEND_ORIGIN:-http://localhost:5173}
+      PUBLIC_BACKEND_URL: ${PUBLIC_BACKEND_URL:-http://localhost:3000}
+      GOOGLE_CLIENT_ID: ${GOOGLE_CLIENT_ID:-}
+      GOOGLE_CLIENT_SECRET: ${GOOGLE_CLIENT_SECRET:-}
+      GITHUB_CLIENT_ID: ${GITHUB_CLIENT_ID:-}
+      GITHUB_CLIENT_SECRET: ${GITHUB_CLIENT_SECRET:-}
+      FORTYTWO_CLIENT_ID: ${FORTYTWO_CLIENT_ID:-}
+      FORTYTWO_CLIENT_SECRET: ${FORTYTWO_CLIENT_SECRET:-}
     
     # Mapeo de puertos: expone el backend en localhost:3000
     ports:
       - "3000:3000"
+
+    # Monta el cÃ³digo para desarrollo (hot reload sin rebuild)
+    volumes:
+      - ./backend:/app
+      - /app/node_modules
     
     # Dependencias: backend espera a que db esté listo
     # Nota: depends_on solo espera que el contenedor inicie, no que esté "listo"
@@ -72,6 +85,11 @@ services:
     # Mapeo de puertos: expone el frontend en localhost:5173
     ports:
       - "5173:5173"
+
+    # Monta el cÃ³digo para desarrollo (hot reload sin rebuild)
+    volumes:
+      - ./frontend:/app
+      - /app/node_modules
     
     # Dependencias: frontend espera a que backend esté listo
     depends_on:

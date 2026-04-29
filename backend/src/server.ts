@@ -10,9 +10,8 @@ import staticPlugin from "@fastify/static";
 import websocket from "@fastify/websocket";
 // Plugin para JWT (JSON Web Tokens) - autenticación sin sesiones
 import jwt from "@fastify/jwt";
-import fastifySocketIO from "fastify-socket.io";
+import { Server as SocketIOServer } from "socket.io";
 import path from "path";
-import type { FastifyInstance } from "fastify";
 import { mkdir } from "fs/promises";
 // Variables de entorno validadas con Zod (puerto, CORS origin, etc.)
 import { env } from "./env.js";
@@ -30,6 +29,12 @@ import { tournamentRoutes } from "./routes/tournament.js";
 import { registerSocketHandlers } from "./sockets/handlers.js";
 
 import type { SocialRealtimeEvent, SocialRealtimePayload, WsConnection } from "./types.js";
+import type {
+  ClientToServerEvents,
+  InterServerEvents,
+  ServerToClientEvents,
+  SocketData,
+} from "./sockets/types.js";
 
 // ===== CONFIGURACIÓN DEL SERVIDOR =====
 // Creamos la instancia principal de Fastify
@@ -83,35 +88,6 @@ app.decorate("authenticate", async function (request: FastifyRequest, reply: Fas
 
 // Registramos el plugin de WebSocket para comunicación bidireccional en tiempo real
 await app.register(websocket);
-
-await app.register(fastifySocketIO, {
-  cors: {
-    origin: env.CORS_ORIGIN,
-    methods: ["GET", "POST"],
-    credentials: true,
-  },
-  transports: ["websocket", "polling"],
-});
-
-((app as any).io).use(async (socket: any, next: any) => {
-  try {
-    const token = String(socket.handshake.auth?.token ?? socket.handshake.query?.token ?? "").trim();
-    if (!token) {
-      return next(new Error("auth_required"));
-    }
-
-    const decoded = await app.jwt.verify<{ userId?: number; email?: string }>(token);
-    if (!decoded?.userId || typeof decoded.userId !== "number") {
-      return next(new Error("auth_invalid"));
-    }
-
-    socket.data.userId = decoded.userId;
-    socket.data.username = typeof decoded.email === "string" ? decoded.email : undefined;
-    return next();
-  } catch (_error) {
-    return next(new Error("auth_invalid"));
-  }
-});
 
 app.decorate("notifySocialUser", (userId, event, data) => {
   const sockets = socialSocketsByUser.get(userId);
@@ -205,7 +181,43 @@ app.get("/ws", { websocket: true }, async (socket, request) => {
   });
 });
 
-registerSocketHandlers((app as any).io);
+await app.ready();
+
+const io = new SocketIOServer<
+  ClientToServerEvents,
+  ServerToClientEvents,
+  InterServerEvents,
+  SocketData
+>(app.server, {
+  cors: {
+    origin: env.CORS_ORIGIN,
+    methods: ["GET", "POST"],
+    credentials: true,
+  },
+  transports: ["websocket", "polling"],
+});
+
+io.use(async (socket, next) => {
+  try {
+    const token = String(socket.handshake.auth?.token ?? socket.handshake.query?.token ?? "").trim();
+    if (!token) {
+      return next(new Error("auth_required"));
+    }
+
+    const decoded = await app.jwt.verify<{ userId?: number; email?: string }>(token);
+    if (!decoded?.userId || typeof decoded.userId !== "number") {
+      return next(new Error("auth_invalid"));
+    }
+
+    socket.data.userId = decoded.userId;
+    socket.data.username = typeof decoded.email === "string" ? decoded.email : undefined;
+    return next();
+  } catch (_error) {
+    return next(new Error("auth_invalid"));
+  }
+});
+
+registerSocketHandlers(io, app);
 app.log.info("Socket.io attached and ready");
 
 // ===== INICIAR SERVIDOR =====

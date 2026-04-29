@@ -16,7 +16,7 @@ export class Player {
   /** La velocidad a la que la pala se mueve hacia arriba o hacia abajo en píxeles por fotograma. */
   public speed: number;
   /** El lado del tablero en el que está el jugador ('left' o 'right'). */
-  private side: 'left' | 'right';
+  public side: 'left' | 'right';
   /** El color principal utilizado para dibujar la pala. */
   private color: string;
 
@@ -47,10 +47,10 @@ export class Player {
    * @param canvasHeight - La altura total del canvas (utilizada para comprobar los límites).
    */
   public update(direction: number, canvasHeight: number): void {
-    if (direction < 0 && this.y > 0) {
-      this.y -= this.speed;
-    } else if (direction > 0 && this.y + this.height < canvasHeight) {
-      this.y += this.speed;
+    if (direction < 0) {
+      if (this.y > 0) this.y = Math.max(0, this.y - this.speed);
+    } else if (direction > 0) {
+      if (this.y + this.height < canvasHeight) this.y = Math.min(canvasHeight - this.height, this.y + this.speed);
     }
   }
 

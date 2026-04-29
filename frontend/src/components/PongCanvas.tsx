@@ -5,9 +5,12 @@ interface PongCanvasProps {
   isMultiplayer?: boolean;
   side?: 'left' | 'right';
   roomId?: string;
+  onMatchEnded?: (winner: 'left' | 'right') => void;
+  settings?: { targetScore: number; difficulty: string };
+  localControlMode?: 'keyboard' | 'mouse';
 }
 
-const PongCanvas: React.FC<PongCanvasProps> = ({ isMultiplayer, side, roomId }) => {
+const PongCanvas: React.FC<PongCanvasProps> = ({ isMultiplayer, side, roomId, onMatchEnded, settings, localControlMode = 'keyboard' }) => {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const engineRef = useRef<GameEngine | null>(null);
 
@@ -21,19 +24,23 @@ const PongCanvas: React.FC<PongCanvasProps> = ({ isMultiplayer, side, roomId }) 
     canvas.width = 800;
     canvas.height = 600;
 
-    engineRef.current = new GameEngine(canvas, isMultiplayer, side, roomId);
+    engineRef.current = new GameEngine(canvas, isMultiplayer, side, roomId, onMatchEnded, settings, localControlMode);
     engineRef.current.start();
 
     // Clean up on unmount
     return () => {
       engineRef.current?.stop();
     };
-  }, [isMultiplayer, roomId, side]);
+  }, [isMultiplayer, side, roomId, localControlMode]);
 
   return (
     <canvas 
       ref={canvasRef} 
       style={{ 
+        width: '100%',
+        maxWidth: '800px',
+        maxHeight: '55vh',
+        aspectRatio: '4 / 3',
         background: '#0a0a14', 
         borderRadius: '8px',
         boxShadow: 'inset 0 0 20px rgba(0,0,0,0.8)',

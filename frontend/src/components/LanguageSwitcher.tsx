@@ -3,38 +3,25 @@ import { useTranslation } from 'react-i18next';
 
 const LanguageSwitcher: React.FC = () => {
   const { i18n } = useTranslation();
-
-  const changeLanguage = (lng: string) => {
-    i18n.changeLanguage(lng);
-  };
+  const currentLanguage = i18n.language.startsWith('en')
+    ? 'en'
+    : i18n.language.startsWith('it')
+      ? 'it'
+      : 'es';
 
   return (
-    <div style={{ position: 'absolute', justifyContent: 'center', top: '20px', display: 'flex', gap: '15px', zIndex: 10 }}>
-      <button
-        onClick={() => changeLanguage('es')}
-        style={{
-          background: 'none', border: 'none', cursor: 'pointer', fontSize: '2rem',
-          opacity: i18n.language === 'es' ? 1 : 0.4,
-          transition: 'opacity 0.3s',
-          filter: i18n.language === 'es' ? 'drop-shadow(0 0 10px rgba(0,240,255,0.8))' : 'none'
-        }}
-        title="Español"
+    <label className="language-switcher" aria-label="Language selector">
+      <span className="language-switcher-label">🌐</span>
+      <select
+        value={currentLanguage}
+        onChange={(event) => void i18n.changeLanguage(event.target.value)}
+        title="Language"
       >
-        <span role="img" aria-label="Español">🇪🇸</span>
-      </button>
-      <button
-        onClick={() => changeLanguage('en')}
-        style={{
-          background: 'none', border: 'none', cursor: 'pointer', fontSize: '2rem',
-          opacity: i18n.language.startsWith('en') ? 1 : 0.4,
-          transition: 'opacity 0.3s',
-          filter: i18n.language.startsWith('en') ? 'drop-shadow(0 0 10px rgba(255,0,60,0.8))' : 'none'
-        }}
-        title="English"
-      >
-        <span role="img" aria-label="English">🇬🇧</span>
-      </button>
-    </div>
+        <option value="es">ES</option>
+        <option value="en">EN</option>
+        <option value="it">IT</option>
+      </select>
+    </label>
   );
 };
 

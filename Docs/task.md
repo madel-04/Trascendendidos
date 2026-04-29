@@ -26,21 +26,21 @@ Este documento rastrea el progreso de la implementación del juego Pong Multijug
 - [x] Integración del backend con la base de datos (usando el ORM Prisma).
 
 ## Hito 4: Integración y Juego Funcional
-- [x] Conectar el frontend React con el servidor WebSocket Fastify.
-- [x] Sincronización del estado del juego servidor -> cliente (interpolación de movimiento si es necesario).
-- [x] Transmisión de las pulsaciones de teclas/movimientos cliente -> servidor.
-- [x] Pruebas cruzadas: asegurar que dos instancias del navegador pueden jugar al unísono.
+- [ ] Conectar el frontend React con el servidor WebSocket Fastify.
+- [ ] Sincronización del estado del juego servidor -> cliente (interpolación de movimiento si es necesario).
+- [ ] Transmisión de las pulsaciones de teclas/movimientos cliente -> servidor.
+- [ ] Pruebas cruzadas: asegurar que dos instancias del navegador pueden jugar al unísono.
 
 ## Hito 5: Gestión de Usuarios y Seguridad
-- [x] Implementación de endpoints de registro e inicio de sesión en Fastify.
-- [x] Autenticación de usuarios vía JWT (JSON Web Tokens) e integración con WebSockets.
-- [x] Interfaz de usuario para login/registro con validación de formularios.
+- [ ] Implementación de endpoints de registro e inicio de sesión en Fastify.
+- [ ] Autenticación de usuarios vía JWT (JSON Web Tokens) e integración con WebSockets.
+- [ ] Interfaz de usuario para login/registro con validación de formularios.
 - [ ] Configuración de HTTPS en el backend.
-- [x] Gestión segura de variables de entorno `.env` para credenciales de BBDD y secretos.
+- [ ] Gestión segura de variables de entorno `.env` para credenciales de BBDD y secretos.
 
 ## Hito 6: Estética, Requisitos Legales y Documentación Documental
-- [x] Refinamiento del diseño web con estética moderna (diseño premium en Vanilla CSS, animaciones, componentes pulidos).
-- [x] Creación e integración de páginas completas para "Política de Privacidad" y "Términos de Servicio".
+- [ ] Refinamiento del diseño web con estética moderna (diseño premium en Vanilla CSS, animaciones, componentes pulidos).
+- [ ] Creación e integración de páginas completas para "Política de Privacidad" y "Términos de Servicio".
 - [ ] Elaboración del `README.md` final del proyecto con instrucciones de despliegue, arquitectura y justificación de recursos.
 
 ## Hito 7: Bonus - Renderizado 3D

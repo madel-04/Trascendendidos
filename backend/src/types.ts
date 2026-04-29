@@ -20,7 +20,8 @@ export type SocialRealtimeEvent =
   | "game_room_created"
   | "game_player_joined"
   | "game_player_ready"
-  | "game_start";
+  | "game_start"
+  | "tournament_match_ready";
 
 export type SocialRealtimePayload = {
   channel: "social";

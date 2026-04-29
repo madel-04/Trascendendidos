@@ -1,7 +1,7 @@
 # Aplicación Web Pong Multijugador - Plan de Implementación
 
 ## Descripción del Objetivo
-Crear un videojuego Pong multijugador con React (frontend), Fastify (backend WebSocket + API REST) y PostgreSQL (Base de datos). Todos los servicios estarán dockerizados y orquestados mediante Docker Compose. El sistema soportará inicialmente 2 jugadores (preparado para escalar a 4), incluirá gestión de usuarios con autenticación segura, validación de formularios, HTTPS en el backend, y cumplirá con requisitos de documentación como "Política de Privacidad", "Términos de Servicio" y un `README.md` exhaustivo. Será **multilenguaje** (Español / Inglés). Como hito final (Bonus), el juego se actualizará a un entorno visual 3D.
+Crear un videojuego Pong multijugador con React (frontend), Fastify (backend WebSocket + API REST) y PostgreSQL (Base de datos). Todos los servicios estarán dockerizados y orquestados mediante Docker Compose. El sistema soportará inicialmente 2 jugadores (preparado para escalar a 4), incluirá gestión de usuarios con autenticación segura, validación de formularios, HTTPS en el backend, y cumplirá con requisitos de documentación como "Política de Privacidad", "Términos de Servicio" y un `README.md` exhaustivo. Será **multilenguaje** (Español / Inglés / Italiano) y totalmente responsivo para adaptarse a cualquier tamaño de pantalla (sin scrolls horizontales ni verticales no deseados). Como hito final (Bonus), el juego se actualizará a un entorno visual 3D.
 
 ## Decisiones Tecnológicas Confirmadas
 1. **Frontend Tooling:** React + Vite (para máxima velocidad y modernidad en SPA).

@@ -29,21 +29,38 @@ export class GameEngine {
   private isMultiplayer: boolean;
   private side: 'left' | 'right' | undefined;
   private roomId: string | undefined;
+  private localControlMode: 'keyboard' | 'mouse';
+  private mouseY: number | null = null;
 
-  /** 
+  /** Callback para notificar cuando la partida ha terminado */
+  public onMatchEnded?: (winner: 'left' | 'right') => void;
+  public targetScore: number = 5;
+
+  /**  
    * Un objeto de mapeo para rastrear qué teclas están pulsadas actualmente.
    * Usamos cadenas genéricas como 'w', 's', 'ArrowUp', 'ArrowDown'.
    */
   private keysTracker: { [key: string]: boolean } = {};
 
-  /**
-   * Inicializa el GameEngine y sus entidades.
-   * Vincula los escuchadores de eventos del teclado para rastrear la entrada.
+  // Dificultad para IA en Modo Local
+  private aiSpeedMod: number = 0.55;
+
+  /** 
+   * Inicializa el motor del juego y sus entidades.
    * 
    * @param canvas - El elemento canvas objetivo para renderizar el juego.
    */
-  constructor(canvas: HTMLCanvasElement, isMultiplayer = false, side?: 'left' | 'right', roomId?: string) {
+  constructor(
+    canvas: HTMLCanvasElement, 
+    isMultiplayer = false, 
+    side?: 'left' | 'right', 
+    roomId?: string, 
+    onMatchEnded?: (winner: 'left' | 'right') => void,
+    settings?: { targetScore: number; difficulty: string },
+    localControlMode: 'keyboard' | 'mouse' = 'keyboard'
+  ) {
     this.canvas = canvas;
+    this.onMatchEnded = onMatchEnded;
     const context = canvas.getContext('2d');
     if (!context) throw new Error("Could not initialize 2D context");
     this.ctx = context;
@@ -51,16 +68,27 @@ export class GameEngine {
     this.isMultiplayer = isMultiplayer;
     this.side = side;
     this.roomId = roomId;
+    this.localControlMode = localControlMode;
 
-    const cw = this.canvas.width;
-    const ch = this.canvas.height;
+    this.keysTracker = {};
 
-    // Instancia las entidades del juego
-    // P1 a la izquierda (Cyan), P2 a la derecha (Magenta)
-    this.player1 = new Player(30, ch / 2 - 50, 'left', '#00F0FF');
-    this.player2 = new Player(cw - 30 - 16, ch / 2 - 50, 'right', '#FF003C');
-    this.ball = new Ball(cw, ch);
-    this.board = new Board(cw, ch);
+    // Configuración Base y Mapeo de Dificultad Dinámico
+    let pHeight = 130;
+    let bSpeed = 5.5;
+    this.targetScore = settings?.targetScore || 5;
+
+    // Solo afectamos parámetros de velocidad/pala en el entorno local offline
+    if (!this.isMultiplayer && settings) {
+      if (settings.difficulty === 'Intermediate') { pHeight = 90; bSpeed = 7.5; this.aiSpeedMod = 0.65; }
+      if (settings.difficulty === 'Expert') { pHeight = 60; bSpeed = 10; this.aiSpeedMod = 0.80; }
+    }
+
+    this.player1 = new Player(10, (this.canvas.height - pHeight) / 2, 'left', '#00F0FF');
+    this.player1.height = pHeight;
+    this.player2 = new Player(this.canvas.width - 26, (this.canvas.height - pHeight) / 2, 'right', '#FF003C');
+    this.player2.height = pHeight;
+    this.ball = new Ball(this.canvas.width, this.canvas.height, bSpeed);
+    this.board = new Board(this.canvas.width, this.canvas.height);
 
     // Vincula los métodos para asegurar que el contexto `this` se preserve en los eventos
     this.handleKeyDown = this.handleKeyDown.bind(this);
@@ -69,6 +97,8 @@ export class GameEngine {
     this.handlePaddleMoved = this.handlePaddleMoved.bind(this);
     this.handleBallState = this.handleBallState.bind(this);
     this.handleScoreUpdate = this.handleScoreUpdate.bind(this);
+    this.handleMouseMove = this.handleMouseMove.bind(this);
+    this.handleMouseLeave = this.handleMouseLeave.bind(this);
   }
 
   /**
@@ -78,7 +108,11 @@ export class GameEngine {
   public start(): void {
     window.addEventListener('keydown', this.handleKeyDown);
     window.addEventListener('keyup', this.handleKeyUp);
-
+    if (!this.isMultiplayer && this.localControlMode === 'mouse') {
+      this.canvas.addEventListener('mousemove', this.handleMouseMove);
+      this.canvas.addEventListener('mouseleave', this.handleMouseLeave);
+    }
+    
     if (this.isMultiplayer) {
       socket.on('paddle_moved', this.handlePaddleMoved);
       socket.on('ball_state', this.handleBallState);
@@ -98,7 +132,9 @@ export class GameEngine {
     }
     window.removeEventListener('keydown', this.handleKeyDown);
     window.removeEventListener('keyup', this.handleKeyUp);
-
+    this.canvas.removeEventListener('mousemove', this.handleMouseMove);
+    this.canvas.removeEventListener('mouseleave', this.handleMouseLeave);
+    
     if (this.isMultiplayer) {
       socket.off('paddle_moved', this.handlePaddleMoved);
       socket.off('ball_state', this.handleBallState);
@@ -115,7 +151,7 @@ export class GameEngine {
   }
 
   private handleBallState(payload: { x: number; y: number; vx: number; vy: number }): void {
-    if (this.side === 'right') {
+    if (this.side === 'right') { // Solo el right actualiza la pelota con lo que dicta el left
       this.ball.x = payload.x;
       this.ball.y = payload.y;
       this.ball.vx = payload.vx;
@@ -128,10 +164,25 @@ export class GameEngine {
     this.player2.score = payload.right;
   }
 
+  private handleMouseMove(e: MouseEvent): void {
+    const rect = this.canvas.getBoundingClientRect();
+    const scaleY = this.canvas.height / rect.height;
+    this.mouseY = (e.clientY - rect.top) * scaleY;
+  }
+
+  private handleMouseLeave(): void {
+    this.mouseY = null;
+  }
+
   /**
    * Rastrea cuando se pulsa una tecla hacia abajo.
    */
   private handleKeyDown(e: KeyboardEvent): void {
+    // Evitar el comportamiento por defecto (ej. scroll) de las teclas de movimiento
+    if (['ArrowUp', 'ArrowDown', 'w', 's', 'W', 'S', ' '].includes(e.key)) {
+      e.preventDefault();
+    }
+    
     this.keysTracker[e.code] = true;
     this.keysTracker[e.key] = true;
     this.keysTracker[e.key.toLowerCase()] = true;
@@ -156,33 +207,48 @@ export class GameEngine {
     let moved = false;
     let newY = 0;
 
-    if (!this.isMultiplayer || this.side === 'left') {
-      if (this.keysTracker['KeyW'] || this.keysTracker['w'] || this.keysTracker['W']) {
-        this.player1.update(-1, this.canvas.height);
-        moved = true;
-        newY = this.player1.y;
+    const upPressed = this.keysTracker['ArrowUp'] || this.keysTracker['w'] || this.keysTracker['W'] || this.keysTracker['KeyW'];
+    const downPressed = this.keysTracker['ArrowDown'] || this.keysTracker['s'] || this.keysTracker['S'] || this.keysTracker['KeyS'];
+
+    if (this.isMultiplayer) {
+      if (this.side === 'left') {
+        if (upPressed) { this.player1.update(-1, this.canvas.height); moved = true; newY = this.player1.y; }
+        if (downPressed) { this.player1.update(1, this.canvas.height); moved = true; newY = this.player1.y; }
+      } else if (this.side === 'right') {
+        if (upPressed) { this.player2.update(-1, this.canvas.height); moved = true; newY = this.player2.y; }
+        if (downPressed) { this.player2.update(1, this.canvas.height); moved = true; newY = this.player2.y; }
       }
-      if (this.keysTracker['KeyS'] || this.keysTracker['s'] || this.keysTracker['S']) {
-        this.player1.update(1, this.canvas.height);
-        moved = true;
-        newY = this.player1.y;
+    } else {
+      // Local Mode: Player 1 is an AI 
+      // Si la pelota va hacia la paleta izquierda, intentamos seguirla.
+      const paddleCenter = this.player1.y + this.player1.height / 2;
+      if (this.ball.vx < 0) {
+        if (this.ball.y < paddleCenter - 10) {
+          this.player1.update(-this.aiSpeedMod, this.canvas.height);
+        } else if (this.ball.y > paddleCenter + 10) {
+          this.player1.update(this.aiSpeedMod, this.canvas.height);
+        }
+      }
+
+      // Local Mode: Player 2 is Human
+      if (this.localControlMode === 'mouse') {
+        if (this.mouseY !== null) {
+          const centeredY = this.mouseY - this.player2.height / 2;
+          this.player2.y = Math.min(Math.max(centeredY, 0), this.canvas.height - this.player2.height);
+        }
+      } else {
+        if (upPressed) {
+          this.player2.update(-1, this.canvas.height);
+        }
+        if (downPressed) {
+          this.player2.update(1, this.canvas.height);
+        }
       }
     }
 
-    if (!this.isMultiplayer || this.side === 'right') {
-      if (this.keysTracker['ArrowUp']) {
-        this.player2.update(-1, this.canvas.height);
-        moved = true;
-        newY = this.player2.y;
-      }
-      if (this.keysTracker['ArrowDown']) {
-        this.player2.update(1, this.canvas.height);
-        moved = true;
-        newY = this.player2.y;
-      }
-    }
-
-    if (this.isMultiplayer && moved && this.roomId && this.side) {
+    if (this.isMultiplayer && moved && this.roomId) {
+      // Limit emission rate or just emit every frame. 
+      // Emitting 60fps might be too much, but for Hito 2 it'll work locally ok.
       socket.emit('paddle_move', { roomId: this.roomId, player: this.side, y: newY });
     }
   }
@@ -192,8 +258,9 @@ export class GameEngine {
    * Mueve la pelota, comprueba colisiones y registra goles.
    */
   private updatePhysics(): void {
+    // Si estamos en multijugador y somos el de la derecha, somos meros espectadores físicos
     if (this.isMultiplayer && this.side === 'right') {
-      return;
+      return; 
     }
 
     this.ball.update();
@@ -221,7 +288,20 @@ export class GameEngine {
       scoreChanged = true;
     }
 
-    if (this.isMultiplayer && this.side === 'left' && this.roomId) {
+    // Comprobar ganador del target
+    let winner: 'left' | 'right' | null = null;
+    if (this.player1.score >= this.targetScore) winner = 'left';
+    else if (this.player2.score >= this.targetScore) winner = 'right';
+
+    if (winner) {
+      if (this.onMatchEnded) this.onMatchEnded(winner);
+      // En multijugador, delegamos al host notificar al servidor para oficializar la victoria
+      if (this.isMultiplayer && this.side === 'left') {
+        socket.emit('game_over', { winner, left: this.player1.score, right: this.player2.score });
+      }
+    }
+
+    if (this.isMultiplayer && this.side === 'left') {
       socket.emit('ball_state', { roomId: this.roomId, x: this.ball.x, y: this.ball.y, vx: this.ball.vx, vy: this.ball.vy });
       if (scoreChanged) {
         socket.emit('score_update', { roomId: this.roomId, left: this.player1.score, right: this.player2.score });
@@ -260,6 +340,11 @@ export class GameEngine {
     this.processInputs();
     this.updatePhysics();
     this.draw();
+
+    // Detener animación si alguien alcanzó la marca ganadora
+    if (this.player1.score >= this.targetScore || this.player2.score >= this.targetScore) {
+      return; 
+    }
 
     // Solicita el siguiente frame para mantener el bucle en marcha
     this.animationFrameId = requestAnimationFrame(this.gameLoop);

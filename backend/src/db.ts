@@ -69,6 +69,26 @@ export async function initDatabase() {
     `);
 
     await client.query(`
+      CREATE TABLE IF NOT EXISTS oauth_accounts (
+        id BIGSERIAL PRIMARY KEY,
+        user_id INT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+        provider VARCHAR(32) NOT NULL,
+        provider_user_id VARCHAR(255) NOT NULL,
+        provider_email VARCHAR(255),
+        created_at TIMESTAMP DEFAULT NOW(),
+        updated_at TIMESTAMP DEFAULT NOW(),
+        UNIQUE(provider, provider_user_id),
+        UNIQUE(user_id, provider)
+      );
+    `);
+
+    await client.query(`
+      CREATE INDEX IF NOT EXISTS idx_oauth_accounts_user_id ON oauth_accounts(user_id);
+      CREATE INDEX IF NOT EXISTS idx_oauth_accounts_provider_email
+      ON oauth_accounts(provider, provider_email);
+    `);
+
+    await client.query(`
       CREATE TABLE IF NOT EXISTS friend_requests (
         id SERIAL PRIMARY KEY,
         sender_id INT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
@@ -164,6 +184,7 @@ export async function initDatabase() {
       CREATE TABLE IF NOT EXISTS tournaments (
         id BIGSERIAL PRIMARY KEY,
         name VARCHAR(120) NOT NULL,
+        description VARCHAR(500) NOT NULL DEFAULT '',
         creator_id INT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
         status VARCHAR(16) NOT NULL DEFAULT 'open' CHECK (status IN ('open', 'in_progress', 'completed', 'cancelled')),
         max_players INT NOT NULL CHECK (max_players IN (4, 8, 16)),
@@ -193,15 +214,53 @@ export async function initDatabase() {
         round INT NOT NULL,
         match_order INT NOT NULL,
         player1_id INT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
-        player2_id INT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+        player2_id INT REFERENCES users(id) ON DELETE CASCADE,
+        game_room_id VARCHAR(128) UNIQUE,
         winner_id INT REFERENCES users(id) ON DELETE SET NULL,
         status VARCHAR(16) NOT NULL DEFAULT 'pending' CHECK (status IN ('pending', 'completed')),
         created_at TIMESTAMP DEFAULT NOW(),
         completed_at TIMESTAMP,
         UNIQUE(tournament_id, round, match_order),
-        CHECK (player1_id <> player2_id)
+        CHECK (player2_id IS NULL OR player1_id <> player2_id)
       );
     `);
+
+    await client.query(`
+      ALTER TABLE tournaments
+      ADD COLUMN IF NOT EXISTS description VARCHAR(500) NOT NULL DEFAULT '';
+    `);
+
+    await client.query(`
+      ALTER TABLE tournament_matches
+      ALTER COLUMN player2_id DROP NOT NULL;
+    `);
+
+    await client.query(`
+      ALTER TABLE tournament_matches
+      ADD COLUMN IF NOT EXISTS game_room_id VARCHAR(128) UNIQUE;
+    `);
+
+    await client.query(`
+      DO $$
+      BEGIN
+        IF EXISTS (
+          SELECT 1
+          FROM pg_constraint
+          WHERE conname = 'tournament_matches_player1_id_player2_id_check'
+        ) THEN
+          ALTER TABLE tournament_matches
+          DROP CONSTRAINT tournament_matches_player1_id_player2_id_check;
+        END IF;
+      END $$;
+    `);
+
+    await client.query(`
+      ALTER TABLE tournament_matches
+      ADD CONSTRAINT tournament_matches_player_distinct_check
+      CHECK (player2_id IS NULL OR player1_id <> player2_id);
+    `).catch(async (error: any) => {
+      if (error?.code !== "42710") throw error;
+    });
 
     await client.query(`
       CREATE TABLE IF NOT EXISTS game_matches (
