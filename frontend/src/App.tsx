@@ -11,6 +11,7 @@ import OAuthCallback from "./pages/OAuthCallback";
 import Register from "./pages/Register";
 import Profile from "./pages/Profile";
 import Tournament from "./pages/Tournament";
+import Organizations from "./pages/Organizations";
 import LanguageSwitcher from "./components/LanguageSwitcher";
 // Importamos el componente de ruta protegida
 import ProtectedRoute from "./components/ProtectedRoute";
@@ -143,6 +144,7 @@ export default function App() {
           <Link className="nav-link" to="/">{t("HOME")}</Link>
           <Link className="nav-link" to="/play">{t("PLAY")}</Link>
           {user ? <Link className="nav-link" to="/tournament">{t("TOURNAMENT")}</Link> : null}
+          {user ? <Link className="nav-link" to="/organizations">{t("ORG_NAV")}</Link> : null}
 
           <div className="user-strip">
             {user ? (
@@ -245,6 +247,14 @@ export default function App() {
               element={
                 <ProtectedRoute>
                   <Tournament />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/organizations"
+              element={
+                <ProtectedRoute>
+                  <Organizations />
                 </ProtectedRoute>
               }
             />
