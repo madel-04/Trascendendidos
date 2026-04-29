@@ -624,7 +624,7 @@ export default function Organizations() {
   }
 
   return (
-    <section className="glass-panel play-hub-panel play-hub-panel-enter page-hub-panel">
+    <section className="glass-panel play-hub-panel play-hub-panel-enter page-hub-panel organizations-shell">
       <div className="page-hub-layout page-stack">
       <div className="hero-card">
         <h1>{t("ORG_PAGE_TITLE")}</h1>

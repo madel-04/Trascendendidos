@@ -302,6 +302,7 @@ export default function Tournament() {
   const canStart = Boolean(detail?.tournament.permissions.canStart && (detail?.participants.length ?? 0) >= 2);
   const canEditTournament = Boolean(detail?.tournament.permissions.canEdit);
   const canCancelTournament = Boolean(detail?.tournament.permissions.canCancel);
+  const showTournamentActions = detail?.tournament.status === "open" || detail?.tournament.status === "in_progress";
   const groupedMatches = useMemo(() => {
     const rounds = new Map<number, TournamentDetail["matches"]>();
     for (const match of detail?.matches ?? []) {
@@ -397,40 +398,50 @@ export default function Tournament() {
                   </p>
                   <p className="muted">{detail.tournament.description || "Sin descripcion."}</p>
                 </div>
-                <div className="tournament-actions">
-                  <button
-                    type="button"
-                    className="btn btn-outline"
-                    disabled={!canJoin || actionBusy}
-                    onClick={() => performAction(`/api/tournament/${detail.tournament.id}/join`)}
-                  >
-                    Unirme
-                  </button>
-                  <button
-                    type="button"
-                    className="btn btn-primary"
-                    disabled={!canStart || actionBusy}
-                    onClick={() => performAction(`/api/tournament/${detail.tournament.id}/start`)}
-                  >
-                    Iniciar
-                  </button>
-                  <button
-                    type="button"
-                    className="btn btn-outline"
-                    disabled={!canEditTournament || actionBusy}
-                    onClick={beginEditing}
-                  >
-                    Editar
-                  </button>
-                  <button
-                    type="button"
-                    className="btn btn-outline"
-                    disabled={!canCancelTournament || actionBusy}
-                    onClick={() => performAction(`/api/tournament/${detail.tournament.id}/cancel`)}
-                  >
-                    Cancelar
-                  </button>
-                </div>
+                {showTournamentActions ? (
+                  <div className="tournament-actions">
+                    {canJoin ? (
+                      <button
+                        type="button"
+                        className="btn btn-outline"
+                        disabled={actionBusy}
+                        onClick={() => performAction(`/api/tournament/${detail.tournament.id}/join`)}
+                      >
+                        Unirme
+                      </button>
+                    ) : null}
+                    {canStart ? (
+                      <button
+                        type="button"
+                        className="btn btn-primary"
+                        disabled={actionBusy}
+                        onClick={() => performAction(`/api/tournament/${detail.tournament.id}/start`)}
+                      >
+                        Iniciar
+                      </button>
+                    ) : null}
+                    {canEditTournament ? (
+                      <button
+                        type="button"
+                        className="btn btn-outline"
+                        disabled={actionBusy}
+                        onClick={beginEditing}
+                      >
+                        Editar
+                      </button>
+                    ) : null}
+                    {canCancelTournament ? (
+                      <button
+                        type="button"
+                        className="btn btn-outline"
+                        disabled={actionBusy}
+                        onClick={() => performAction(`/api/tournament/${detail.tournament.id}/cancel`)}
+                      >
+                        Cancelar
+                      </button>
+                    ) : null}
+                  </div>
+                ) : null}
               </div>
 
               {editing ? (

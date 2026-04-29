@@ -82,6 +82,7 @@ export default function Play() {
   const [multiplayerState, setMultiplayerState] = useState<{ roomId: string; side: "left" | "right" } | null>(null);
   const [loading, setLoading] = useState(false);
   const [message, setMessage] = useState<{ type: "error" | "success"; text: string } | null>(null);
+  const isActiveMatchView = localView === "game" || !!roomStatus?.gameStarted;
 
   const matchContext = useMemo(() => {
     const roomId = searchParams.get("roomId")?.trim() || "";
@@ -226,6 +227,14 @@ export default function Play() {
     };
   }, [token, matchContext]);
 
+  useEffect(() => {
+    document.body.classList.toggle("play-active-session", isActiveMatchView);
+
+    return () => {
+      document.body.classList.remove("play-active-session");
+    };
+  }, [isActiveMatchView]);
+
   const markReady = async () => {
     if (!matchContext || !token || isReady) return;
 
@@ -306,9 +315,6 @@ export default function Play() {
             <div className="play-card">
             <div>
               <h2 className="title-glow" style={{ marginBottom: 8 }}>{t("CHOOSE CONTROLS")}</h2>
-              <p style={{ color: "var(--text-muted)", margin: 0 }}>
-                {t("Choose how you want to move your paddle before starting the local match.")}
-              </p>
             </div>
             <div className="play-side-picker">
               <button
@@ -317,7 +323,6 @@ export default function Play() {
                 onClick={() => setLocalPlayerSide("left")}
               >
                 <span>{t("LEFT SIDE")}</span>
-                <small>{t("Play as the cyan paddle on the left.")}</small>
               </button>
               <button
                 className={`btn-premium secondary play-side-option${localPlayerSide === "right" ? " is-active" : ""}`}
@@ -325,7 +330,6 @@ export default function Play() {
                 onClick={() => setLocalPlayerSide("right")}
               >
                 <span>{t("RIGHT SIDE")}</span>
-                <small>{t("Play as the magenta paddle on the right.")}</small>
               </button>
             </div>
             <div className="play-controls-grid">
@@ -339,9 +343,6 @@ export default function Play() {
               >
                 <KeyboardArrowsIcon />
                 <span>{t("ARROW KEYS")}</span>
-                <small>
-                  {t("Use the keyboard arrows to move up and down.")}
-                </small>
               </button>
               <button
                 className="btn-premium secondary play-control-option"
@@ -353,9 +354,6 @@ export default function Play() {
               >
                 <MouseControlIcon />
                 <span>{t("MOUSE")}</span>
-                <small>
-                  {t("Move the mouse over the court to control the paddle.")}
-                </small>
               </button>
             </div>
             <button className="btn-premium tertiary" type="button" onClick={() => setLocalView("menu")}>

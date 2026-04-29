@@ -9,6 +9,18 @@ type OAuthProvider = {
   label: string;
 };
 
+type OAuthLogoButton = {
+  key: "42" | "google" | "github";
+  label: string;
+  imageSrc: string;
+};
+
+const OAUTH_LOGO_BUTTONS: OAuthLogoButton[] = [
+  { key: "42", label: "42", imageSrc: "/42_logo.png" },
+  { key: "google", label: "Google", imageSrc: "/google_logo.png" },
+  { key: "github", label: "GitHub", imageSrc: "/github_logo.png" },
+];
+
 export default function Login() {
   const { login } = useAuth();
   const navigate = useNavigate();
@@ -67,17 +79,22 @@ export default function Login() {
     window.location.href = `${API}/api/auth/oauth/${encodeURIComponent(providerId)}`;
   };
 
+  const getProviderForLogo = (providerKey: OAuthLogoButton["key"]) =>
+    oauthProviders.find((provider) => {
+      const normalizedId = provider.id.toLowerCase();
+      const normalizedLabel = provider.label.toLowerCase();
+      return normalizedId.includes(providerKey) || normalizedLabel.includes(providerKey);
+    });
+
   return (
     <div className="app-container play-route-shell play-route-shell-center">
       <div className={`glass-panel play-hub-panel play-hub-panel-enter auth-hub-panel${leavingTarget ? " auth-hub-panel-leaving" : ""}`}>
         <div className="auth-hub-inner">
-          <div className="auth-hub-copy">
-            <div className="main-menu-kicker">ACCESO NEON</div>
-            <h1 className="title-glow auth-hub-title">INICIAR SESION</h1>
-            <p className="auth-hub-subtitle">Accede al menu principal, partidas online, torneos y organizaciones sin salir del mismo entorno visual.</p>
-          </div>
-
           <div className="auth-card auth-card-hub">
+            <div className="auth-hub-copy auth-hub-copy-left">
+              <h1 className="title-glow auth-hub-title">INICIAR SESION</h1>
+              <p className="auth-hub-subtitle">Entra sin salir del mismo entorno visual del juego y continua directamente hacia el menu principal.</p>
+            </div>
             <form onSubmit={handleSubmit} className="auth-form">
               <div className="auth-field">
                 <label className="auth-label" htmlFor="email">Email</label>
@@ -112,30 +129,41 @@ export default function Login() {
               </button>
             </form>
 
-            {oauthProviders.length > 0 ? (
-              <div className="oauth-section">
-                <div className="oauth-divider">o</div>
-                <div className="oauth-buttons">
-                  {oauthProviders.map((provider) => (
-                    <button
-                      key={provider.id}
-                      className="btn-premium secondary oauth-btn"
-                      type="button"
-                      onClick={() => startOAuthLogin(provider.id)}
-                    >
-                      Continuar con {provider.label}
-                    </button>
-                  ))}
-                </div>
-              </div>
-            ) : null}
-
             <p className="auth-linkline">
               Aun no tienes cuenta?{" "}
               <button className="auth-inline-link" type="button" onClick={() => handleSoftNavigate("/register")}>
                 Registrate aqui
               </button>
             </p>
+          </div>
+
+          <div className="auth-brand-panel">
+            <div className="auth-brand-copy">
+              <h2>Accesos disponibles</h2>
+              <p>Accede con email y password o entra desde uno de los proveedores ya conectados.</p>
+            </div>
+            <div className="auth-brand-grid">
+              {OAUTH_LOGO_BUTTONS.map((logoButton) => {
+                const provider = getProviderForLogo(logoButton.key);
+                return (
+                  <button
+                    key={logoButton.key}
+                    type="button"
+                    className={`auth-brand-tile auth-brand-tile-button auth-brand-tile-${logoButton.key}${provider ? "" : " is-disabled"}`}
+                    aria-label={logoButton.label}
+                    title={provider ? `Continuar con ${logoButton.label}` : `${logoButton.label} no disponible`}
+                    onClick={() => {
+                      if (provider) {
+                        startOAuthLogin(provider.id);
+                      }
+                    }}
+                    disabled={!provider}
+                  >
+                    <img className="auth-brand-logo" src={logoButton.imageSrc} alt={logoButton.label} />
+                  </button>
+                );
+              })}
+            </div>
           </div>
         </div>
       </div>

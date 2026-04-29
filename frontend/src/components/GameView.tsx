@@ -116,15 +116,24 @@ const GameView: React.FC<GameViewProps> = ({ onExit, isMultiplayer, multiplayerS
   }, [isPaused, matchStatus]);
 
   React.useEffect(() => {
-    if (isMultiplayer) {
-      syncSocketAuthToken();
-      if (!socket.connected) {
-        socket.connect();
-      }
-      if (joinInviteRoom && roomId) {
-        socket.emit('join_invite_match', { roomId });
-      }
+    if (!isMultiplayer) {
+      return;
+    }
 
+    setIsPaused(false);
+
+    const handleEscapeDisabled = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') {
+        event.preventDefault();
+      }
+    };
+
+    window.addEventListener('keydown', handleEscapeDisabled, true);
+    return () => window.removeEventListener('keydown', handleEscapeDisabled, true);
+  }, [isMultiplayer]);
+
+  React.useEffect(() => {
+    if (isMultiplayer) {
       const handleOpponentDisconnected = () => {
         alert(t('Opponent disconnected or left! Match ended.'));
         onExit();
@@ -137,10 +146,6 @@ const GameView: React.FC<GameViewProps> = ({ onExit, isMultiplayer, multiplayerS
       const handleInviteMatchReady = () => {
         setRealtimeReady(true);
       };
-
-      socket.on('opponent_disconnected', handleOpponentDisconnected);
-      socket.on('returned_to_home', handleReturnHome);
-      socket.on('invite_match_ready', handleInviteMatchReady);
 
       const handleMatchEndedPayload = (payload: { reason: string; winner: 'left' | 'right' | null }) => {
         if (payload.reason === 'completed') {
@@ -160,8 +165,19 @@ const GameView: React.FC<GameViewProps> = ({ onExit, isMultiplayer, multiplayerS
         if (onStatusChange) onStatusChange(false);
       };
 
+      socket.on('opponent_disconnected', handleOpponentDisconnected);
+      socket.on('returned_to_home', handleReturnHome);
+      socket.on('invite_match_ready', handleInviteMatchReady);
       socket.on('match_ended', handleMatchEndedPayload);
       socket.on('restart_match', handleRestartMatch);
+
+      syncSocketAuthToken();
+      if (!socket.connected) {
+        socket.connect();
+      }
+      if (joinInviteRoom && roomId) {
+        socket.emit('join_invite_match', { roomId });
+      }
 
       return () => {
         socket.off('opponent_disconnected', handleOpponentDisconnected);

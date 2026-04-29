@@ -138,13 +138,12 @@ export class Ball {
    * Restablece la pelota al centro del canvas y aleatoriza su dirección inicial.
    * La velocidad también se restablece a la base inicial.
    */
-  public reset(): void {
+  public reset(serveTo: 'left' | 'right' = this.vx > 0 ? 'left' : 'right'): void {
     this.x = this.canvasWidth / 2;
     this.y = this.canvasHeight / 2;
     this.speed = this.baseSpeed;
-    // Invierte la dirección para servir la pelota al jugador que perdió el punto
     const proportion = this.baseSpeed / 7;
-    this.vx = (this.vx > 0 ? -1 : 1) * (5 * proportion);
+    this.vx = (serveTo === 'left' ? -1 : 1) * (5 * proportion);
     this.vy = (5 * proportion) * (Math.random() > 0.5 ? 1 : -1);
   }
 }

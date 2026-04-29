@@ -54,6 +54,11 @@ export default function App() {
   const [notifOpen, setNotifOpen] = useState(false);
   const [notifications, setNotifications] = useState<AppNotification[]>([]);
   const isPlayRoute = location.pathname.startsWith("/play");
+  const isWideHubRoute =
+    location.pathname.startsWith("/tournament") ||
+    location.pathname.startsWith("/organizations") ||
+    isPlayRoute;
+  const isWidePanelRoute = location.pathname.startsWith("/tournament") || location.pathname.startsWith("/organizations");
   const isHomeRoute = location.pathname === "/";
 
   // useEffect: Hook que ejecuta código cuando el componente se monta
@@ -130,9 +135,9 @@ export default function App() {
   // Mostrar loading mientras se verifica autenticación
   if (isLoading) {
     return (
-      <div className={`app-shell${isPlayRoute ? " app-shell-play" : ""}${isHomeRoute ? " app-shell-home" : ""}`}>
-        <div className={`app-frame${isPlayRoute ? " app-frame-play" : ""}${isHomeRoute ? " app-frame-home" : ""}`}>
-          <div className={`content-wrap${isPlayRoute ? " content-wrap-play" : ""}${isHomeRoute ? " content-wrap-home" : ""}`}>
+      <div className={`app-shell${isWideHubRoute ? " app-shell-play" : ""}${isHomeRoute ? " app-shell-home" : ""}`}>
+        <div className={`app-frame${isWideHubRoute ? " app-frame-play" : ""}${isHomeRoute ? " app-frame-home" : ""}`}>
+          <div className={`content-wrap${isPlayRoute ? " content-wrap-play" : ""}${isWidePanelRoute ? " content-wrap-wide-panel" : ""}${isHomeRoute ? " content-wrap-home" : ""}`}>
             <p>{t("LOADING")}</p>
           </div>
         </div>
@@ -141,8 +146,8 @@ export default function App() {
   }
 
   return (
-    <div className={`app-shell${isPlayRoute ? " app-shell-play" : ""}${isHomeRoute ? " app-shell-home" : ""}`}>
-      <div className={`app-frame${isPlayRoute ? " app-frame-play" : ""}${isHomeRoute ? " app-frame-home" : ""}`}>
+    <div className={`app-shell${isWideHubRoute ? " app-shell-play" : ""}${isHomeRoute ? " app-shell-home" : ""}`}>
+      <div className={`app-frame${isWideHubRoute ? " app-frame-play" : ""}${isHomeRoute ? " app-frame-home" : ""}`}>
         {!isHomeRoute ? (
           <header className="topbar">
             <NavLink className={({ isActive }) => `nav-link${isActive ? " nav-link-active" : ""}`} to="/">{t("HOME")}</NavLink>
@@ -184,7 +189,7 @@ export default function App() {
           </header>
         ) : null}
 
-        <main className={`content-wrap${isPlayRoute ? " content-wrap-play" : ""}${isHomeRoute ? " content-wrap-home" : ""}`}>
+        <main className={`content-wrap${isPlayRoute ? " content-wrap-play" : ""}${isWidePanelRoute ? " content-wrap-wide-panel" : ""}${isHomeRoute ? " content-wrap-home" : ""}`}>
           <Routes>
             <Route
               path="/"

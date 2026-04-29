@@ -31,7 +31,7 @@ export class Board {
    * @param score1 - El número de puntuación actual para el Jugador 1 (Left).
    * @param score2 - El número de puntuación actual para el Jugador 2 (Right).
    */
-  public draw(ctx: CanvasRenderingContext2D, score1: number, score2: number): void {
+  public draw(ctx: CanvasRenderingContext2D, score1: number, score2: number, countdown: number | null = null): void {
     ctx.save();
 
     // 1. Dibuja la línea central discontinua
@@ -58,6 +58,13 @@ export class Board {
     
     // Player 2 score (right)
     ctx.fillText(score2.toString(), (this.width / 4) * 3, 30);
+
+    if (countdown !== null) {
+      ctx.font = '700 180px "Space Grotesk", sans-serif';
+      ctx.fillStyle = 'rgba(255, 255, 255, 0.18)';
+      ctx.textBaseline = 'middle';
+      ctx.fillText(String(countdown), this.width / 2, this.height / 2);
+    }
 
     ctx.restore();
   }

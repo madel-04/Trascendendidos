@@ -34,6 +34,8 @@ export class GameEngine {
   private mouseY: number | null = null;
   private isPaused = false;
   private isGameOver = false;
+  private countdownFrames = 0;
+  private readonly countdownDurationFrames = 180;
 
   /** Callback para notificar cuando la partida ha terminado */
   public onMatchEnded?: (winner: 'left' | 'right') => void;
@@ -113,6 +115,10 @@ export class GameEngine {
   public start(): void {
     this.isPaused = false;
     this.isGameOver = false;
+    this.player1.resetPosition(this.canvas.height);
+    this.player2.resetPosition(this.canvas.height);
+    this.ball.reset(this.ball.vx > 0 ? 'right' : 'left');
+    this.countdownFrames = this.countdownDurationFrames;
     window.addEventListener('keydown', this.handleKeyDown);
     window.addEventListener('keyup', this.handleKeyUp);
     if (!this.isMultiplayer && this.localControlMode === 'mouse') {
@@ -191,8 +197,18 @@ export class GameEngine {
   }
 
   private handleScoreUpdate(payload: { left: number; right: number }): void {
+    const previousLeft = this.player1.score;
+    const previousRight = this.player2.score;
+    const scoreChanged = payload.left !== previousLeft || payload.right !== previousRight;
     this.player1.score = payload.left;
     this.player2.score = payload.right;
+    if (scoreChanged) {
+      const scoredOn = payload.left > previousLeft ? 'right' : 'left';
+      this.player1.resetPosition(this.canvas.height);
+      this.player2.resetPosition(this.canvas.height);
+      this.ball.reset(scoredOn);
+      this.countdownFrames = this.countdownDurationFrames;
+    }
   }
 
   private handleMouseMove(e: MouseEvent): void {
@@ -243,7 +259,7 @@ export class GameEngine {
 
     if (this.isMultiplayer) {
       if (this.side === 'left') {
-        if (upPressed) { this.player1.update(-1, this.canvas.height); moved = true; newY = this.player1.y; }
+      if (upPressed) { this.player1.update(-1, this.canvas.height); moved = true; newY = this.player1.y; }
         if (downPressed) { this.player1.update(1, this.canvas.height); moved = true; newY = this.player1.y; }
       } else if (this.side === 'right') {
         if (upPressed) { this.player2.update(-1, this.canvas.height); moved = true; newY = this.player2.y; }
@@ -296,6 +312,14 @@ export class GameEngine {
       return; 
     }
 
+    if (this.countdownFrames > 0) {
+      this.countdownFrames -= 1;
+      if (this.isMultiplayer && this.side === 'left') {
+        socket.emit('ball_state', { roomId: this.roomId, x: this.ball.x, y: this.ball.y, vx: this.ball.vx, vy: this.ball.vy });
+      }
+      return;
+    }
+
     this.ball.update();
 
     // Comprobar colisiones de palas
@@ -312,12 +336,12 @@ export class GameEngine {
     if (this.ball.x < 0) {
       // ¡El Jugador 2 anota!
       this.player2.increaseScore();
-      this.resetAfterGoal();
+      this.resetAfterGoal('left');
       scoreChanged = true;
     } else if (this.ball.x > this.canvas.width) {
       // ¡El Jugador 1 anota!
       this.player1.increaseScore();
-      this.resetAfterGoal();
+      this.resetAfterGoal('right');
       scoreChanged = true;
     }
 
@@ -345,10 +369,11 @@ export class GameEngine {
   /**
    * Restablece las posiciones del tablero, pelota y jugador tras un gol.
    */
-  private resetAfterGoal(): void {
-    this.ball.reset();
+  private resetAfterGoal(scoredOn: 'left' | 'right'): void {
+    this.ball.reset(scoredOn);
     this.player1.resetPosition(this.canvas.height);
     this.player2.resetPosition(this.canvas.height);
+    this.countdownFrames = this.countdownDurationFrames;
   }
 
   /**
@@ -359,7 +384,8 @@ export class GameEngine {
     this.ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
 
     // Dibuja los elementos
-    this.board.draw(this.ctx, this.player1.score, this.player2.score);
+    const countdown = this.countdownFrames > 0 ? Math.ceil(this.countdownFrames / 60) : null;
+    this.board.draw(this.ctx, this.player1.score, this.player2.score, countdown);
     this.player1.draw(this.ctx);
     this.player2.draw(this.ctx);
     this.ball.draw(this.ctx);
