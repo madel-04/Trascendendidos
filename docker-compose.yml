@@ -7,7 +7,14 @@ services:
   db:
     # Imagen oficial de PostgreSQL versión 16 desde Docker Hub
     image: postgres:16
-    
+
+    # Política de reinicio: siempre reinicia si el contenedor falla
+    # condition: always → reinicia automáticamente cuando cae
+    # delay: tiempo de espera antes de reintentar
+    restart_policy:
+      condition: always
+      delay: 5s
+
     # Variables de entorno para configurar PostgreSQL
     environment:
       # Nombre de la base de datos a crear al iniciar
@@ -34,6 +41,15 @@ services:
     # Construye la imagen desde el Dockerfile en ./backend
     build: ./backend
     
+    # Política de reinicio: reinicia hasta 5 veces si falla
+    # condition: on-failure → reinicia solo si el contenedor termina con error
+    # max_attempts: máximo número de reintentos
+    # delay: tiempo de espera entre reintentos
+    restart_policy:
+      condition: on-failure
+      delay: 5s
+      max_attempts: 5
+
     # Variables de entorno para el backend
     environment:
       # Puerto donde el servidor Fastify escuchará
@@ -76,6 +92,16 @@ services:
     # Construye la imagen desde el Dockerfile en ./frontend
     build: ./frontend
     
+    # Política de reinicio: reinicia hasta 5 veces si falla
+    # condition: on-failure → reinicia solo si el contenedor termina con error
+    # max_attempts: máximo número de reintentos
+    # delay: tiempo de espera entre reintentos
+    restart_policy:
+      condition: on-failure
+      delay: 5s
+      max_attempts: 5
+
+
     # Variables de entorno para Vite
     environment:
       # URL base de la API para que el frontend sepa dónde hacer peticiones
