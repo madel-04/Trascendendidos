@@ -31,6 +31,8 @@ export class GameEngine {
   private roomId: string | undefined;
   private localControlMode: 'keyboard' | 'mouse';
   private mouseY: number | null = null;
+  private isPaused = false;
+  private isGameOver = false;
 
   /** Callback para notificar cuando la partida ha terminado */
   public onMatchEnded?: (winner: 'left' | 'right') => void;
@@ -106,6 +108,8 @@ export class GameEngine {
    * lanzando la primera solicitud de frame de animación.
    */
   public start(): void {
+    this.isPaused = false;
+    this.isGameOver = false;
     window.addEventListener('keydown', this.handleKeyDown);
     window.addEventListener('keyup', this.handleKeyUp);
     if (!this.isMultiplayer && this.localControlMode === 'mouse') {
@@ -122,13 +126,37 @@ export class GameEngine {
     this.animationFrameId = requestAnimationFrame(this.gameLoop);
   }
 
+  public pause(): void {
+    if (this.isMultiplayer || this.isPaused || this.isGameOver) {
+      return;
+    }
+
+    this.isPaused = true;
+    this.keysTracker = {};
+    if (this.animationFrameId !== null) {
+      cancelAnimationFrame(this.animationFrameId);
+      this.animationFrameId = null;
+    }
+  }
+
+  public resume(): void {
+    if (this.isMultiplayer || !this.isPaused || this.isGameOver) {
+      return;
+    }
+
+    this.isPaused = false;
+    this.animationFrameId = requestAnimationFrame(this.gameLoop);
+  }
+
   /**
    * Detiene el bucle del juego y elimina los escuchadores de eventos de la ventana 
    * para limpiar la memoria cuando el componente se desmonta.
    */
   public stop(): void {
-    if (this.animationFrameId) {
+    this.isPaused = false;
+    if (this.animationFrameId !== null) {
       cancelAnimationFrame(this.animationFrameId);
+      this.animationFrameId = null;
     }
     window.removeEventListener('keydown', this.handleKeyDown);
     window.removeEventListener('keyup', this.handleKeyUp);
@@ -337,12 +365,19 @@ export class GameEngine {
    * Patrón: Entrada -> Actualizar -> Dibujar -> Repetir
    */
   private gameLoop(): void {
+    if (this.isPaused) {
+      this.animationFrameId = null;
+      return;
+    }
+
     this.processInputs();
     this.updatePhysics();
     this.draw();
 
     // Detener animación si alguien alcanzó la marca ganadora
     if (this.player1.score >= this.targetScore || this.player2.score >= this.targetScore) {
+      this.isGameOver = true;
+      this.animationFrameId = null;
       return; 
     }
 
