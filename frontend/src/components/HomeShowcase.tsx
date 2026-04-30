@@ -23,6 +23,7 @@ export default function HomeShowcase() {
 
     let animationFrame = 0;
     let lastTime = performance.now();
+    let resizeObserver: ResizeObserver | null = null;
 
     const board = { width: 1280, height: 720 };
     const paddle = { width: 18, height: 126, inset: 48 };
@@ -46,8 +47,17 @@ export default function HomeShowcase() {
       const parent = canvas.parentElement;
       if (!parent) return;
       const rect = parent.getBoundingClientRect();
-      canvas.width = Math.max(1, Math.round(rect.width));
-      canvas.height = Math.max(1, Math.round(rect.height));
+      const dpr = window.devicePixelRatio || 1;
+      const nextWidth = Math.max(1, Math.round(rect.width * dpr));
+      const nextHeight = Math.max(1, Math.round(rect.height * dpr));
+
+      if (canvas.width !== nextWidth) {
+        canvas.width = nextWidth;
+      }
+
+      if (canvas.height !== nextHeight) {
+        canvas.height = nextHeight;
+      }
     };
 
     const clamp = (value: number, min: number, max: number) => Math.min(Math.max(value, min), max);
@@ -93,10 +103,13 @@ export default function HomeShowcase() {
     };
 
     const render = () => {
-      const scaleX = canvas.width / board.width;
-      const scaleY = canvas.height / board.height;
-      context.setTransform(scaleX, 0, 0, scaleY, 0, 0);
-      context.clearRect(0, 0, board.width, board.height);
+      context.setTransform(1, 0, 0, 1, 0, 0);
+      context.clearRect(0, 0, canvas.width, canvas.height);
+
+      const scale = Math.max(canvas.width / board.width, canvas.height / board.height);
+      const offsetX = (canvas.width - board.width * scale) / 2;
+      const offsetY = (canvas.height - board.height * scale) / 2;
+      context.setTransform(scale, 0, 0, scale, offsetX, offsetY);
 
       const background = context.createLinearGradient(0, 0, board.width, board.height);
       background.addColorStop(0, "rgba(3, 10, 24, 0.94)");
@@ -228,10 +241,20 @@ export default function HomeShowcase() {
     render();
     animationFrame = window.requestAnimationFrame(update);
     window.addEventListener("resize", resize);
+    window.visualViewport?.addEventListener("resize", resize);
+
+    if ("ResizeObserver" in window) {
+      resizeObserver = new ResizeObserver(() => {
+        resize();
+      });
+      resizeObserver.observe(canvas.parentElement ?? canvas);
+    }
 
     return () => {
       window.cancelAnimationFrame(animationFrame);
       window.removeEventListener("resize", resize);
+      window.visualViewport?.removeEventListener("resize", resize);
+      resizeObserver?.disconnect();
     };
   }, []);
 
