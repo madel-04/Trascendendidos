@@ -657,7 +657,7 @@ export default function SocialPanel({ token }: { token: string | null }) {
   };
 
   return (
-    <div style={{ border: "1px solid rgba(255, 255, 255, 0.16)", padding: 20, marginBottom: 30, display: "grid", gap: 16 }}>
+    <div style={{ border: "1px solid rgba(255, 255, 255, 0.16)", padding: 20, marginBottom: 30, display: "flex", flexDirection: "column", gap: 16 }}>
       <h2 style={{ margin: 0, fontSize: 14, textTransform: "uppercase", letterSpacing: "0.5px", color: "var(--ink-muted)" }}>
         {t("SOCIAL")}
       </h2>
@@ -676,7 +676,9 @@ export default function SocialPanel({ token }: { token: string | null }) {
         </div>
       )}
 
-      <form onSubmit={sendFriendRequest} style={{ display: "grid", gap: 8 }}>
+      <div className="profile-grid-2col">
+        <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
+          <form onSubmit={sendFriendRequest} style={{ display: "grid", gap: 8 }}>
         <label style={{ fontSize: 13, color: "var(--ink-muted)" }}>{t("FRIEND_REQUEST_BY_USERNAME")}</label>
         <div style={{ display: "flex", gap: 8 }}>
           <input
@@ -749,9 +751,10 @@ export default function SocialPanel({ token }: { token: string | null }) {
             ))}
           </div>
         )}
-      </section>
+        </section>
+      </div>
 
-      <div style={{ display: "grid", gap: 12 }}>
+      <div style={{ display: "grid", gap: 12, alignContent: "start" }}>
         <section>
           <h3 style={{ margin: "8px 0", fontSize: 13, color: "var(--ink-strong)" }}>{t("INCOMING_REQUESTS")}</h3>
           {loading ? (
@@ -1037,6 +1040,7 @@ export default function SocialPanel({ token }: { token: string | null }) {
             </div>
           )}
         </section>
+        </div>
       </div>
     </div>
   );

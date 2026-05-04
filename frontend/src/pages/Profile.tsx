@@ -328,195 +328,235 @@ export default function Profile() {
   };
 
   return (
-    <div className="profile-shell">
-      <h1 className="page-title">{t("PROFILE")}</h1>
+    <section className="glass-panel play-hub-panel play-hub-panel-enter page-hub-panel profile-hub-shell">
+      <div className="page-hub-layout page-stack">
+        <h1 className="page-title">{t("PROFILE")}</h1>
 
-      <div className="profile-tabs">
-        {[
-          ["profile", t("PROFILE_INFO")],
-          ["security", t("SECURITY")],
-          ["matches", t("MATCHES")],
-          ["social", t("SOCIAL")],
-        ].map(([key, label]) => (
-          <button key={key} className={`tab-btn ${activeTab === key ? "active" : ""}`} onClick={() => setActiveTab(key as ProfileTab)} type="button">
-            {label}
-          </button>
-        ))}
-      </div>
-
-      {message && <div className={`profile-message ${message.type}`}>{message.text}</div>}
-
-      {activeTab === "profile" && (
-        <form className="profile-panel" onSubmit={handleProfileSave}>
-          <p className="muted">Gestiona tu identidad publica, avatar y bio.</p>
-          <label className="auth-field">
-            <span className="auth-label">Email</span>
-            <input type="email" value={user?.email ?? ""} readOnly />
-          </label>
-          <label className="auth-field">
-            <span className="auth-label">{t("USERNAME")}</span>
-            <input value={username} onChange={(event) => setUsername(event.target.value)} minLength={3} maxLength={50} required />
-          </label>
-          <label className="auth-field">
-            <span className="auth-label">{t("DISPLAY_NAME")}</span>
-            <input value={displayName} onChange={(event) => setDisplayName(event.target.value)} maxLength={80} />
-          </label>
-          <label className="auth-field">
-            <span className="auth-label">{t("BIO")}</span>
-            <textarea value={bio} onChange={(event) => setBio(event.target.value)} maxLength={280} rows={4} />
-          </label>
-          <div className="profile-avatar-row">
-            {resolveAvatarUrl(avatarUrl) && <img src={resolveAvatarUrl(avatarUrl) ?? ""} alt="Avatar actual" />}
-            <span className="auth-label">{t("AVATAR_IMAGE")}</span>
-            <input type="file" accept="image/png,image/jpeg,image/webp,image/gif" onChange={(event) => setAvatarFile(event.target.files?.[0] ?? null)} />
-          </div>
-          <div className="split-actions">
-            <button className="btn btn-outline" type="button" onClick={handleAvatarUpload} disabled={loading || !avatarFile}>{t("UPLOAD_AVATAR")}</button>
-            <button className="btn btn-outline" type="button" onClick={handleAvatarDelete} disabled={loading || !avatarUrl}>{t("DELETE_AVATAR")}</button>
-          </div>
-          <button className="btn btn-primary" type="submit" disabled={loading || !!profileValidationError}>{t("SAVE_CHANGES")}</button>
-        </form>
-      )}
-
-      {activeTab === "security" && (
-        <div className="profile-panel">
-          <form className="auth-form" onSubmit={handlePasswordChange}>
-            <h2>{t("PASSWORD_SECURITY")}</h2>
-            <input type="password" value={currentPassword} onChange={(event) => setCurrentPassword(event.target.value)} placeholder={t("CURRENT_PASSWORD")} required />
-            <input type="password" value={newPassword} onChange={(event) => setNewPassword(event.target.value)} placeholder={t("NEW_PASSWORD")} minLength={12} required />
-            <div className="password-meter">
-              <div className="password-meter-track">
-                <div className={`password-meter-fill ${passwordStrength.level}`} style={{ width: `${(passwordStrength.score / passwordStrength.rules.length) * 100}%` }} />
-              </div>
-              <div className="password-meter-label">Fortaleza: {passwordStrength.level === "strong" ? "Fuerte" : passwordStrength.level === "medium" ? "Media" : "Debil"}</div>
-            </div>
-            <input type="password" value={confirmNewPassword} onChange={(event) => setConfirmNewPassword(event.target.value)} placeholder={t("CONFIRM_NEW_PASSWORD")} minLength={12} required />
-            <button className="btn btn-primary" type="submit" disabled={loading}>{t("UPDATE_PASSWORD")}</button>
-          </form>
-
-          <div className="profile-divider" />
-          <h2>Two-Factor Authentication</h2>
-          <p className="muted">Anade una capa extra de seguridad a tu cuenta.</p>
-          {!twoFAEnabled && !showSetup && <button className="btn btn-primary" type="button" onClick={handleSetup2FA} disabled={loading}>{t("ENABLE_2FA")}</button>}
-          {!twoFAEnabled && showSetup && qrCodeUrl && (
-            <div className="profile-2fa-box">
-              <img src={qrCodeUrl} alt="QR Code for 2FA" />
-              <code>{secret}</code>
-              <input value={verificationCode} onChange={(event) => setVerificationCode(event.target.value.replace(/\D/g, "").slice(0, 6))} placeholder="000000" maxLength={6} />
-              <button className="btn btn-primary" type="button" onClick={handleEnable2FA} disabled={loading || verificationCode.length !== 6}>Verificar y activar</button>
-            </div>
-          )}
-          {twoFAEnabled && <button className="btn btn-outline" type="button" onClick={handleDisable2FA} disabled={loading}>{t("DISABLE_2FA")}</button>}
+        <div className="profile-tabs">
+          {[
+            ["profile", t("PROFILE_INFO")],
+            ["security", t("SECURITY")],
+            ["matches", t("MATCHES")],
+            ["social", t("SOCIAL")],
+          ].map(([key, label]) => (
+            <button key={key} className={`tab-btn ${activeTab === key ? "active" : ""}`} onClick={() => setActiveTab(key as ProfileTab)} type="button">
+              {label}
+            </button>
+          ))}
         </div>
-      )}
 
-      {activeTab === "matches" && (
-        <div className="profile-panel profile-game-panel">
-          <h2>{t("GAME_STATS")}</h2>
-          <div className="profile-tabs" style={{ marginBottom: 0 }}>
-            {[
-              ["multiplayer", t("MULTIPLAYER_STATS")],
-              ["local", t("LOCAL_BOT_STATS")],
-            ].map(([key, label]) => (
-              <button
-                key={key}
-                className={`tab-btn ${statsView === key ? "active" : ""}`}
-                type="button"
-                onClick={() => {
-                  if (key === "local") setLocalBotStats(getLocalBotStats(user?.id));
-                  setStatsView(key as StatsView);
-                }}
-              >
-                {label}
-              </button>
-            ))}
-          </div>
-          {loadingStats ? <p className="muted">Cargando estadisticas...</p> : (
-            <>
-              {statsView === "local" && (
-                <>
-                  <div className="profile-stats-grid">
-                    {statCard(t("GAMES_PLAYED"), localBotStats.totalPlayed)}
-                    {statCard(t("GAMES_WON"), localBotStats.wins, "#9bf2bd")}
-                    {statCard(t("GAMES_LOST"), localBotStats.losses, "#ff8da1")}
-                    {statCard("Rival", "Bot", "#f9cb28")}
-                  </div>
+        {message && <div className={`profile-message ${message.type}`}>{message.text}</div>}
 
-                  <h3>{t("LOCAL_BOT_HISTORY")}</h3>
-                  {localBotStats.matches.length === 0 ? <p className="muted">Todavia no tienes partidas locales registradas en este navegador.</p> : (
-                    <div className="match-history-list">
-                      {localBotStats.matches.slice(0, 10).map((match) => (
-                        <article key={match.id} className={`match-history-card ${match.result}`}>
-                          <div><strong>{match.result.toUpperCase()} vs Bot</strong><span>{new Date(match.playedAt).toLocaleString()}</span></div>
-                          <p>Dificultad {match.difficulty} · Objetivo {match.targetScore} · Control {match.controlMode === "mouse" ? "raton" : "teclado"}</p>
-                        </article>
-                      ))}
+        {activeTab === "profile" && (
+          <form className="profile-panel" onSubmit={handleProfileSave}>
+            <div className="profile-grid-2col">
+              <div style={{ display: "flex", flexDirection: "column", gap: "14px" }}>
+                <p className="muted">{t("MANAGE_IDENTITY")}</p>
+                <label className="auth-field">
+                  <span className="auth-label">{t("EMAIL")}</span>
+                  <input type="email" value={user?.email ?? ""} readOnly />
+                </label>
+                <label className="auth-field">
+                  <span className="auth-label">{t("USERNAME")}</span>
+                  <input value={username} onChange={(event) => setUsername(event.target.value)} minLength={3} maxLength={50} required />
+                </label>
+                <label className="auth-field">
+                  <span className="auth-label">{t("DISPLAY_NAME")}</span>
+                  <input value={displayName} onChange={(event) => setDisplayName(event.target.value)} maxLength={80} />
+                </label>
+              </div>
+              <div style={{ display: "flex", flexDirection: "column", gap: "14px", height: "100%" }}>
+                <label className="auth-field">
+                  <span className="auth-label">{t("BIO")}</span>
+                  <textarea value={bio} onChange={(event) => setBio(event.target.value)} maxLength={280} style={{ height: "86px", resize: "none" }} />
+                </label>
+
+                <div style={{ display: "flex", flexDirection: "column", gap: "6px", width: "100%" }}>
+                  <span className="auth-label">{t("AVATAR_IMAGE")}</span>
+                  <div style={{ display: "flex", gap: "16px", flexWrap: "wrap", alignItems: "stretch" }}>
+                    {resolveAvatarUrl(avatarUrl) ? (
+                      <img src={resolveAvatarUrl(avatarUrl) ?? ""} alt="Avatar actual" style={{ width: "124px", height: "124px", borderRadius: "14px", objectFit: "cover", border: "1px solid rgba(255, 255, 255, 0.16)" }} />
+                    ) : (
+                      <div style={{ width: "124px", height: "124px", borderRadius: "14px", border: "1px solid rgba(255, 255, 255, 0.16)", background: "rgba(255, 255, 255, 0.05)", display: "flex", alignItems: "center", justifyContent: "center" }}>
+                        <span style={{ color: "var(--ink-muted)", fontSize: "0.8rem" }}>Sin imagen</span>
+                      </div>
+                    )}
+
+                    <div style={{ display: "flex", flexDirection: "column", justifyContent: "space-between", flex: 1, minWidth: "220px", height: "124px" }}>
+                      <div style={{ position: "relative", width: "100%" }}>
+                        <input id="avatar-upload" type="file" accept="image/png,image/jpeg,image/webp,image/gif" onChange={(event) => setAvatarFile(event.target.files?.[0] ?? null)} style={{ display: "none" }} />
+                        <label htmlFor="avatar-upload" className="btn btn-outline" style={{ display: "block", textAlign: "center", cursor: "pointer", padding: "8px 10px", fontSize: "0.9rem", width: "100%", margin: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                          {avatarFile ? avatarFile.name : t("BROWSE")}
+                        </label>
+                      </div>
+                      <div className="split-actions" style={{ margin: 0 }}>
+                        <button className="btn btn-outline" type="button" onClick={handleAvatarUpload} disabled={loading || !avatarFile}>{t("UPLOAD_AVATAR")}</button>
+                        <button className="btn btn-outline" type="button" onClick={handleAvatarDelete} disabled={loading || !avatarUrl}>{t("DELETE_AVATAR")}</button>
+                      </div>
                     </div>
-                  )}
-                </>
-              )}
-
-              {statsView === "multiplayer" && (
-                <>
-              <div className="profile-stats-grid">
-                {statCard(t("GAMES_PLAYED"), multiplayerSummary.totalPlayed)}
-                {statCard("Ranking", gameStats?.ranking ? `#${gameStats.ranking}` : "Sin rank", "#9ef8ff")}
-                {statCard("Rating", gameStats?.rating ?? 1000)}
-                {statCard("Nivel", gameStats?.progression.level ?? 1, "#f9cb28")}
-                {statCard("Win rate", `${gameStats?.winRate ?? 0}%`, "#9bf2bd")}
-                {statCard(t("GAMES_WON"), gameStats?.wins ?? 0, "#9bf2bd")}
-                {statCard(t("GAMES_LOST"), gameStats?.losses ?? 0, "#ff8da1")}
+                  </div>
+                </div>
               </div>
-              <div className="profile-progress">
-                <div><strong>Progreso</strong><span>{gameStats?.progression.xp ?? 0} XP</span></div>
-                <div className="profile-progress-track"><span style={{ width: `${levelProgress}%` }} /></div>
-              </div>
+            </div>
+            <div style={{ marginTop: "24px" }}>
+              <button className="btn btn-primary" style={{ width: "100%" }} type="submit" disabled={loading || !!profileValidationError}>{t("SAVE_CHANGES")}</button>
+            </div>
+          </form>
+        )}
 
-              <h3>Achievements</h3>
-              <div className="achievement-grid">
-                {(gameStats?.achievements ?? []).map((achievement) => (
-                  <article key={achievement.key} className={`achievement-card ${achievement.unlocked ? "unlocked" : ""}`}>
-                    <strong>{achievement.unlocked ? "Unlocked" : "Locked"} · {achievement.title}</strong>
-                    <p>{achievement.description}</p>
-                    <span>{achievement.progress}/{achievement.target}</span>
-                  </article>
-                ))}
+        {activeTab === "security" && (
+          <div className="profile-panel profile-grid-2col">
+            <form className="auth-form" onSubmit={handlePasswordChange}>
+              <h2>{t("PASSWORD_SECURITY")}</h2>
+              <input type="password" value={currentPassword} onChange={(event) => setCurrentPassword(event.target.value)} placeholder={t("CURRENT_PASSWORD")} required />
+              <input type="password" value={newPassword} onChange={(event) => setNewPassword(event.target.value)} placeholder={t("NEW_PASSWORD")} minLength={12} required />
+              <div className="password-meter">
+                <div className="password-meter-track">
+                  <div className={`password-meter-fill ${passwordStrength.level}`} style={{ width: `${(passwordStrength.score / passwordStrength.rules.length) * 100}%` }} />
+                </div>
+                <div className="password-meter-label">Fortaleza: {passwordStrength.level === "strong" ? "Fuerte" : passwordStrength.level === "medium" ? "Media" : "Debil"}</div>
               </div>
+              <input type="password" value={confirmNewPassword} onChange={(event) => setConfirmNewPassword(event.target.value)} placeholder={t("CONFIRM_NEW_PASSWORD")} minLength={12} required />
+              <button className="btn btn-primary" type="submit" disabled={loading}>{t("UPDATE_PASSWORD")}</button>
+            </form>
 
-              <h3>Match history</h3>
-              {matchHistory.length === 0 ? <p className="muted">Todavia no tienes partidas registradas.</p> : (
-                <div className="match-history-list">
-                  {matchHistory.map((match) => (
-                    <article key={match.id} className={`match-history-card ${match.result}`}>
-                      <div><strong>{match.result.toUpperCase()} vs @{match.opponentUsername}</strong><span>{new Date(match.endedAt).toLocaleString()}</span></div>
-                      <p>1v1 · {match.reason} · {match.scoreFor} - {match.scoreAgainst}</p>
-                    </article>
-                  ))}
+            <div>
+              <h2>Two-Factor Authentication</h2>
+              <p className="muted">Anade una capa extra de seguridad a tu cuenta.</p>
+              {!twoFAEnabled && !showSetup && <button className="btn btn-primary" type="button" onClick={handleSetup2FA} disabled={loading}>{t("ENABLE_2FA")}</button>}
+              {!twoFAEnabled && showSetup && qrCodeUrl && (
+                <div className="profile-2fa-box">
+                  <img src={qrCodeUrl} alt="QR Code for 2FA" />
+                  <code>{secret}</code>
+                  <input value={verificationCode} onChange={(event) => setVerificationCode(event.target.value.replace(/\D/g, "").slice(0, 6))} placeholder="000000" maxLength={6} />
+                  <button className="btn btn-primary" type="button" onClick={handleEnable2FA} disabled={loading || verificationCode.length !== 6}>Verificar y activar</button>
                 </div>
               )}
+              {twoFAEnabled && <button className="btn btn-outline" type="button" onClick={handleDisable2FA} disabled={loading}>{t("DISABLE_2FA")}</button>}
+            </div>
+          </div>
+        )}
 
-              <h3>Leaderboard</h3>
-              <div className="leaderboard-list">
-                {leaderboard.map((player) => (
-                  <div key={player.id} className={`leaderboard-row ${player.id === user?.id ? "me" : ""}`}>
-                    <strong>#{player.rank} @{player.username}</strong>
-                    <span>{player.rating} pts · Lvl {player.progression.level} · {player.wins}/{player.losses} · {player.winRate}%</span>
+        {activeTab === "matches" && (
+          <div className="profile-panel profile-game-panel">
+            <h2>{t("GAME_STATS")}</h2>
+            <div className="profile-tabs" style={{ marginBottom: 0 }}>
+              {[
+                ["multiplayer", t("MULTIPLAYER_STATS")],
+                ["local", t("LOCAL_BOT_STATS")],
+              ].map(([key, label]) => (
+                <button
+                  key={key}
+                  className={`tab-btn ${statsView === key ? "active" : ""}`}
+                  type="button"
+                  onClick={() => {
+                    if (key === "local") setLocalBotStats(getLocalBotStats(user?.id));
+                    setStatsView(key as StatsView);
+                  }}
+                >
+                  {label}
+                </button>
+              ))}
+            </div>
+            {loadingStats ? <p className="muted">Cargando estadisticas...</p> : (
+              <>
+                {statsView === "local" && (
+                  <div className="profile-grid-2col">
+                    <div>
+                      <div className="profile-stats-grid">
+                        {statCard(t("GAMES_PLAYED"), localBotStats.totalPlayed)}
+                        {statCard(t("GAMES_WON"), localBotStats.wins, "#9bf2bd")}
+                        {statCard(t("GAMES_LOST"), localBotStats.losses, "#ff8da1")}
+                        {statCard("Rival", "Bot", "#f9cb28")}
+                      </div>
+                    </div>
+
+                    <div>
+                      <h3>{t("LOCAL_BOT_HISTORY")}</h3>
+                      {localBotStats.matches.length === 0 ? <p className="muted">Todavia no tienes partidas locales registradas en este navegador.</p> : (
+                        <div className="match-history-list">
+                          {localBotStats.matches.slice(0, 10).map((match) => (
+                            <article key={match.id} className={`match-history-card ${match.result}`}>
+                              <div><strong>{match.result.toUpperCase()} vs Bot</strong><span>{new Date(match.playedAt).toLocaleString()}</span></div>
+                              <p>Dificultad {match.difficulty} · Objetivo {match.targetScore} · Control {match.controlMode === "mouse" ? "raton" : "teclado"}</p>
+                            </article>
+                          ))}
+                        </div>
+                      )}
+                    </div>
                   </div>
-                ))}
-              </div>
-                </>
-              )}
-            </>
-          )}
+                )}
+
+                {statsView === "multiplayer" && (
+                  <div className="profile-grid-2col">
+                    <div>
+                      <div className="profile-stats-grid">
+                        {statCard(t("GAMES_PLAYED"), multiplayerSummary.totalPlayed)}
+                        {statCard("Ranking", gameStats?.ranking ? `#${gameStats.ranking}` : "Sin rank", "#9ef8ff")}
+                        {statCard("Rating", gameStats?.rating ?? 1000)}
+                        {statCard("Nivel", gameStats?.progression.level ?? 1, "#f9cb28")}
+                        {statCard("Win rate", `${gameStats?.winRate ?? 0}%`, "#9bf2bd")}
+                        {statCard(t("GAMES_WON"), gameStats?.wins ?? 0, "#9bf2bd")}
+                        {statCard(t("GAMES_LOST"), gameStats?.losses ?? 0, "#ff8da1")}
+                      </div>
+                      <div className="profile-progress" style={{ marginTop: "24px" }}>
+                        <div><strong>Progreso</strong><span>{gameStats?.progression.xp ?? 0} XP</span></div>
+                        <div className="profile-progress-track"><span style={{ width: `${levelProgress}%` }} /></div>
+                      </div>
+
+                      <h3 style={{ marginTop: "30px" }}>Achievements</h3>
+                      <div className="achievement-grid">
+                        {(gameStats?.achievements ?? []).map((achievement) => (
+                          <article key={achievement.key} className={`achievement-card ${achievement.unlocked ? "unlocked" : ""}`}>
+                            <strong>{achievement.unlocked ? "Unlocked" : "Locked"} · {achievement.title}</strong>
+                            <p>{achievement.description}</p>
+                            <span>{achievement.progress}/{achievement.target}</span>
+                          </article>
+                        ))}
+                      </div>
+                    </div>
+
+                    <div style={{ display: "flex", flexDirection: "column", gap: "24px" }}>
+                      <div>
+                        <h3>Match history</h3>
+                        {matchHistory.length === 0 ? <p className="muted">Todavia no tienes partidas registradas.</p> : (
+                          <div className="match-history-list">
+                            {matchHistory.map((match) => (
+                              <article key={match.id} className={`match-history-card ${match.result}`}>
+                                <div><strong>{match.result.toUpperCase()} vs @{match.opponentUsername}</strong><span>{new Date(match.endedAt).toLocaleString()}</span></div>
+                                <p>1v1 · {match.reason} · {match.scoreFor} - {match.scoreAgainst}</p>
+                              </article>
+                            ))}
+                          </div>
+                        )}
+                      </div>
+
+                      <div>
+                        <h3>Leaderboard</h3>
+                        <div className="leaderboard-list">
+                          {leaderboard.map((player) => (
+                            <div key={player.id} className={`leaderboard-row ${player.id === user?.id ? "me" : ""}`}>
+                              <strong>#{player.rank} @{player.username}</strong>
+                              <span>{player.rating} pts · Lvl {player.progression.level} · {player.wins}/{player.losses} · {player.winRate}%</span>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                )}
+              </>
+            )}
+          </div>
+        )}
+
+        {activeTab === "social" && <SocialPanel token={token} />}
+
+        <div className="split-actions">
+          <button onClick={() => navigate("/")} className="btn btn-outline" type="button">{t("BACK")}</button>
+          <button onClick={logout} className="btn btn-primary" type="button">{t("LOGOUT")}</button>
         </div>
-      )}
-
-      {activeTab === "social" && <SocialPanel token={token} />}
-
-      <div className="split-actions">
-        <button onClick={() => navigate("/")} className="btn btn-outline" type="button">{t("BACK")}</button>
-        <button onClick={logout} className="btn btn-primary" type="button">{t("LOGOUT")}</button>
       </div>
-    </div>
+    </section>
   );
 }

@@ -29,6 +29,12 @@ import { useTranslation } from "react-i18next";
 // ?? "http://localhost:3000" → Valor por defecto si no está definida
 const API = import.meta.env.VITE_API_BASE ?? "http://localhost:3000";
 
+function resolveAvatarUrl(api: string, avatarUrl?: string | null): string | null {
+  if (!avatarUrl) return null;
+  if (avatarUrl.startsWith("http://") || avatarUrl.startsWith("https://")) return avatarUrl;
+  return `${api}${avatarUrl}`;
+}
+
 function toWsBaseUrl(httpBase: string): string {
   if (httpBase.startsWith("https://")) {
     return `wss://${httpBase.slice("https://".length)}`;
@@ -54,12 +60,9 @@ export default function App() {
   const [notifOpen, setNotifOpen] = useState(false);
   const [notifications, setNotifications] = useState<AppNotification[]>([]);
   const isPlayRoute = location.pathname.startsWith("/play");
-  const isWideHubRoute =
-    location.pathname.startsWith("/tournament") ||
-    location.pathname.startsWith("/organizations") ||
-    isPlayRoute;
-  const isWidePanelRoute = location.pathname.startsWith("/tournament") || location.pathname.startsWith("/organizations");
   const isHomeRoute = location.pathname === "/";
+  const isWideHubRoute = !isHomeRoute;
+  const isWidePanelRoute = !isHomeRoute && !isPlayRoute;
 
   // useEffect: Hook que ejecuta código cuando el componente se monta
   // [] → Array vacío significa que solo se ejecuta una vez al montar
@@ -176,7 +179,22 @@ export default function App() {
                     )}
                   </div>
                   <LanguageSwitcher />
-                  <NavLink className={({ isActive }) => `nav-link${isActive ? " nav-link-active" : ""}`} to="/profile">{t("PROFILE")}: {user.username}</NavLink>
+                  <NavLink className={({ isActive }) => `nav-link${isActive ? " nav-link-active" : ""}`} to="/profile" style={{ display: "flex", alignItems: "center", gap: "8px", padding: "4px 12px 4px 4px" }}>
+                    {user.avatarUrl ? (
+                      <img 
+                        src={resolveAvatarUrl(API, user.avatarUrl) || ""} 
+                        alt={user.username} 
+                        style={{ width: "28px", height: "28px", borderRadius: "50%", objectFit: "cover" }} 
+                      />
+                    ) : (
+                      <div style={{ width: "28px", height: "28px", borderRadius: "50%", background: "rgba(255,255,255,0.1)", display: "flex", alignItems: "center", justifyContent: "center" }}>
+                        <svg viewBox="0 0 24 24" fill="currentColor" width="18" height="18">
+                          <path d="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z"/>
+                        </svg>
+                      </div>
+                    )}
+                    <span>{user.username}</span>
+                  </NavLink>
                   <button className="btn btn-outline" onClick={logout}>{t("LOGOUT")}</button>
                 </>
               ) : (

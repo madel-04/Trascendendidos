@@ -9,9 +9,15 @@ const LanguageSwitcher: React.FC = () => {
       ? 'it'
       : 'es';
 
+  const flags: Record<string, string> = {
+    es: '🇪🇸',
+    en: '🇬🇧',
+    it: '🇮🇹',
+  };
+
   return (
     <label className="language-switcher" aria-label="Language selector">
-      <span className="language-switcher-label">🌐</span>
+      <span className="language-switcher-label">{flags[currentLanguage] || '🌐'}</span>
       <select
         value={currentLanguage}
         onChange={(event) => void i18n.changeLanguage(event.target.value)}

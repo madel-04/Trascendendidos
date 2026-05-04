@@ -557,8 +557,7 @@ body.play-active-session .content-wrap-play {
   }
 }
 
-.auth-card,
-.profile-shell {
+.auth-card {
   max-width: 560px;
   margin: clamp(12px, 3vh, 30px) auto;
   padding: clamp(18px, 3vw, 24px);
@@ -725,8 +724,14 @@ body.play-active-session .content-wrap-play {
   }
 }
 
-.profile-shell {
-  max-width: 920px;
+
+
+.profile-grid-2col {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(420px, 1fr));
+  gap: 30px;
+  align-items: start;
+  width: 100%;
 }
 
 .auth-form {
@@ -746,8 +751,8 @@ body.play-active-session .content-wrap-play {
 }
 
 .auth-input,
-.profile-shell input,
-.profile-shell textarea {
+.profile-hub-shell input,
+.profile-hub-shell textarea {
   width: 100%;
   border: 1px solid rgba(255, 255, 255, 0.16);
   background: rgba(6, 8, 16, 0.8);
@@ -1351,12 +1356,10 @@ body.play-active-session .content-wrap-play {
 
 .organizations-shell {
   width: 100%;
-  margin-top: clamp(12px, 2vh, 20px);
-  margin-bottom: clamp(12px, 2vh, 20px);
 }
 
 .page-hub-panel {
-  margin: 0 auto;
+  margin: auto;
 }
 
 .page-hub-layout {
