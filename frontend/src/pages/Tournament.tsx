@@ -356,7 +356,7 @@ export default function Tournament() {
               <option value={16}>16 jugadores</option>
             </select>
 
-            <button className="btn btn-primary" type="submit" disabled={creating || !token}>
+            <button className="btn-premium" type="submit" disabled={creating || !token}>
               {creating ? "Creando..." : "Crear torneo"}
             </button>
           </form>
@@ -389,7 +389,7 @@ export default function Tournament() {
           {selectedTournamentId && loadingDetail ? <p className="muted">Cargando detalle...</p> : null}
 
           {detail ? (
-            <div className="tournament-detail">
+            <div key={selectedTournamentId} className="tournament-detail profile-tab-stage profile-tab-stage-enter">
               <div className="tournament-head">
                 <div>
                   <h2 className="page-title">{detail.tournament.name}</h2>
@@ -403,7 +403,7 @@ export default function Tournament() {
                     {canJoin ? (
                       <button
                         type="button"
-                        className="btn btn-outline"
+                        className="btn-premium secondary"
                         disabled={actionBusy}
                         onClick={() => performAction(`/api/tournament/${detail.tournament.id}/join`)}
                       >
@@ -413,7 +413,7 @@ export default function Tournament() {
                     {canStart ? (
                       <button
                         type="button"
-                        className="btn btn-primary"
+                        className="btn-premium"
                         disabled={actionBusy}
                         onClick={() => performAction(`/api/tournament/${detail.tournament.id}/start`)}
                       >
@@ -423,7 +423,7 @@ export default function Tournament() {
                     {canEditTournament ? (
                       <button
                         type="button"
-                        className="btn btn-outline"
+                        className="btn-premium tertiary"
                         disabled={actionBusy}
                         onClick={beginEditing}
                       >
@@ -433,7 +433,7 @@ export default function Tournament() {
                     {canCancelTournament ? (
                       <button
                         type="button"
-                        className="btn btn-outline"
+                        className="btn-premium tertiary"
                         disabled={actionBusy}
                         onClick={() => performAction(`/api/tournament/${detail.tournament.id}/cancel`)}
                       >
@@ -466,11 +466,11 @@ export default function Tournament() {
                   />
 
                   <div className="tournament-actions">
-                    <button className="btn btn-primary" type="submit" disabled={actionBusy}>
+                    <button className="btn-premium" type="submit" disabled={actionBusy}>
                       Guardar cambios
                     </button>
                     <button
-                      className="btn btn-outline"
+                      className="btn-premium secondary"
                       type="button"
                       disabled={actionBusy}
                       onClick={() => setEditing(false)}
@@ -553,7 +553,7 @@ export default function Tournament() {
                         {canEnterMatch ? (
                           <button
                                   type="button"
-                                  className="btn btn-primary"
+                                  className="btn-premium"
                                   disabled={actionBusy}
                                   onClick={() => {
                                     const params = new URLSearchParams({
