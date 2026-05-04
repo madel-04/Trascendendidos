@@ -1,4 +1,6 @@
+import { useState } from "react";
 import { useTranslation } from "react-i18next";
+import { useNavigate } from "react-router-dom";
 
 const content = {
   en: {
@@ -50,30 +52,94 @@ const content = {
       ["6. Sicurezza", ["Le password sono salvate come hash, mai in chiaro.", "L'autenticazione usa token firmati e 2FA opzionale.", "Il rate limiting protegge endpoint sensibili.", "Gli avatar sono validati e normalizzati lato server."]],
       ["7. I tuoi diritti", ["Accedere ai dati dell'account.", "Aggiornare il profilo.", "Richiedere eliminazione account dove applicabile.", "Opporti a trattamenti non essenziali quando previsto dalla legge."]],
       ["8. Utenti internazionali", "Se accedi da fuori regione, riconosci che i dati possono essere trattati in giurisdizioni con leggi privacy diverse."],
-      ["9. Minori", "La piattaforma non è destinata a minori sotto l'età minima di consenso digitale nella loro giurisdizione."],
+      ["9. Minori", "La piattaforma è destinata a minori sotto l'età minima di consenso digitale nella loro giurisdizione."],
       ["10. Modifiche", "Possiamo aggiornare questa informativa. Le modifiche importanti saranno pubblicate nell'app con data aggiornata."],
-      ["11. Contatto", "Per domande privacy o richieste dati, contatta l'amministratore tramite i canali ufficiali del progetto."],
+      ["11. Contact", "Per domande privacy o richieste dati, contatta l'amministratore tramite i canali ufficiali del progetto."],
     ],
   },
 };
 
 export default function Privacy() {
-  const { i18n } = useTranslation();
-  const page = content[i18n.language.startsWith("it") ? "it" : i18n.language.startsWith("en") ? "en" : "es"];
+  const { i18n, t } = useTranslation();
+  const navigate = useNavigate();
+  const lang = i18n.language.startsWith("it") ? "it" : i18n.language.startsWith("en") ? "en" : "es";
+  const page = content[lang];
+  
+  // Logical grouping:
+  // Page 0: Intro + Sections 0, 1, 2
+  // Page 1: Sections 3, 4, 5
+  // Page 2: Sections 6, 7, 8
+  // Page 3: Sections 9, 10
+  const pagesData = [
+    { intro: true, sections: page.sections.slice(0, 3) },
+    { sections: page.sections.slice(3, 6) },
+    { sections: page.sections.slice(6, 9) },
+    { sections: page.sections.slice(9, 11) },
+  ];
+
+  const [current, setCurrent] = useState(0);
+  const totalPages = pagesData.length;
+
+  const goTo = (n: number) => {
+    if (n >= 0 && n < totalPages) setCurrent(n);
+  };
 
   return (
-    <div className="legal-layout">
-      <article className="legal-panel">
-        <h1>{page.title}</h1>
-        <p className="legal-meta">{page.meta}</p>
-        <p>{page.intro}</p>
-        {page.sections.map(([title, body]) => (
-          <section key={title}>
-            <h2>{title}</h2>
-            {Array.isArray(body) ? <ul>{body.map((item) => <li key={item}>{item}</li>)}</ul> : <p>{body}</p>}
-          </section>
-        ))}
-      </article>
-    </div>
+    <section className="glass-panel play-hub-panel play-hub-panel-enter page-hub-panel legal-hub-shell">
+      <div className="page-hub-layout page-stack">
+        <header className="legal-header">
+          <h1 className="legal-header-title">{page.title}</h1>
+          <button className="btn btn-outline" onClick={() => navigate(-1)}>
+            ← {t("BACK")}
+          </button>
+        </header>
+
+        <div key={`${lang}-${current}`} className="legal-page legal-page-enter">
+          {pagesData[current].intro && (
+            <>
+              <p className="legal-meta">{page.meta}</p>
+              <p className="muted">{page.intro}</p>
+            </>
+          )}
+          {pagesData[current].sections.map(([title, body]) => (
+            <section key={String(title)}>
+              <h2 style={{ fontSize: "1rem", fontWeight: 700, marginBottom: "8px", color: "var(--ink-strong)" }}>{String(title)}</h2>
+              {Array.isArray(body)
+                ? <ul className="legal-list">{body.map((item) => <li key={item}>{item}</li>)}</ul>
+                : <p className="muted">{String(body)}</p>}
+            </section>
+          ))}
+        </div>
+
+        <div className="legal-nav">
+          <button
+            className="btn btn-outline legal-arrow"
+            onClick={() => goTo(current - 1)}
+            disabled={current === 0}
+            aria-label="Previous page"
+          >
+            ◀
+          </button>
+          <div className="legal-nav-dots">
+            {pagesData.map((_, i) => (
+              <button
+                key={i}
+                className={`legal-dot${i === current ? " active" : ""}`}
+                onClick={() => goTo(i)}
+                aria-label={`Page ${i + 1}`}
+              />
+            ))}
+          </div>
+          <button
+            className="btn btn-outline legal-arrow"
+            onClick={() => goTo(current + 1)}
+            disabled={current === totalPages - 1}
+            aria-label="Next page"
+          >
+            ▶
+          </button>
+        </div>
+      </div>
+    </section>
   );
 }

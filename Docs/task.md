@@ -26,14 +26,16 @@ Este documento rastrea el progreso de la implementación del juego Pong Multijug
 - [x] Integración del backend con la base de datos (usando el ORM Prisma).
 
 ## Hito 4: Integración y Juego Funcional
-- [ ] Conectar el frontend React con el servidor WebSocket Fastify.
-- [ ] Sincronización del estado del juego servidor -> cliente (interpolación de movimiento si es necesario).
-- [ ] Transmisión de las pulsaciones de teclas/movimientos cliente -> servidor.
-- [ ] Pruebas cruzadas: asegurar que dos instancias del navegador pueden jugar al unísono.
+- [x] Conectar el frontend React con el servidor WebSocket Fastify.
+- [x] Sincronización del estado del juego servidor -> cliente (interpolación de movimiento si es necesario).
+- [x] Transmisión de las pulsaciones de teclas/movimientos cliente -> servidor.
+- [x] Pruebas cruzadas: asegurar que dos instancias del navegador pueden jugar al unísono.
 
 ## Hito 5: Gestión de Usuarios y Seguridad
-- [ ] Implementación de endpoints de registro e inicio de sesión en Fastify.
-- [ ] Autenticación de usuarios vía JWT (JSON Web Tokens) e integración con WebSockets.
+- [x] Arreglar traducción footer (TRANSCENDENCE_PROJECT)
+- [x] Refinar paginación y layout legal (Privacy.tsx y Terms.tsx) - Incluyendo navegación fija al fondo.
+- [x] Unificar dimensiones y posición de todos los contenedores principales (Incluyendo Menú - Altura y Ancho corregidos).
+- [x] Resolver conflictos de pull branch PRE (App, Profile, index.css, LanguageSwitcher)ación de usuarios vía JWT (JSON Web Tokens) e integración con WebSockets.
 - [ ] Interfaz de usuario para login/registro con validación de formularios.
 - [ ] Configuración de HTTPS en el backend.
 - [ ] Gestión segura de variables de entorno `.env` para credenciales de BBDD y secretos.

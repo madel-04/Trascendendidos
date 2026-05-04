@@ -252,7 +252,7 @@ export default function App() {
         </main>
 
         <footer className={`footer${isHomeRoute ? " footer-home" : ""}`}>
-          <div>Transcendence Project</div>
+          <div>{t("TRANSCENDENCE_PROJECT")}</div>
           <div>
             <Link to="/privacy">{t("Privacy Policy")}</Link>
             {" · "}

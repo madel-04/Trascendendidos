@@ -278,10 +278,7 @@ export default function Play() {
   };
 
   if (!matchContext) {
-    const localShellClassName =
-      localView === "lobby" || localView === "menu" || localView === "settings" || localView === "controls"
-        ? "app-container play-route-shell play-route-shell-center"
-        : "app-container play-route-shell";
+    const localShellClassName = "play-route-shell";
 
     return (
       <div className={localShellClassName}>
