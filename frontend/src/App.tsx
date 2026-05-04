@@ -219,7 +219,6 @@ export default function App() {
             />
 
             <Route path="/login" element={user ? <Navigate to="/play" replace /> : <Login />} />
-            <Route path="/oauth/callback" element={<OAuthCallback />} />
             <Route path="/register" element={user ? <Navigate to="/play" replace /> : <Register />} />
             <Route path="/privacy" element={<Privacy />} />
             <Route path="/terms" element={<Terms />} />
@@ -248,6 +247,7 @@ export default function App() {
                 </ProtectedRoute>
               }
             />
+            <Route path="/oauth/callback" element={<OAuthCallback />} />
           </Routes>
         </main>
 

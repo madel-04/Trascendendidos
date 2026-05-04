@@ -11,9 +11,7 @@ services:
     # Política de reinicio: siempre reinicia si el contenedor falla
     # condition: always → reinicia automáticamente cuando cae
     # delay: tiempo de espera antes de reintentar
-    restart_policy:
-      condition: always
-      delay: 5s
+    restart: always
 
     # Variables de entorno para configurar PostgreSQL
     environment:
@@ -45,10 +43,7 @@ services:
     # condition: on-failure → reinicia solo si el contenedor termina con error
     # max_attempts: máximo número de reintentos
     # delay: tiempo de espera entre reintentos
-    restart_policy:
-      condition: on-failure
-      delay: 5s
-      max_attempts: 5
+    restart: on-failure
 
     # Variables de entorno para el backend
     environment:
@@ -96,10 +91,7 @@ services:
     # condition: on-failure → reinicia solo si el contenedor termina con error
     # max_attempts: máximo número de reintentos
     # delay: tiempo de espera entre reintentos
-    restart_policy:
-      condition: on-failure
-      delay: 5s
-      max_attempts: 5
+    restart: on-failure
 
 
     # Variables de entorno para Vite
@@ -112,7 +104,7 @@ services:
     ports:
       - "5173:5173"
 
-    # Monta el cÃ³digo para desarrollo (hot reload sin rebuild)
+    # Monta el codigo para desarrollo (hot reload sin rebuild)
     volumes:
       - ./frontend:/app
       - /app/node_modules

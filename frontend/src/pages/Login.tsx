@@ -2,6 +2,9 @@
 import { useEffect, useState, FormEvent } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
+import { useTranslation } from "react-i18next";
+import githubLogo from "../assets/oauth-github.svg";
+import fortyTwoLogo from "../assets/oauth-42.svg";
 
 const API = import.meta.env.VITE_API_BASE ?? "http://localhost:3000";
 
@@ -10,16 +13,48 @@ type OAuthProvider = {
   label: string;
 };
 
+type OAuthProviderMeta = {
+  badge: string;
+  tagline: string;
+  tone: string;
+};
+
+const OAUTH_PROVIDER_META: Record<string, OAuthProviderMeta> = {
+  google: {
+    badge: "G",
+    tagline: "Fast sign in with your Google account",
+    tone: "google",
+  },
+  github: {
+    badge: "GH",
+    tagline: "Developer login with GitHub",
+    tone: "github",
+  },
+  "42": {
+    badge: "42",
+    tagline: "Campus SSO for 42 students and alumni",
+    tone: "forty-two",
+  },
+};
+
+const OAUTH_LOGOS: Record<string, string> = {
+  google: "https://www.gstatic.com/images/branding/product/1x/googleg_48dp.png",
+  github: githubLogo,
+  "42": fortyTwoLogo,
+};
+
 export default function Login() {
   const { login } = useAuth();
   const navigate = useNavigate();
-  
+  const { t } = useTranslation();
+
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [twoFAToken, setTwoFAToken] = useState("");
   const [requires2FA, setRequires2FA] = useState(false);
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
+  const [redirectingProvider, setRedirectingProvider] = useState<string | null>(null);
   const [oauthProviders, setOauthProviders] = useState<OAuthProvider[]>([]);
 
   useEffect(() => {
@@ -36,14 +71,14 @@ export default function Login() {
 
     try {
       await login(email, password, twoFAToken || undefined);
-      navigate("/play"); // Redirigir al juego tras login exitoso
-    } catch (err: any) {
-      // Si requiere 2FA, mostrar campo para el código
-      if (err.message.includes("2FA")) {
+      navigate("/play");
+    } catch (err: unknown) {
+      const message = err instanceof Error ? err.message : "Error en el login";
+      if (message.includes("2FA")) {
         setRequires2FA(true);
         setError("Ingresa tu código 2FA");
       } else {
-        setError(err.message || "Error en el login");
+        setError(message);
       }
     } finally {
       setLoading(false);
@@ -51,8 +86,17 @@ export default function Login() {
   };
 
   const startOAuthLogin = (providerId: string) => {
-    window.location.href = `${API}/api/auth/oauth/${encodeURIComponent(providerId)}`;
+    setError("");
+    setRedirectingProvider(providerId);
+    window.location.assign(`${API}/api/auth/oauth/${encodeURIComponent(providerId)}`);
   };
+
+  const getOAuthMeta = (providerId: string): OAuthProviderMeta =>
+    OAUTH_PROVIDER_META[providerId] ?? {
+      badge: "SSO",
+      tagline: "Remote login",
+      tone: "generic",
+    };
 
   return (
     <div className="auth-card">
@@ -105,33 +149,45 @@ export default function Login() {
           </div>
         )}
 
-        {error && (
-          <div className="auth-error">{error}</div>
-        )}
+        {error && <div className="auth-error">{error}</div>}
 
-        <button
-          className="btn btn-primary"
-          type="submit"
-          disabled={loading}
-        >
+        <button className="btn btn-primary" type="submit" disabled={loading}>
           {loading ? "Loading..." : "Login"}
         </button>
       </form>
 
       {oauthProviders.length > 0 && (
         <div className="oauth-section">
-          <div className="oauth-divider">or</div>
+          <div className="oauth-divider">{t("or continue with")}</div>
           <div className="oauth-buttons">
-            {oauthProviders.map((provider) => (
-              <button
-                key={provider.id}
-                className="btn btn-outline oauth-btn"
-                type="button"
-                onClick={() => startOAuthLogin(provider.id)}
-              >
-                Continue with {provider.label}
-              </button>
-            ))}
+            {oauthProviders.map((provider) => {
+              const meta = getOAuthMeta(provider.id);
+              const isRedirecting = redirectingProvider === provider.id;
+
+              return (
+                <button
+                  key={provider.id}
+                  className={`btn btn-outline oauth-btn oauth-btn-${meta.tone}`}
+                  type="button"
+                  onClick={() => startOAuthLogin(provider.id)}
+                  disabled={loading || redirectingProvider !== null}
+                >
+                  {OAUTH_LOGOS[provider.id] ? (
+                    <img
+                      src={OAUTH_LOGOS[provider.id]}
+                      alt={`${provider.label} logo`}
+                      className={`oauth-logo oauth-logo-${provider.id}`}
+                    />
+                  ) : (
+                    <span className="oauth-badge" aria-hidden="true">{meta.badge}</span>
+                  )}
+                  <span className="oauth-btn-copy">
+                    <span className="oauth-btn-label">{t("Continue with " + provider.label)}</span>
+                    <span className="oauth-btn-note">{isRedirecting ? t("Opening " + provider.label + "...") : t(meta.tagline)}</span>
+                  </span>
+                </button>
+              );
+            })}
           </div>
         </div>
       )}

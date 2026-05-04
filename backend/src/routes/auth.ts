@@ -168,9 +168,12 @@ function getOAuthRedirectUri(request: any, provider: OAuthProvider): string {
   return `${backendOrigin}/api/auth/oauth/${provider}/callback`;
 }
 
-function redirectWithOAuthError(reply: any, message: string) {
+function redirectWithOAuthError(reply: any, message: string, provider?: OAuthProvider) {
   const url = new URL("/oauth/callback", getFrontendOrigin());
   url.searchParams.set("error", message);
+  if (provider) {
+    url.searchParams.set("provider", provider);
+  }
   return reply.redirect(url.toString());
 }
 
@@ -460,24 +463,24 @@ export async function authRoutes(app: FastifyInstance) {
       const providerId = (request.params as { provider?: string }).provider as OAuthProvider;
       const provider = OAUTH_PROVIDERS[providerId];
       if (!provider || !provider.clientId || !provider.clientSecret) {
-        return redirectWithOAuthError(reply, "Proveedor OAuth no configurado");
+        return redirectWithOAuthError(reply, "Proveedor OAuth no configurado", providerId);
       }
 
       const queryParams = request.query as { code?: string; state?: string; error?: string };
       if (queryParams.error) {
-        return redirectWithOAuthError(reply, queryParams.error);
+        return redirectWithOAuthError(reply, queryParams.error, providerId);
       }
       if (!queryParams.code || !queryParams.state) {
-        return redirectWithOAuthError(reply, "Respuesta OAuth incompleta");
+        return redirectWithOAuthError(reply, "Respuesta OAuth incompleta", providerId);
       }
 
       const state = await app.jwt.verify<{ type?: string; provider?: string }>(queryParams.state);
       if (state.type !== "oauth-state" || state.provider !== providerId) {
-        return redirectWithOAuthError(reply, "Estado OAuth invalido");
+        return redirectWithOAuthError(reply, "Estado OAuth invalido", providerId);
       }
 
       if (!isRateLimitAllowed(`oauth-callback:${providerId}:${request.ip}`, 30, 60_000)) {
-        return redirectWithOAuthError(reply, "Demasiados intentos OAuth");
+        return redirectWithOAuthError(reply, "Demasiados intentos OAuth", providerId);
       }
 
       const accessToken = await exchangeOAuthCode(
@@ -494,7 +497,7 @@ export async function authRoutes(app: FastifyInstance) {
       return reply.redirect(redirectUrl.toString());
     } catch (error) {
       console.error("Error completando OAuth:", error);
-      return redirectWithOAuthError(reply, "No se pudo completar OAuth");
+      return redirectWithOAuthError(reply, "No se pudo completar OAuth", providerId);
     }
   });
 

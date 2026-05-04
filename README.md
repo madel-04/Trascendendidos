@@ -14,6 +14,10 @@ La arquitectura activa del proyecto esta en la raiz:
 ## Funcionalidades implementadas
 
 - Registro e inicio de sesion con JWT
+- Inicio de sesion remoto con OAuth 2.0:
+  - Google
+  - GitHub
+  - 42
 - 2FA con TOTP (setup, enable, disable)
 - Perfil editable (username, nombre visible, bio)
 - Avatar seguro:
@@ -52,6 +56,10 @@ make all
 
 - Frontend: http://localhost:5173
 - Backend health: http://localhost:3000/api/health
+- OAuth callback local:
+  - Google: http://localhost:3000/api/auth/oauth/google/callback
+  - GitHub: http://localhost:3000/api/auth/oauth/github/callback
+  - 42: http://localhost:3000/api/auth/oauth/42/callback
 
 ## Comandos utiles
 
