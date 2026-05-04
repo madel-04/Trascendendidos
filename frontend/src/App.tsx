@@ -54,11 +54,16 @@ export default function App() {
   const [notifOpen, setNotifOpen] = useState(false);
   const [notifications, setNotifications] = useState<AppNotification[]>([]);
   const isPlayRoute = location.pathname.startsWith("/play");
+  const isProfileRoute = location.pathname.startsWith("/profile");
   const isWideHubRoute =
+    isProfileRoute ||
     location.pathname.startsWith("/tournament") ||
     location.pathname.startsWith("/organizations") ||
     isPlayRoute;
-  const isWidePanelRoute = location.pathname.startsWith("/tournament") || location.pathname.startsWith("/organizations");
+  const isWidePanelRoute =
+    isProfileRoute ||
+    location.pathname.startsWith("/tournament") ||
+    location.pathname.startsWith("/organizations");
   const isHomeRoute = location.pathname === "/";
 
   // useEffect: Hook que ejecuta código cuando el componente se monta

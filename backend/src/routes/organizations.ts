@@ -37,6 +37,14 @@ const UpdateMemberSchema = z.object({
   role: z.enum(["admin", "member"]),
 });
 
+const OrganizationMessagesQuerySchema = z.object({
+  limit: z.coerce.number().int().min(1).max(100).default(50),
+});
+
+const OrganizationMessageBodySchema = z.object({
+  content: z.string().trim().min(1, "El mensaje no puede estar vacio").max(1000),
+});
+
 type OrganizationRole = "owner" | "admin" | "member";
 type JoinRequestStatus = "pending" | "approved" | "rejected" | "cancelled";
 
@@ -59,6 +67,16 @@ type JoinRequestRow = {
   status: JoinRequestStatus;
   created_at: Date;
   updated_at: Date;
+};
+
+type OrganizationMessageRow = {
+  id: string;
+  author_id: number;
+  author_username: string;
+  author_display_name: string | null;
+  author_avatar_url: string | null;
+  content: string;
+  created_at: Date;
 };
 
 function getAuthUserId(request: FastifyRequest): number {
@@ -349,6 +367,136 @@ export async function organizationRoutes(app: FastifyInstance) {
         return reply.code(400).send({ error: error.errors[0].message });
       }
       request.log.error(error, "Error obteniendo organizacion");
+      return reply.code(500).send({ error: "Error interno del servidor" });
+    }
+  });
+
+  app.get<{ Params: { organizationId: string } }>("/api/organizations/:organizationId/messages", { onRequest: [app.authenticate] }, async (request, reply) => {
+    try {
+      const { organizationId } = OrganizationParamsSchema.parse(request.params);
+      const { limit } = OrganizationMessagesQuerySchema.parse(request.query);
+      const userId = getAuthUserId(request);
+
+      const organization = await ensureOrganizationExists(organizationId);
+      if (!organization) {
+        return reply.code(404).send({ error: "Organizacion no encontrada" });
+      }
+
+      const membership = await getMembership(organizationId, userId);
+      if (!membership) {
+        return reply.code(403).send({ error: "Debes formar parte de la organizacion para ver el chat" });
+      }
+
+      const rows = await query<OrganizationMessageRow>(
+        `SELECT om.id,
+                om.author_id,
+                u.username AS author_username,
+                u.display_name AS author_display_name,
+                u.avatar_url AS author_avatar_url,
+                om.content,
+                om.created_at
+         FROM organization_messages om
+         JOIN users u ON u.id = om.author_id
+         WHERE om.org_id = $1
+         ORDER BY om.created_at DESC, om.id DESC
+         LIMIT $2`,
+        [organizationId, limit]
+      );
+
+      rows.reverse();
+
+      return reply.send({
+        messages: rows.map((row) => ({
+          id: Number(row.id),
+          author: {
+            id: row.author_id,
+            username: row.author_username,
+            displayName: row.author_display_name,
+            avatarUrl: row.author_avatar_url,
+          },
+          content: row.content,
+          createdAt: row.created_at,
+        })),
+      });
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        return reply.code(400).send({ error: error.errors[0].message });
+      }
+      request.log.error(error, "Error obteniendo mensajes de organizacion");
+      return reply.code(500).send({ error: "Error interno del servidor" });
+    }
+  });
+
+  app.post<{ Params: { organizationId: string } }>("/api/organizations/:organizationId/messages", { onRequest: [app.authenticate] }, async (request, reply) => {
+    try {
+      const { organizationId } = OrganizationParamsSchema.parse(request.params);
+      const body = OrganizationMessageBodySchema.parse(request.body);
+      const userId = getAuthUserId(request);
+
+      const organization = await ensureOrganizationExists(organizationId);
+      if (!organization) {
+        return reply.code(404).send({ error: "Organizacion no encontrada" });
+      }
+
+      const membership = await getMembership(organizationId, userId);
+      if (!membership) {
+        return reply.code(403).send({ error: "Debes formar parte de la organizacion para escribir en el chat" });
+      }
+
+      const [author] = await query<{
+        username: string;
+        display_name: string | null;
+        avatar_url: string | null;
+      }>(
+        `SELECT username, display_name, avatar_url
+         FROM users
+         WHERE id = $1
+         LIMIT 1`,
+        [userId]
+      );
+
+      if (!author) {
+        return reply.code(404).send({ error: "Usuario no encontrado" });
+      }
+
+      const [created] = await query<OrganizationMessageRow>(
+        `INSERT INTO organization_messages (org_id, author_id, content)
+         VALUES ($1, $2, $3)
+         RETURNING id,
+                   author_id,
+                   $4::varchar AS author_username,
+                   $5::varchar AS author_display_name,
+                   $6::varchar AS author_avatar_url,
+                   content,
+                   created_at`,
+        [
+          organizationId,
+          userId,
+          body.content,
+          author.username,
+          author.display_name,
+          author.avatar_url,
+        ]
+      );
+
+      return reply.code(201).send({
+        message: {
+          id: Number(created.id),
+          author: {
+            id: created.author_id,
+            username: created.author_username,
+            displayName: created.author_display_name,
+            avatarUrl: created.author_avatar_url,
+          },
+          content: created.content,
+          createdAt: created.created_at,
+        },
+      });
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        return reply.code(400).send({ error: error.errors[0].message });
+      }
+      request.log.error(error, "Error creando mensaje de organizacion");
       return reply.code(500).send({ error: "Error interno del servidor" });
     }
   });

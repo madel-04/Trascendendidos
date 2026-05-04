@@ -43,6 +43,18 @@ type RequestItem = {
   updatedAt: string;
 };
 
+type OrganizationChatMessage = {
+  id: number;
+  author: {
+    id: number;
+    username: string;
+    displayName: string | null;
+    avatarUrl: string | null;
+  };
+  content: string;
+  createdAt: string;
+};
+
 type OrganizationDetail = {
   organization: OrganizationItem;
   members: MemberItem[];
@@ -79,6 +91,9 @@ export default function Organizations() {
   const [editDescription, setEditDescription] = useState("");
   const [showEditForm, setShowEditForm] = useState(false);
   const [openMemberMenuId, setOpenMemberMenuId] = useState<number | null>(null);
+  const [chatMessages, setChatMessages] = useState<OrganizationChatMessage[]>([]);
+  const [chatDraft, setChatDraft] = useState("");
+  const [chatLoading, setChatLoading] = useState(false);
   const [message, setMessage] = useState<{ type: "success" | "error"; text: string } | null>(null);
   const [loading, setLoading] = useState(false);
 
@@ -192,6 +207,8 @@ export default function Organizations() {
     setDetail(null);
     setShowEditForm(false);
     setOpenMemberMenuId(null);
+    setChatMessages([]);
+    setChatDraft("");
   }
 
   function switchTab(nextTab: PageTab) {
@@ -231,6 +248,39 @@ export default function Organizations() {
       setMessage({ type: "error", text: error instanceof Error ? error.message : t("CONNECTION_ERROR") });
     });
   }, [selectedOrganizationId, activeTab, token, t]);
+
+  useEffect(() => {
+    if (!token || !selectedOrganizationId || !viewer?.isMember) return;
+
+    let cancelled = false;
+
+    const loadChatMessages = async () => {
+      try {
+        const response = await fetch(`${API}/api/organizations/${selectedOrganizationId}/messages?limit=50`, {
+          headers: { Authorization: `Bearer ${token}` },
+        });
+        const json = await response.json();
+        if (!response.ok) throw new Error(json.error || "No se pudo cargar el chat");
+        if (!cancelled) {
+          setChatMessages(json.messages ?? []);
+        }
+      } catch (_error) {
+        if (!cancelled) {
+          setChatMessages([]);
+        }
+      }
+    };
+
+    void loadChatMessages();
+    const interval = window.setInterval(() => {
+      void loadChatMessages();
+    }, 5000);
+
+    return () => {
+      cancelled = true;
+      window.clearInterval(interval);
+    };
+  }, [selectedOrganizationId, token, viewer?.isMember]);
 
   useEffect(() => {
     if (activeTab !== "search" || selectedOrganizationId) return;
@@ -440,6 +490,32 @@ export default function Organizations() {
     }
   }
 
+  async function handleSendChatMessage(event: FormEvent) {
+    event.preventDefault();
+    if (!token || !selectedOrganizationId || !viewer?.isMember || !chatDraft.trim()) return;
+
+    setChatLoading(true);
+    try {
+      const response = await fetch(`${API}/api/organizations/${selectedOrganizationId}/messages`, {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${token}`,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ content: chatDraft.trim() }),
+      });
+      const json = await response.json();
+      if (!response.ok) throw new Error(json.error || "No se pudo enviar el mensaje");
+
+      setChatDraft("");
+      setChatMessages((prev) => [...prev, json.message]);
+    } catch (error) {
+      setMessage({ type: "error", text: error instanceof Error ? error.message : t("CONNECTION_ERROR") });
+    } finally {
+      setChatLoading(false);
+    }
+  }
+
   function renderOrganizationDetail() {
     if (!selectedOrganizationId) return null;
 
@@ -469,21 +545,21 @@ export default function Organizations() {
           </div>
 
           <div className="organizations-detail-actions">
-            <button className="btn btn-outline" type="button" onClick={clearOrganizationDetail}>
+            <button className="btn-premium tertiary" type="button" onClick={clearOrganizationDetail}>
               {backLabel}
             </button>
             {canEditOrganization ? (
-              <button className="btn btn-outline" type="button" onClick={() => setShowEditForm((current) => !current)}>
+              <button className="btn-premium secondary" type="button" onClick={() => setShowEditForm((current) => !current)}>
                 {showEditForm ? t("ORG_CLOSE_EDIT") : t("ORG_OPEN_EDIT")}
               </button>
             ) : null}
             {!viewer?.isMember && viewer?.canApply ? (
-              <button className="btn btn-primary" type="button" onClick={() => void handleApplyToOrganization(selectedOrganization.id)} disabled={loading}>
+              <button className="btn-premium" type="button" onClick={() => void handleApplyToOrganization(selectedOrganization.id)} disabled={loading}>
                 {t("ORG_APPLY")}
               </button>
             ) : null}
             {viewer?.isMember ? (
-              <button className="btn btn-outline" type="button" onClick={() => void handleLeaveOrganization()} disabled={loading}>
+              <button className="btn-premium tertiary" type="button" onClick={() => void handleLeaveOrganization()} disabled={loading}>
                 {t("ORG_LEAVE")}
               </button>
             ) : null}
@@ -516,7 +592,7 @@ export default function Organizations() {
                   <textarea value={editDescription} onChange={(event) => setEditDescription(event.target.value)} rows={4} maxLength={400} />
                 </label>
                 <div className="split-actions">
-                  <button className="btn btn-primary" type="submit" disabled={loading}>{t("SAVE_CHANGES")}</button>
+                  <button className="btn-premium" type="submit" disabled={loading}>{t("SAVE_CHANGES")}</button>
                 </div>
               </form>
             ) : null}
@@ -536,7 +612,6 @@ export default function Organizations() {
                       <div className="organization-member-main">
                         <div>
                           <strong>@{member.username}</strong>
-                          <span>ID: {member.userId}</span>
                         </div>
                         <span>{t("ORG_SINCE")}: {formatDate(member.joinedAt)}</span>
                       </div>
@@ -579,6 +654,43 @@ export default function Organizations() {
               </div>
             </div>
 
+            <div className="profile-panel">
+              <div className="organization-head">
+                <div>
+                  <h2>Chat</h2>
+                  <p>Habla con los miembros de la organizacion.</p>
+                </div>
+                <span>{chatMessages.length} mensajes</span>
+              </div>
+              <div className="organization-chat-list">
+                {chatMessages.length === 0 ? (
+                  <p className="muted">Todavia no hay mensajes en esta organizacion.</p>
+                ) : (
+                  chatMessages.map((chatMessage) => (
+                    <article key={chatMessage.id} className="organization-chat-message">
+                      <div className="organization-chat-message-head">
+                        <strong>@{chatMessage.author.username}</strong>
+                        <span>{formatDate(chatMessage.createdAt)}</span>
+                      </div>
+                      <p>{chatMessage.content}</p>
+                    </article>
+                  ))
+                )}
+              </div>
+              <form className="organization-chat-form" onSubmit={handleSendChatMessage}>
+                <textarea
+                  value={chatDraft}
+                  onChange={(event) => setChatDraft(event.target.value)}
+                  rows={3}
+                  maxLength={1000}
+                  placeholder="Escribe un mensaje para la organizacion"
+                />
+                <button className="btn-premium" type="submit" disabled={chatLoading || !chatDraft.trim()}>
+                  {chatLoading ? "Enviando..." : "Enviar mensaje"}
+                </button>
+              </form>
+            </div>
+
             {canReviewRequests ? (
               <div className="profile-panel">
                 <div className="organization-head">
@@ -597,10 +709,10 @@ export default function Organizations() {
                           <span>{getRequestStatusLabel(requestItem.status)}</span>
                         </div>
                         <div className="organization-actions">
-                          <button className="btn btn-primary" type="button" onClick={() => void handleReviewRequest(requestItem, "approve")} disabled={loading}>
+                          <button className="btn-premium" type="button" onClick={() => void handleReviewRequest(requestItem, "approve")} disabled={loading}>
                             {t("ACCEPT")}
                           </button>
-                          <button className="btn btn-outline" type="button" onClick={() => void handleReviewRequest(requestItem, "reject")} disabled={loading}>
+                          <button className="btn-premium tertiary" type="button" onClick={() => void handleReviewRequest(requestItem, "reject")} disabled={loading}>
                             {t("REJECT")}
                           </button>
                         </div>
@@ -645,6 +757,7 @@ export default function Organizations() {
 
       {message ? <div className={`profile-message ${message.type}`}>{message.text}</div> : null}
 
+      <div key={activeTab} className="profile-tab-stage profile-tab-stage-enter">
       {activeTab === "create" ? (
         <form className="profile-panel" onSubmit={handleCreate}>
           <h2>{t("ORG_CREATE_TAB")}</h2>
@@ -656,7 +769,7 @@ export default function Organizations() {
             <span>{t("ORG_DESCRIPTION")}</span>
             <textarea value={description} onChange={(event) => setDescription(event.target.value)} rows={5} maxLength={400} />
           </label>
-          <button className="btn btn-primary" type="submit" disabled={loading}>{t("ORG_CREATE_ACTION")}</button>
+          <button className="btn-premium" type="submit" disabled={loading}>{t("ORG_CREATE_ACTION")}</button>
         </form>
       ) : null}
 
@@ -689,14 +802,14 @@ export default function Organizations() {
                 </label>
                 <div className="organizations-inline-actions">
                   <button
-                    className="btn btn-outline"
+                    className="btn-premium tertiary"
                     type="button"
                     onClick={() => setShowAdvancedFilters((current) => !current)}
                   >
                     {t("ORG_ADVANCED_FILTERS")}
                   </button>
                   <button
-                    className="btn btn-outline"
+                    className="btn-premium secondary"
                     type="button"
                     onClick={() => {
                       setSearchQuery("");
@@ -765,11 +878,11 @@ export default function Organizations() {
                     <span>{organization.description || t("ORG_NO_DESCRIPTION")}</span>
                     <span>{organization.totalMembers} {t("ORG_MEMBERS_SHORT")}</span>
                     <div className="organization-actions">
-                      <button className="btn btn-primary" type="button" onClick={() => openOrganizationDetail(organization.id)}>
+                      <button className="btn-premium" type="button" onClick={() => openOrganizationDetail(organization.id)}>
                         {t("ORG_VIEW")}
                       </button>
                       {organization.viewer.canApply ? (
-                        <button className="btn btn-outline" type="button" onClick={() => void handleApplyToOrganization(organization.id)} disabled={loading}>
+                        <button className="btn-premium secondary" type="button" onClick={() => void handleApplyToOrganization(organization.id)} disabled={loading}>
                           {t("ORG_APPLY")}
                         </button>
                       ) : null}
@@ -787,11 +900,11 @@ export default function Organizations() {
               {searchResults.length === 0 ? <p className="muted">{t("ORG_NO_RESULTS")}</p> : null}
 
               <div className="split-actions">
-                <button className="btn btn-outline" type="button" disabled={searchPage === 0 || loading} onClick={() => void loadSearchResults(searchPage - 1)}>
+                <button className="btn-premium tertiary" type="button" disabled={searchPage === 0 || loading} onClick={() => void loadSearchResults(searchPage - 1)}>
                   {t("ORG_PREVIOUS")}
                 </button>
                 <button
-                  className="btn btn-outline"
+                  className="btn-premium secondary"
                   type="button"
                   disabled={loading || searchPage * searchLimit + searchResults.length >= searchTotal}
                   onClick={() => void loadSearchResults(searchPage + 1)}
@@ -828,7 +941,7 @@ export default function Organizations() {
                         <span>{organization.description || t("ORG_NO_DESCRIPTION")}</span>
                         <span>{organization.totalMembers} {t("ORG_MEMBERS_SHORT")}</span>
                         <span>{t("ORG_YOUR_ROLE")}: {getRoleLabel(organization.viewer.role)}</span>
-                        <button className="btn btn-primary" type="button" onClick={() => openOrganizationDetail(organization.id)}>
+                        <button className="btn-premium" type="button" onClick={() => openOrganizationDetail(organization.id)}>
                           {t("ORG_ENTER")}
                         </button>
                       </article>
@@ -842,6 +955,7 @@ export default function Organizations() {
           )}
         </>
       ) : null}
+      </div>
       </div>
     </section>
   );

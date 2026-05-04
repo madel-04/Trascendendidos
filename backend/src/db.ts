@@ -325,6 +325,17 @@ export async function initDatabase() {
     `);
 
     await client.query(`
+      CREATE TABLE IF NOT EXISTS organization_messages (
+        id BIGSERIAL PRIMARY KEY,
+        org_id BIGINT NOT NULL REFERENCES organizations(id) ON DELETE CASCADE,
+        author_id INT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+        content VARCHAR(1000) NOT NULL,
+        created_at TIMESTAMP DEFAULT NOW(),
+        CHECK (char_length(trim(content)) > 0)
+      );
+    `);
+
+    await client.query(`
       CREATE INDEX IF NOT EXISTS idx_direct_messages_sender_created
       ON direct_messages(sender_id, created_at DESC);
       CREATE INDEX IF NOT EXISTS idx_direct_messages_receiver_created
@@ -359,6 +370,8 @@ export async function initDatabase() {
       ON organization_join_requests(org_id, status, created_at ASC);
       CREATE INDEX IF NOT EXISTS idx_organization_join_requests_user_status
       ON organization_join_requests(user_id, status, updated_at DESC);
+      CREATE INDEX IF NOT EXISTS idx_organization_messages_org_created
+      ON organization_messages(org_id, created_at DESC, id DESC);
     `);
 
     console.log("Database tables initialized");

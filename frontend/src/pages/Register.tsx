@@ -162,7 +162,7 @@ export default function Register() {
                   <ul className="password-rules">
                     {passwordStrength.rules.map((rule) => (
                       <li key={rule.key} className={`password-rule ${rule.passed ? "ok" : ""}`}>
-                        {rule.passed ? "OK" : "-"} {rule.label}
+                        {rule.label}
                       </li>
                     ))}
                   </ul>
