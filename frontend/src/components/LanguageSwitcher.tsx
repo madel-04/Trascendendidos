@@ -1,13 +1,13 @@
-import React from 'react';
-import { useTranslation } from 'react-i18next';
+import React from "react";
+import { useTranslation } from "react-i18next";
 
 const LanguageSwitcher: React.FC = () => {
   const { i18n } = useTranslation();
-  const currentLanguage = i18n.language.startsWith('en')
-    ? 'en'
-    : i18n.language.startsWith('it')
-      ? 'it'
-      : 'es';
+  const currentLanguage = i18n.language.startsWith("en")
+    ? "en"
+    : i18n.language.startsWith("it")
+      ? "it"
+      : "es";
 
   const flags: Record<string, string> = {
     es: '🇪🇸',
@@ -17,7 +17,7 @@ const LanguageSwitcher: React.FC = () => {
 
   return (
     <label className="language-switcher" aria-label="Language selector">
-      <span className="language-switcher-label">{flags[currentLanguage] || '🌐'}</span>
+      <span className="language-switcher-label" aria-hidden="true">{flags[currentLanguage] || '🌐'}</span>
       <select
         value={currentLanguage}
         onChange={(event) => void i18n.changeLanguage(event.target.value)}
