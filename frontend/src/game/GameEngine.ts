@@ -34,8 +34,8 @@ export class GameEngine {
   private mouseY: number | null = null;
   private isPaused = false;
   private isGameOver = false;
-  private countdownFrames = 0;
-  private readonly countdownDurationFrames = 180;
+  private countdownEndTimeMs: number | null = null;
+  private readonly countdownDurationMs = 3000;
 
   /** Callback para notificar cuando la partida ha terminado */
   public onMatchEnded?: (winner: 'left' | 'right') => void;
@@ -118,7 +118,7 @@ export class GameEngine {
     this.player1.resetPosition(this.canvas.height);
     this.player2.resetPosition(this.canvas.height);
     this.ball.reset(this.ball.vx > 0 ? 'right' : 'left');
-    this.countdownFrames = this.countdownDurationFrames;
+    this.startCountdown();
     window.addEventListener('keydown', this.handleKeyDown);
     window.addEventListener('keyup', this.handleKeyUp);
     if (!this.isMultiplayer && this.localControlMode === 'mouse') {
@@ -185,6 +185,7 @@ export class GameEngine {
     } else {
       this.player2.y = payload.y;
     }
+    this.draw();
   }
 
   private handleBallState(payload: { x: number; y: number; vx: number; vy: number }): void {
@@ -193,6 +194,7 @@ export class GameEngine {
       this.ball.y = payload.y;
       this.ball.vx = payload.vx;
       this.ball.vy = payload.vy;
+      this.draw();
     }
   }
 
@@ -207,8 +209,9 @@ export class GameEngine {
       this.player1.resetPosition(this.canvas.height);
       this.player2.resetPosition(this.canvas.height);
       this.ball.reset(scoredOn);
-      this.countdownFrames = this.countdownDurationFrames;
+      this.startCountdown();
     }
+    this.draw();
   }
 
   private handleMouseMove(e: MouseEvent): void {
@@ -306,19 +309,20 @@ export class GameEngine {
    * Actualiza la física del estado del juego.
    * Mueve la pelota, comprueba colisiones y registra goles.
    */
-  private updatePhysics(): void {
+  private updatePhysics(nowMs: number): void {
     // Si estamos en multijugador y somos el de la derecha, somos meros espectadores físicos
     if (this.isMultiplayer && this.side === 'right') {
       return; 
     }
 
-    if (this.countdownFrames > 0) {
-      this.countdownFrames -= 1;
+    if (this.getCountdownRemainingMs(nowMs) > 0) {
       if (this.isMultiplayer && this.side === 'left') {
         socket.emit('ball_state', { roomId: this.roomId, x: this.ball.x, y: this.ball.y, vx: this.ball.vx, vy: this.ball.vy });
       }
       return;
     }
+
+    this.countdownEndTimeMs = null;
 
     this.ball.update();
 
@@ -373,7 +377,19 @@ export class GameEngine {
     this.ball.reset(scoredOn);
     this.player1.resetPosition(this.canvas.height);
     this.player2.resetPosition(this.canvas.height);
-    this.countdownFrames = this.countdownDurationFrames;
+    this.startCountdown();
+  }
+
+  private startCountdown(): void {
+    this.countdownEndTimeMs = performance.now() + this.countdownDurationMs;
+  }
+
+  private getCountdownRemainingMs(nowMs: number): number {
+    if (this.countdownEndTimeMs === null) {
+      return 0;
+    }
+
+    return Math.max(0, this.countdownEndTimeMs - nowMs);
   }
 
   /**
@@ -384,7 +400,8 @@ export class GameEngine {
     this.ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
 
     // Dibuja los elementos
-    const countdown = this.countdownFrames > 0 ? Math.ceil(this.countdownFrames / 60) : null;
+    const countdownRemainingMs = this.getCountdownRemainingMs(performance.now());
+    const countdown = countdownRemainingMs > 0 ? Math.ceil(countdownRemainingMs / 1000) : null;
     this.board.draw(this.ctx, this.player1.score, this.player2.score, countdown);
     this.player1.draw(this.ctx);
     this.player2.draw(this.ctx);
@@ -395,14 +412,14 @@ export class GameEngine {
    * El bucle central del juego ejecutado unas 60 veces por segundo.
    * Patrón: Entrada -> Actualizar -> Dibujar -> Repetir
    */
-  private gameLoop(): void {
+  private gameLoop(nowMs: number): void {
     if (this.isPaused) {
       this.animationFrameId = null;
       return;
     }
 
     this.processInputs();
-    this.updatePhysics();
+    this.updatePhysics(nowMs);
     this.draw();
 
     // Detener animación si alguien alcanzó la marca ganadora
