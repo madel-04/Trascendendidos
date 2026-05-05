@@ -39,7 +39,7 @@ build:
 # -d → Background mode: los contenedores corren en segundo plano
 # --build → Reconstruye imágenes antes de iniciar
 up: env
-	$(COMPOSE) up --build -d
+	$(COMPOSE) up -d
 
 # ===== LEVANTAR EN FOREGROUND =====
 # up-fg: Igual que 'up' pero en foreground (puedes ver los logs en tiempo real)
