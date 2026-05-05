@@ -416,11 +416,11 @@ export default function Play() {
             </div>
           )}
 
-          {roomStatus ? (
+          {roomStatus && !(isTournamentMatch && roomStatus.gameStarted) ? (
             <div className="play-status-card">
               <div>
                 <strong style={{ display: "block", marginBottom: 4 }}>
-                  {isTournamentMatch ? "Sala de torneo" : t("INVITE_MATCH")}
+                  {isTournamentMatch ? t("TOURNAMENT_ROOM") : t("INVITE_MATCH")}
                 </strong>
                 <span style={{ display: "block", fontSize: 13, color: "var(--ink-muted)" }}>
                   {t("ROOM")}: {roomStatus.roomId}
@@ -507,7 +507,7 @@ export default function Play() {
           joinInviteRoom
           waitForRealtimeReady
           allowRematch={!isTournamentMatch}
-          exitLabel={isTournamentMatch ? "Volver al torneo" : undefined}
+          exitLabel={isTournamentMatch ? t("BACK_TO_TOURNAMENT") : undefined}
           onStatusChange={setIsMatchFinished}
           settings={settings}
           localControlMode={localControlMode}

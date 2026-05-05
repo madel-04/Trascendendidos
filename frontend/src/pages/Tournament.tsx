@@ -1,6 +1,6 @@
 import { FormEvent, useCallback, useEffect, useMemo, useState } from "react";
-import { useNavigate } from "react-router-dom";
-import { useSearchParams } from "react-router-dom";
+import { useTranslation } from "react-i18next";
+import { useNavigate, useSearchParams } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
 
 const API = import.meta.env.VITE_API_BASE ?? "http://localhost:3000";
@@ -75,6 +75,7 @@ function formatDate(value: string | null): string {
 }
 
 export default function Tournament() {
+  const { t } = useTranslation();
   const { token, user } = useAuth();
   const navigate = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
@@ -115,26 +116,26 @@ export default function Tournament() {
       const response = await fetch(`${API}/api/tournament`, { headers: authHeaders });
       const data = await response.json();
       if (!response.ok) {
-        setMessage({ type: "error", text: data.error ?? "No se pudo cargar la lista de torneos" });
+        setMessage({ type: "error", text: data.error ?? t("TOURNAMENT_LIST_LOAD_ERROR") });
         return;
       }
       setTournaments(data.tournaments ?? []);
 
       setSelectedTournamentId((current) => {
-        if (requestedTournamentId && (data.tournaments ?? []).some((t: TournamentListItem) => t.id === requestedTournamentId)) {
+        if (requestedTournamentId && (data.tournaments ?? []).some((item: TournamentListItem) => item.id === requestedTournamentId)) {
           return requestedTournamentId;
         }
-        if (current && (data.tournaments ?? []).some((t: TournamentListItem) => t.id === current)) {
+        if (current && (data.tournaments ?? []).some((item: TournamentListItem) => item.id === current)) {
           return current;
         }
         return data.tournaments?.[0]?.id ?? null;
       });
     } catch (_error) {
-      setMessage({ type: "error", text: "Error de conexion cargando torneos" });
+      setMessage({ type: "error", text: t("TOURNAMENT_LIST_CONNECTION_ERROR") });
     } finally {
       setLoadingList(false);
     }
-  }, [authHeaders, token, requestedTournamentId]);
+  }, [authHeaders, requestedTournamentId, t, token]);
 
   const loadDetail = useCallback(async (tournamentId: number) => {
     if (!token || !authHeaders) return;
@@ -143,16 +144,16 @@ export default function Tournament() {
       const response = await fetch(`${API}/api/tournament/${tournamentId}`, { headers: authHeaders });
       const data = await response.json();
       if (!response.ok) {
-        setMessage({ type: "error", text: data.error ?? "No se pudo cargar el torneo" });
+        setMessage({ type: "error", text: data.error ?? t("TOURNAMENT_DETAIL_LOAD_ERROR") });
         return;
       }
       setDetail(data as TournamentDetail);
     } catch (_error) {
-      setMessage({ type: "error", text: "Error de conexion cargando detalle del torneo" });
+      setMessage({ type: "error", text: t("TOURNAMENT_DETAIL_CONNECTION_ERROR") });
     } finally {
       setLoadingDetail(false);
     }
-  }, [authHeaders, token]);
+  }, [authHeaders, t, token]);
 
   useEffect(() => {
     void loadList();
@@ -164,13 +165,15 @@ export default function Tournament() {
       setEditing(false);
       return;
     }
+
     setSearchParams((current) => {
       const next = new URLSearchParams(current);
       next.set("tournamentId", String(selectedTournamentId));
       return next;
     }, { replace: true });
+
     void loadDetail(selectedTournamentId);
-  }, [selectedTournamentId, loadDetail, setSearchParams]);
+  }, [loadDetail, selectedTournamentId, setSearchParams]);
 
   const handleCreate = async (event: FormEvent) => {
     event.preventDefault();
@@ -179,7 +182,7 @@ export default function Tournament() {
     const trimmedName = name.trim();
     const trimmedDescription = description.trim();
     if (trimmedName.length < 3) {
-      setMessage({ type: "error", text: "El nombre del torneo debe tener al menos 3 caracteres" });
+      setMessage({ type: "error", text: t("TOURNAMENT_NAME_MIN") });
       return;
     }
 
@@ -197,19 +200,19 @@ export default function Tournament() {
       });
       const data = await response.json();
       if (!response.ok) {
-        setMessage({ type: "error", text: data.error ?? "No se pudo crear el torneo" });
+        setMessage({ type: "error", text: data.error ?? t("TOURNAMENT_CREATE_ERROR") });
         return;
       }
 
       setName("");
       setDescription("");
-      setMessage({ type: "success", text: "Torneo creado correctamente" });
+      setMessage({ type: "success", text: t("TOURNAMENT_CREATED_SUCCESS") });
       await loadList();
       if (data?.tournament?.id) {
         setSelectedTournamentId(Number(data.tournament.id));
       }
     } catch (_error) {
-      setMessage({ type: "error", text: "Error de conexion al crear torneo" });
+      setMessage({ type: "error", text: t("TOURNAMENT_CREATE_CONNECTION_ERROR") });
     } finally {
       setCreating(false);
     }
@@ -234,16 +237,16 @@ export default function Tournament() {
       });
       const data = await response.json();
       if (!response.ok) {
-        setMessage({ type: "error", text: data.error ?? "No se pudo completar la accion" });
+        setMessage({ type: "error", text: data.error ?? t("TOURNAMENT_ACTION_ERROR") });
         return;
       }
 
       setEditing(false);
-      setMessage({ type: "success", text: data.message ?? "Accion completada" });
+      setMessage({ type: "success", text: data.message ?? t("TOURNAMENT_ACTION_SUCCESS") });
       await loadList();
       await loadDetail(selectedTournamentId);
     } catch (_error) {
-      setMessage({ type: "error", text: "Error de conexion ejecutando la accion" });
+      setMessage({ type: "error", text: t("TOURNAMENT_ACTION_CONNECTION_ERROR") });
     } finally {
       setActionBusy(false);
     }
@@ -256,7 +259,7 @@ export default function Tournament() {
     const trimmedName = editName.trim();
     const trimmedDescription = editDescription.trim();
     if (trimmedName.length < 3) {
-      setMessage({ type: "error", text: "El nombre del torneo debe tener al menos 3 caracteres" });
+      setMessage({ type: "error", text: t("TOURNAMENT_NAME_MIN") });
       return;
     }
 
@@ -274,16 +277,16 @@ export default function Tournament() {
       });
       const data = await response.json();
       if (!response.ok) {
-        setMessage({ type: "error", text: data.error ?? "No se pudo actualizar el torneo" });
+        setMessage({ type: "error", text: data.error ?? t("TOURNAMENT_UPDATE_ERROR") });
         return;
       }
 
       setEditing(false);
-      setMessage({ type: "success", text: data.message ?? "Torneo actualizado" });
+      setMessage({ type: "success", text: data.message ?? t("TOURNAMENT_UPDATED_SUCCESS") });
       await loadList();
       await loadDetail(detail.tournament.id);
     } catch (_error) {
-      setMessage({ type: "error", text: "Error de conexion actualizando el torneo" });
+      setMessage({ type: "error", text: t("TOURNAMENT_UPDATE_CONNECTION_ERROR") });
     } finally {
       setActionBusy(false);
     }
@@ -297,12 +300,24 @@ export default function Tournament() {
     setMessage(null);
   };
 
-  const isParticipant = Boolean(detail?.participants.some((p) => p.userId === user?.id));
+  const isParticipant = Boolean(detail?.participants.some((participant) => participant.userId === user?.id));
   const canJoin = detail?.tournament.status === "open" && !isParticipant && (detail?.participants.length ?? 0) < (detail?.tournament.maxPlayers ?? 0);
   const canStart = Boolean(detail?.tournament.permissions.canStart && (detail?.participants.length ?? 0) >= 2);
   const canEditTournament = Boolean(detail?.tournament.permissions.canEdit);
   const canCancelTournament = Boolean(detail?.tournament.permissions.canCancel);
   const showTournamentActions = detail?.tournament.status === "open" || detail?.tournament.status === "in_progress";
+
+  const getTournamentStatusLabel = useCallback((status: TournamentListItem["status"]) => {
+    if (status === "open") return t("TOURNAMENT_STATUS_OPEN");
+    if (status === "in_progress") return t("TOURNAMENT_STATUS_IN_PROGRESS");
+    if (status === "completed") return t("TOURNAMENT_STATUS_COMPLETED");
+    return t("TOURNAMENT_STATUS_CANCELLED");
+  }, [t]);
+
+  const getMatchStatusLabel = useCallback((status: TournamentDetail["matches"][number]["status"]) => {
+    return status === "completed" ? t("TOURNAMENT_MATCH_STATUS_COMPLETED") : t("TOURNAMENT_MATCH_STATUS_PENDING");
+  }, [t]);
+
   const groupedMatches = useMemo(() => {
     const rounds = new Map<number, TournamentDetail["matches"]>();
     for (const match of detail?.matches ?? []) {
@@ -319,51 +334,51 @@ export default function Tournament() {
     <section className="glass-panel play-hub-panel play-hub-panel-enter page-hub-panel tournament-shell">
       <div className="page-hub-layout tournament-grid">
         <article className="tournament-column">
-          <h2 className="page-title">Torneos</h2>
-          <p className="page-subtitle">Sistema de eliminacion directa para 4, 8 o 16 jugadores.</p>
+          <h2 className="page-title">{t("TOURNAMENT_PAGE_TITLE")}</h2>
+          <p className="page-subtitle">{t("TOURNAMENT_PAGE_SUBTITLE")}</p>
 
           <form className="tournament-create" onSubmit={handleCreate}>
-            <label className="auth-label" htmlFor="tournamentName">Nombre del torneo</label>
+            <label className="auth-label" htmlFor="tournamentName">{t("TOURNAMENT_NAME_LABEL")}</label>
             <input
               id="tournamentName"
               className="auth-input"
               value={name}
               onChange={(e) => setName(e.target.value)}
-              placeholder="Ej: Weekend Cup"
+              placeholder={t("TOURNAMENT_NAME_PLACEHOLDER")}
               maxLength={120}
             />
 
-            <label className="auth-label" htmlFor="tournamentDescription">Descripcion</label>
+            <label className="auth-label" htmlFor="tournamentDescription">{t("TOURNAMENT_DESCRIPTION_LABEL")}</label>
             <textarea
               id="tournamentDescription"
               className="auth-input"
               value={description}
               onChange={(e) => setDescription(e.target.value)}
-              placeholder="Reglas, formato o notas para los participantes"
+              placeholder={t("TOURNAMENT_DESCRIPTION_PLACEHOLDER")}
               maxLength={500}
               rows={4}
             />
 
-            <label className="auth-label" htmlFor="tournamentSize">Tamano del cuadro</label>
+            <label className="auth-label" htmlFor="tournamentSize">{t("TOURNAMENT_SIZE_LABEL")}</label>
             <select
               id="tournamentSize"
               className="auth-input"
               value={maxPlayers}
               onChange={(e) => setMaxPlayers(Number(e.target.value) as 4 | 8 | 16)}
             >
-              <option value={4}>4 jugadores</option>
-              <option value={8}>8 jugadores</option>
-              <option value={16}>16 jugadores</option>
+              <option value={4}>{t("TOURNAMENT_SIZE_OPTION", { count: 4 })}</option>
+              <option value={8}>{t("TOURNAMENT_SIZE_OPTION", { count: 8 })}</option>
+              <option value={16}>{t("TOURNAMENT_SIZE_OPTION", { count: 16 })}</option>
             </select>
 
             <button className="btn-premium" type="submit" disabled={creating || !token}>
-              {creating ? "Creando..." : "Crear torneo"}
+              {creating ? t("TOURNAMENT_CREATING") : t("TOURNAMENT_CREATE_ACTION")}
             </button>
           </form>
 
           <div className="tournament-list-wrap">
-            {loadingList ? <p className="muted">Cargando torneos...</p> : null}
-            {!loadingList && tournaments.length === 0 ? <p className="muted">No hay torneos creados aun.</p> : null}
+            {loadingList ? <p className="muted">{t("TOURNAMENT_LOADING_LIST")}</p> : null}
+            {!loadingList && tournaments.length === 0 ? <p className="muted">{t("TOURNAMENT_EMPTY_LIST")}</p> : null}
             {tournaments.map((item) => (
               <button
                 key={item.id}
@@ -373,10 +388,10 @@ export default function Tournament() {
               >
                 <div>
                   <strong>{item.name}</strong>
-                  <span className="muted">{item.creator.username} · {item.creator.role}</span>
+                  <span className="muted">{item.creator.username} · {t("TOURNAMENT_HOST_ROLE")}</span>
                 </div>
                 <div>
-                  <span className="status-pill">{item.status}</span>
+                  <span className="status-pill">{getTournamentStatusLabel(item.status)}</span>
                   <span className="muted">{item.participantsCount}/{item.maxPlayers}</span>
                 </div>
               </button>
@@ -385,8 +400,8 @@ export default function Tournament() {
         </article>
 
         <article className="tournament-column">
-          {!selectedTournamentId ? <p className="muted">Selecciona un torneo para ver el detalle.</p> : null}
-          {selectedTournamentId && loadingDetail ? <p className="muted">Cargando detalle...</p> : null}
+          {!selectedTournamentId ? <p className="muted">{t("TOURNAMENT_SELECT_DETAIL")}</p> : null}
+          {selectedTournamentId && loadingDetail ? <p className="muted">{t("TOURNAMENT_LOADING_DETAIL")}</p> : null}
 
           {detail ? (
             <div key={selectedTournamentId} className="tournament-detail profile-tab-stage profile-tab-stage-enter">
@@ -394,9 +409,9 @@ export default function Tournament() {
                 <div>
                   <h2 className="page-title">{detail.tournament.name}</h2>
                   <p className="page-subtitle">
-                    Anfitrion: {detail.tournament.creator.username} · Estado: {detail.tournament.status}
+                    {t("TOURNAMENT_HOST")}: {detail.tournament.creator.username} · {t("TOURNAMENT_STATE")}: {getTournamentStatusLabel(detail.tournament.status)}
                   </p>
-                  <p className="muted">{detail.tournament.description || "Sin descripcion."}</p>
+                  <p className="muted">{detail.tournament.description || t("TOURNAMENT_NO_DESCRIPTION")}</p>
                 </div>
                 {showTournamentActions ? (
                   <div className="tournament-actions">
@@ -407,7 +422,7 @@ export default function Tournament() {
                         disabled={actionBusy}
                         onClick={() => performAction(`/api/tournament/${detail.tournament.id}/join`)}
                       >
-                        Unirme
+                        {t("TOURNAMENT_JOIN")}
                       </button>
                     ) : null}
                     {canStart ? (
@@ -417,7 +432,7 @@ export default function Tournament() {
                         disabled={actionBusy}
                         onClick={() => performAction(`/api/tournament/${detail.tournament.id}/start`)}
                       >
-                        Iniciar
+                        {t("TOURNAMENT_START")}
                       </button>
                     ) : null}
                     {canEditTournament ? (
@@ -427,7 +442,7 @@ export default function Tournament() {
                         disabled={actionBusy}
                         onClick={beginEditing}
                       >
-                        Editar
+                        {t("TOURNAMENT_EDIT")}
                       </button>
                     ) : null}
                     {canCancelTournament ? (
@@ -437,7 +452,7 @@ export default function Tournament() {
                         disabled={actionBusy}
                         onClick={() => performAction(`/api/tournament/${detail.tournament.id}/cancel`)}
                       >
-                        Cancelar
+                        {t("TOURNAMENT_CANCEL")}
                       </button>
                     ) : null}
                   </div>
@@ -446,7 +461,7 @@ export default function Tournament() {
 
               {editing ? (
                 <form className="tournament-create" onSubmit={handleSaveTournament}>
-                  <label className="auth-label" htmlFor="editTournamentName">Nombre del torneo</label>
+                  <label className="auth-label" htmlFor="editTournamentName">{t("TOURNAMENT_NAME_LABEL")}</label>
                   <input
                     id="editTournamentName"
                     className="auth-input"
@@ -455,7 +470,7 @@ export default function Tournament() {
                     maxLength={120}
                   />
 
-                  <label className="auth-label" htmlFor="editTournamentDescription">Descripcion</label>
+                  <label className="auth-label" htmlFor="editTournamentDescription">{t("TOURNAMENT_DESCRIPTION_LABEL")}</label>
                   <textarea
                     id="editTournamentDescription"
                     className="auth-input"
@@ -467,7 +482,7 @@ export default function Tournament() {
 
                   <div className="tournament-actions">
                     <button className="btn-premium" type="submit" disabled={actionBusy}>
-                      Guardar cambios
+                      {t("TOURNAMENT_SAVE_CHANGES")}
                     </button>
                     <button
                       className="btn-premium secondary"
@@ -475,7 +490,7 @@ export default function Tournament() {
                       disabled={actionBusy}
                       onClick={() => setEditing(false)}
                     >
-                      Cerrar
+                      {t("TOURNAMENT_CLOSE")}
                     </button>
                   </div>
                 </form>
@@ -483,21 +498,21 @@ export default function Tournament() {
 
               <div className="tournament-meta-grid">
                 <div className="feature-card">
-                  <h3>Jugadores</h3>
+                  <h3>{t("TOURNAMENT_PLAYERS")}</h3>
                   <p>{detail.participants.length} / {detail.tournament.maxPlayers}</p>
                 </div>
                 <div className="feature-card">
-                  <h3>Creado</h3>
+                  <h3>{t("TOURNAMENT_CREATED_AT")}</h3>
                   <p>{formatDate(detail.tournament.createdAt)}</p>
                 </div>
                 <div className="feature-card">
-                  <h3>Campeon</h3>
-                  <p>{detail.tournament.championUsername ?? "Aun sin definir"}</p>
+                  <h3>{t("TOURNAMENT_CHAMPION")}</h3>
+                  <p>{detail.tournament.championUsername ?? t("TOURNAMENT_CHAMPION_PENDING")}</p>
                 </div>
               </div>
 
               <section>
-                <h3>Participantes</h3>
+                <h3>{t("TOURNAMENT_PARTICIPANTS")}</h3>
                 <div className="tournament-chip-list">
                   {detail.participants.map((participant) => (
                     <span key={participant.id} className="tournament-chip">
@@ -509,12 +524,12 @@ export default function Tournament() {
               </section>
 
               <section>
-                <h3>Bracket</h3>
-                {detail.matches.length === 0 ? <p className="muted">Aun no hay partidas generadas.</p> : null}
+                <h3>{t("TOURNAMENT_BRACKET")}</h3>
+                {detail.matches.length === 0 ? <p className="muted">{t("TOURNAMENT_NO_MATCHES")}</p> : null}
                 <div className="tournament-bracket">
                   {groupedMatches.map((roundGroup) => (
                     <div key={roundGroup.round} className="tournament-round">
-                      <div className="tournament-round-title">Ronda {roundGroup.round}</div>
+                      <div className="tournament-round-title">{t("TOURNAMENT_ROUND", { round: roundGroup.round })}</div>
                       <div className="tournament-round-stack">
                         {roundGroup.matches.map((match) => {
                           const isCurrentPlayerMatch = user?.id === match.player1.id || user?.id === match.player2?.id;
@@ -526,32 +541,34 @@ export default function Tournament() {
                               className={`tournament-match-card ${match.winner ? "is-complete" : ""} ${canEnterMatch ? "is-active" : ""}`}
                             >
                               <div className="tournament-match-head">
-                                <span>Match {match.order}</span>
-                                <span className="status-pill">{match.status}</span>
+                                <span>{t("TOURNAMENT_MATCH", { order: match.order })}</span>
+                                <span className="status-pill">{getMatchStatusLabel(match.status)}</span>
                               </div>
 
                               <div className="tournament-duel">
                                 <div className={`tournament-player-row ${match.winner?.id === match.player1.id ? "is-winner" : ""}`}>
                                   <span>{match.player1.username}</span>
-                                  {match.winner?.id === match.player1.id ? <strong>WIN</strong> : null}
+                                  {match.winner?.id === match.player1.id ? <strong>{t("TOURNAMENT_WIN")}</strong> : null}
                                 </div>
-                                <div className="tournament-vs">VS</div>
+                                <div className="tournament-vs">{t("TOURNAMENT_VS")}</div>
                                 <div className={`tournament-player-row ${match.winner?.id === match.player2?.id ? "is-winner" : ""}`}>
-                                  <span>{match.player2?.username ?? "Bye"}</span>
-                                  {match.winner?.id === match.player2?.id ? <strong>WIN</strong> : null}
+                                  <span>{match.player2?.username ?? t("TOURNAMENT_BYE")}</span>
+                                  {match.winner?.id === match.player2?.id ? <strong>{t("TOURNAMENT_WIN")}</strong> : null}
                                 </div>
                               </div>
 
-                        <p className="muted">
-                          {match.player2 ? `Ganador: ${match.winner?.username ?? "Pendiente"}` : `${match.player1.username} pasa de ronda`}
-                        </p>
+                              <p className="muted">
+                                {match.player2
+                                  ? t("TOURNAMENT_WINNER_LABEL", { username: match.winner?.username ?? t("TOURNAMENT_PENDING") })
+                                  : t("TOURNAMENT_ADVANCES", { username: match.player1.username })}
+                              </p>
 
-                        {match.player2 && match.status === "pending" ? (
-                          <p className="muted">El ganador se registrara automaticamente al terminar la partida.</p>
-                        ) : null}
+                              {match.player2 && match.status === "pending" ? (
+                                <p className="muted">{t("TOURNAMENT_AUTO_REGISTER_WINNER")}</p>
+                              ) : null}
 
-                        {canEnterMatch ? (
-                          <button
+                              {canEnterMatch ? (
+                                <button
                                   type="button"
                                   className="btn-premium"
                                   disabled={actionBusy}
@@ -566,12 +583,12 @@ export default function Tournament() {
                                     navigate(`/play?${params.toString()}`);
                                   }}
                                 >
-                            Unirme a la sala
-                          </button>
-                        ) : null}
-                      </div>
-                    );
-                  })}
+                                  {t("TOURNAMENT_JOIN_ROOM")}
+                                </button>
+                              ) : null}
+                            </div>
+                          );
+                        })}
                       </div>
                     </div>
                   ))}
