@@ -377,6 +377,9 @@ export function registerSocketHandlers(io: IoServer, app: FastifyInstance): void
       if (match.rematchLeft && match.rematchRight) {
         match.rematchLeft = false;
         match.rematchRight = false;
+        match.scoreLeft = 0;
+        match.scoreRight = 0;
+        io.to(roomId).emit('score_update', { left: 0, right: 0 });
         io.to(roomId).emit('restart_match');
         console.log(`[Match] ${roomId} is restarting a rematch.`);
       }

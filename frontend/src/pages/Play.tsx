@@ -144,6 +144,7 @@ export default function Play() {
       const statusData: GameRoomStatus = await statusResponse.json();
       if (statusResponse.ok) {
         setRoomStatus(statusData);
+        setIsReady(statusData.players.you.ready);
       }
     } catch (error) {
       setMessage({ type: "error", text: t("JOIN_ROOM_CONNECTION_ERROR") });
@@ -235,6 +236,12 @@ export default function Play() {
     };
   }, [isActiveMatchView]);
 
+  useEffect(() => {
+    if (roomStatus?.gameStarted) {
+      setMessage(null);
+    }
+  }, [roomStatus?.gameStarted]);
+
   const markReady = async () => {
     if (!matchContext || !token || isReady) return;
 
@@ -278,7 +285,7 @@ export default function Play() {
   };
 
   if (!matchContext) {
-    const localShellClassName = "play-route-shell";
+    const localShellClassName = "play-route-shell play-route-shell-center";
 
     return (
       <div className={localShellClassName}>
@@ -397,7 +404,7 @@ export default function Play() {
     <div className="app-container play-route-shell">
       {matchContext ? (
         <>
-          {message && (
+          {message && !roomStatus?.gameStarted && (
             <div
               style={{
                 marginBottom: 12,
@@ -413,7 +420,7 @@ export default function Play() {
             </div>
           )}
 
-          {roomStatus && !(isTournamentMatch && roomStatus.gameStarted) ? (
+          {roomStatus && !roomStatus.gameStarted ? (
             <div className="play-status-card">
               <div>
                 <strong style={{ display: "block", marginBottom: 4 }}>
@@ -469,7 +476,7 @@ export default function Play() {
                 </div>
               )}
             </div>
-          ) : (
+          ) : !roomStatus?.gameStarted ? (
             <div
               className="play-status-card"
               style={{
@@ -481,7 +488,7 @@ export default function Play() {
             >
               {loading ? t("JOINING_ROOM") : t("PREPARING_MATCH")}
             </div>
-          )}
+          ) : null}
         </>
       ) : (
         <div className="play-status-empty">
@@ -500,6 +507,7 @@ export default function Play() {
           }}
           isMultiplayer
           multiplayerSide={roomStatus.players.you.side}
+          multiplayerOpponentUsername={roomStatus.players.opponent.username}
           roomId={roomStatus.roomId}
           joinInviteRoom
           waitForRealtimeReady

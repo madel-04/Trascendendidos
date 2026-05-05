@@ -2,6 +2,7 @@ import { FormEvent, useCallback, useEffect, useMemo, useRef, useState } from "re
 import { useNavigate } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 import { useAuth } from "../context/AuthContext";
+import SocialChatPanel from "./SocialChatPanel";
 
 const API = import.meta.env.VITE_API_BASE ?? "http://localhost:3000";
 
@@ -88,6 +89,19 @@ type InAppNotification = {
   createdAt: number;
 };
 
+type ConversationSummary = {
+  user: PublicUser;
+  lastMessage: string;
+  lastMessageAt: string;
+};
+
+type ChatProfile = PublicUser & {
+  bio?: string | null;
+  isFriend?: boolean;
+  blockedByMe?: boolean;
+  blockedMe?: boolean;
+};
+
 const EMPTY_OVERVIEW: SocialOverview = {
   friends: [],
   incomingRequests: [],
@@ -97,6 +111,25 @@ const EMPTY_OVERVIEW: SocialOverview = {
 
 function displayUserName(user: PublicUser): string {
   return user.displayName?.trim() ? `${user.displayName} (@${user.username})` : `@${user.username}`;
+}
+
+function resolveAvatarUrl(avatarUrl?: string | null): string | null {
+  if (!avatarUrl) return null;
+  if (avatarUrl.startsWith("http://") || avatarUrl.startsWith("https://")) return avatarUrl;
+  return `${API}${avatarUrl}`;
+}
+
+function formatChatTimestamp(value?: string | null): string {
+  if (!value) return "";
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return "";
+  return date.toLocaleString();
+}
+
+function formatMessagePreview(value?: string | null): string {
+  if (!value?.trim()) return "";
+  const compact = value.replace(/\s+/g, " ").trim();
+  return compact.length > 60 ? `${compact.slice(0, 57)}...` : compact;
 }
 
 export default function SocialPanel({ token }: { token: string | null }) {
@@ -120,16 +153,48 @@ export default function SocialPanel({ token }: { token: string | null }) {
   const [typingUsers, setTypingUsers] = useState<Set<string>>(new Set());
   const [readReceipts, setReadReceipts] = useState<Map<string, ChatReadAt>>(new Map());
   const [showChatProfile, setShowChatProfile] = useState(false);
+  const [conversations, setConversations] = useState<ConversationSummary[]>([]);
+  const [chatProfile, setChatProfile] = useState<ChatProfile | null>(null);
   const typingTimeoutRef = useRef<number | null>(null);
+  const chatScrollRef = useRef<HTMLDivElement | null>(null);
 
-  const friendUsernames = useMemo(
-    () => overview.friends.map((friend) => friend.user.username),
-    [overview.friends]
-  );
+  const availableConversations = useMemo(() => {
+    const merged = new Map<string, ConversationSummary>();
 
-  const activeChatFriend = useMemo(
-    () => overview.friends.find((friend) => friend.user.username === chatTarget)?.user,
-    [chatTarget, overview.friends]
+    for (const item of conversations) {
+      merged.set(item.user.username, item);
+    }
+
+    for (const friend of overview.friends) {
+      if (!merged.has(friend.user.username)) {
+        merged.set(friend.user.username, {
+          user: friend.user,
+          lastMessage: "",
+          lastMessageAt: "",
+        });
+      }
+    }
+
+    return Array.from(merged.values()).sort((left, right) => {
+      const leftTime = left.lastMessageAt ? new Date(left.lastMessageAt).getTime() : 0;
+      const rightTime = right.lastMessageAt ? new Date(right.lastMessageAt).getTime() : 0;
+      return rightTime - leftTime || left.user.username.localeCompare(right.user.username);
+    });
+  }, [conversations, overview.friends]);
+
+  const activeChatUser = useMemo(() => {
+    const fromConversation = availableConversations.find((item) => item.user.username === chatTarget)?.user;
+    if (fromConversation) return fromConversation;
+    return overview.friends.find((friend) => friend.user.username === chatTarget)?.user ?? null;
+  }, [availableConversations, chatTarget, overview.friends]);
+
+  const chatNotifications = useMemo(
+    () =>
+      notifications.filter((item) => {
+        const lowered = item.text.toLowerCase();
+        return lowered.includes("chat") || lowered.includes("partida") || lowered.includes("tournament") || lowered.includes("torneo");
+      }).slice(0, 5),
+    [notifications]
   );
 
   const pushNotification = useCallback((text: string) => {
@@ -175,6 +240,34 @@ export default function SocialPanel({ token }: { token: string | null }) {
       setOutgoingInvites(data.outgoing ?? []);
     } catch (_error) {
       // Silent refresh fail; user-facing errors shown on explicit actions.
+    }
+  }, [token]);
+
+  const fetchConversations = useCallback(async () => {
+    if (!token) return;
+    try {
+      const response = await fetch(`${API}/api/chat/conversations`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      const data = await response.json();
+      if (!response.ok) return;
+      setConversations(data.conversations ?? []);
+    } catch (_error) {
+      // Silent refresh fail
+    }
+  }, [token]);
+
+  const fetchChatProfile = useCallback(async (targetUsername: string) => {
+    if (!token || !targetUsername.trim()) return;
+    try {
+      const response = await fetch(`${API}/api/social/user/${encodeURIComponent(targetUsername.trim())}`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      const data = await response.json();
+      if (!response.ok) return;
+      setChatProfile(data.user ?? null);
+    } catch (_error) {
+      // Silent refresh fail
     }
   }, [token]);
 
@@ -227,7 +320,8 @@ export default function SocialPanel({ token }: { token: string | null }) {
   useEffect(() => {
     fetchOverview();
     fetchInvites();
-  }, [fetchInvites, fetchOverview]);
+    fetchConversations();
+  }, [fetchConversations, fetchInvites, fetchOverview]);
 
   useEffect(() => {
     if (!token) return;
@@ -253,6 +347,7 @@ export default function SocialPanel({ token }: { token: string | null }) {
           match_invite_sent: "Invitacion de partida enviada",
           match_invite_accepted: "Tu invitacion de partida fue aceptada",
           match_invite_rejected: "Tu invitacion de partida fue rechazada",
+          tournament_match_ready: "Tu partida de torneo esta lista",
         };
 
         if (messages[payload.event]) {
@@ -314,8 +409,14 @@ export default function SocialPanel({ token }: { token: string | null }) {
 
         void fetchOverview();
         void fetchInvites();
+        void fetchConversations();
 
-        if (payload.event === "chat_message_received" && payload.data?.fromUserId && chatTarget.trim().length > 0) {
+        if (
+          payload.event === "chat_message_received" &&
+          typeof payload.data?.fromUsername === "string" &&
+          chatTarget.trim().length > 0 &&
+          payload.data.fromUsername === chatTarget
+        ) {
           void loadConversation(chatTarget);
         }
       } catch (_error) {
@@ -330,7 +431,7 @@ export default function SocialPanel({ token }: { token: string | null }) {
     return () => {
       ws.close();
     };
-  }, [chatTarget, fetchInvites, fetchOverview, loadConversation, navigate, pushNotification, token]);
+  }, [chatTarget, fetchConversations, fetchInvites, fetchOverview, loadConversation, navigate, pushNotification, token]);
 
   const sendFriendRequest = async (event: FormEvent) => {
     event.preventDefault();
@@ -544,7 +645,9 @@ export default function SocialPanel({ token }: { token: string | null }) {
       setMessage({ type: "success", text: data.message });
       setChatTarget("");
       setChatMessages([]);
+      setChatProfile(null);
       await fetchOverview();
+      await fetchConversations();
     } catch (_error) {
       setMessage({ type: "error", text: "Error de conexion al bloquear" });
     } finally {
@@ -614,6 +717,7 @@ export default function SocialPanel({ token }: { token: string | null }) {
         body: JSON.stringify({ typing: false }),
       });
       setChatMessages((prev) => [...prev, data.message]);
+      await fetchConversations();
     } catch (_error) {
       setMessage({ type: "error", text: "Error de conexion al enviar mensaje" });
     } finally {
@@ -622,9 +726,41 @@ export default function SocialPanel({ token }: { token: string | null }) {
   };
 
   const handleOpenConversation = async (username: string) => {
-    setChatTarget(username);
+    const normalizedUsername = username.trim();
+    if (!normalizedUsername) return;
+
+    if (chatTarget === normalizedUsername) {
+      if (token) {
+        try {
+          await fetch(`${API}/api/chat/conversation/${encodeURIComponent(normalizedUsername)}/typing`, {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+              Authorization: `Bearer ${token}`,
+            },
+            body: JSON.stringify({ typing: false }),
+          });
+        } catch (_error) {
+          // Silent close cleanup.
+        }
+      }
+
+      if (typingTimeoutRef.current !== null) {
+        window.clearTimeout(typingTimeoutRef.current);
+        typingTimeoutRef.current = null;
+      }
+
+      setChatTarget("");
+      setShowChatProfile(false);
+      setChatInput("");
+      setChatMessages([]);
+      setChatProfile(null);
+      return;
+    }
+
+    setChatTarget(normalizedUsername);
     setShowChatProfile(false);
-    await loadConversation(username);
+    await Promise.all([loadConversation(normalizedUsername), fetchChatProfile(normalizedUsername)]);
   };
 
   const handleChatInputChange = async (value: string) => {
@@ -657,7 +793,7 @@ export default function SocialPanel({ token }: { token: string | null }) {
   };
 
   return (
-    <div style={{ border: "1px solid rgba(255, 255, 255, 0.16)", padding: 20, marginBottom: 30, display: "flex", flexDirection: "column", gap: 16 }}>
+    <div className="social-panel-shell" style={{ border: "1px solid rgba(255, 255, 255, 0.16)", padding: 20, marginBottom: 30, display: "flex", flexDirection: "column", gap: 16 }}>
       <h2 style={{ margin: 0, fontSize: 14, textTransform: "uppercase", letterSpacing: "0.5px", color: "var(--ink-muted)" }}>
         {t("SOCIAL")}
       </h2>
@@ -676,8 +812,8 @@ export default function SocialPanel({ token }: { token: string | null }) {
         </div>
       )}
 
-      <div className="profile-grid-2col">
-        <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
+      <div className="social-panel-stack">
+        <div className="social-panel-tools">
           <form onSubmit={sendFriendRequest} style={{ display: "grid", gap: 8 }}>
         <label style={{ fontSize: 13, color: "var(--ink-muted)" }}>{t("FRIEND_REQUEST_BY_USERNAME")}</label>
         <div style={{ display: "flex", gap: 8 }}>
@@ -754,7 +890,7 @@ export default function SocialPanel({ token }: { token: string | null }) {
         </section>
       </div>
 
-      <div style={{ display: "grid", gap: 12, alignContent: "start" }}>
+      <div className="social-panel-overview">
         <section>
           <h3 style={{ margin: "8px 0", fontSize: 13, color: "var(--ink-strong)" }}>{t("INCOMING_REQUESTS")}</h3>
           {loading ? (
@@ -838,43 +974,86 @@ export default function SocialPanel({ token }: { token: string | null }) {
           )}
         </section>
 
+        <SocialChatPanel
+          actionLoading={actionLoading}
+          availableConversations={availableConversations}
+          activeChatUser={activeChatUser}
+          chatInput={chatInput}
+          chatLoading={chatLoading}
+          chatMessages={chatMessages}
+          chatNotifications={chatNotifications}
+          chatProfile={chatProfile}
+          chatTarget={chatTarget}
+          currentUserId={user?.id}
+          readReceipts={readReceipts}
+          showChatProfile={showChatProfile}
+          typingUsers={typingUsers}
+          onBlockFromChat={() => void blockFromChat()}
+          onChatInputChange={(value) => void handleChatInputChange(value)}
+          onInviteFromChat={() => void inviteFromChat()}
+          onOpenConversation={(username) => void handleOpenConversation(username)}
+          onSendChatMessage={sendChatMessage}
+          onToggleProfile={() => setShowChatProfile((prev) => !prev)}
+        />
+
+        {false && (
         <section>
           <h3 style={{ margin: "8px 0", fontSize: 13, color: "var(--ink-strong)" }}>{t("REALTIME_CHAT")}</h3>
-          <div style={{ display: "flex", gap: 8, marginBottom: 8, flexWrap: "wrap" }}>
-            {friendUsernames.length === 0 ? (
-              <span style={{ fontSize: 13, color: "var(--ink-muted)" }}>{t("ADD_FRIENDS_TO_CHAT")}</span>
-            ) : (
-              friendUsernames.map((username) => (
-                <button
-                  key={username}
-                  type="button"
-                  onClick={() => void handleOpenConversation(username)}
-                  style={{
-                    padding: "6px 10px",
-                    border: "1px solid rgba(255, 255, 255, 0.16)",
-                    background: chatTarget === username ? "rgba(0, 240, 255, 0.18)" : "rgba(8, 10, 20, 0.86)",
-                    color: chatTarget === username ? "#9ef8ff" : "var(--ink-strong)",
-                    cursor: "pointer",
-                    fontSize: 12,
-                  }}
-                >
-                  {username}
-                </button>
-              ))
-            )}
-          </div>
+          <div className="social-chat-layout">
+            <div className="social-chat-conversation-list">
+              {availableConversations.length === 0 ? (
+                <div className="social-chat-empty-state">{t("ADD_FRIENDS_TO_CHAT")}</div>
+              ) : (
+                availableConversations.map((conversation) => {
+                  const isActive = chatTarget === conversation.user.username;
+                  const avatarUrl = resolveAvatarUrl(conversation.user.avatarUrl);
+                  return (
+                    <button
+                      key={conversation.user.username}
+                      type="button"
+                      onClick={() => void handleOpenConversation(conversation.user.username)}
+                      className={`social-chat-conversation-card${isActive ? " is-active" : ""}`}
+                    >
+                      <div className="social-chat-conversation-main">
+                        <div className="social-chat-avatar">
+                          {avatarUrl ? <img src={avatarUrl} alt={conversation.user.username} /> : <span>{conversation.user.username.slice(0, 1).toUpperCase()}</span>}
+                        </div>
+                        <div style={{ minWidth: 0 }}>
+                          <div style={{ fontSize: 13, fontWeight: 700, color: "var(--ink-strong)" }}>
+                            {displayUserName(conversation.user)}
+                          </div>
+                          <div style={{ fontSize: 11, color: "var(--ink-muted)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                            {formatMessagePreview(conversation.lastMessage) || t("NO_MESSAGES")}
+                          </div>
+                        </div>
+                      </div>
+                      <div style={{ fontSize: 10, color: "var(--ink-muted)", whiteSpace: "nowrap" }}>
+                        {formatChatTimestamp(conversation.lastMessageAt)}
+                      </div>
+                    </button>
+                  );
+                })
+              )}
+            </div>
 
-          {chatTarget && (
-            <>
-              <div style={{ border: "1px solid rgba(255, 255, 255, 0.12)", padding: 10, minHeight: 120, maxHeight: 260, overflowY: "auto", background: "rgba(8, 10, 20, 0.86)" }}>
-                <div style={{ display: "flex", gap: 8, marginBottom: 10, justifyContent: "space-between", alignItems: "center" }}>
-                  <span style={{ fontSize: 13, fontWeight: "bold", color: "var(--ink-strong)" }}>@{chatTarget}</span>
-                  <div style={{ display: "flex", gap: 6 }}>
+            <div className="social-chat-panel">
+              {!chatTarget ? (
+                <div className="social-chat-empty-state">{t("OPEN_CONVERSATION")}</div>
+              ) : (
+                <>
+                  <div className="social-chat-header">
+                    <div style={{ display: "grid", gap: 4 }}>
+                      <span style={{ fontSize: 14, fontWeight: 700, color: "var(--ink-strong)" }}>
+                        {displayUserName(chatProfile ?? activeChatUser ?? { id: 0, username: chatTarget })}
+                      </span>
+                      <span style={{ fontSize: 11, color: "var(--ink-muted)" }}>@{chatTarget}</span>
+                    </div>
+                    <div style={{ display: "flex", gap: 6, flexWrap: "wrap", justifyContent: "flex-end" }}>
                     <button
                       type="button"
                       onClick={() => setShowChatProfile((prev) => !prev)}
                       style={{
-                        padding: "4px 8px",
+                        padding: "6px 10px",
                         border: "1px solid rgba(255, 255, 255, 0.16)",
                         background: "rgba(8, 10, 20, 0.86)",
                         color: "var(--ink-strong)",
@@ -916,26 +1095,52 @@ export default function SocialPanel({ token }: { token: string | null }) {
                     </button>
                   </div>
                 </div>
-                {showChatProfile && activeChatFriend && (
-                  <div style={{ border: "1px solid rgba(255, 255, 255, 0.12)", padding: 8, marginBottom: 10, background: "rgba(255, 255, 255, 0.03)" }}>
-                    <p style={{ margin: 0, fontSize: 12, color: "var(--ink-strong)" }}>{displayUserName(activeChatFriend)}</p>
-                    {activeChatFriend.avatarUrl ? (
-                      <p style={{ margin: "4px 0 0", fontSize: 11, color: "var(--ink-muted)" }}>{activeChatFriend.avatarUrl}</p>
+                  {showChatProfile && (
+                    <div className="social-chat-profile-card">
+                      <div className="social-chat-profile-head">
+                        <div className="social-chat-avatar large">
+                          {resolveAvatarUrl((chatProfile ?? activeChatUser)?.avatarUrl) ? (
+                            <img src={resolveAvatarUrl((chatProfile ?? activeChatUser)?.avatarUrl) ?? ""} alt={chatTarget} />
+                          ) : (
+                            <span>{chatTarget.slice(0, 1).toUpperCase()}</span>
+                          )}
+                        </div>
+                        <div style={{ display: "grid", gap: 4 }}>
+                          <strong style={{ color: "var(--ink-strong)" }}>
+                            {displayUserName(chatProfile ?? activeChatUser ?? { id: 0, username: chatTarget })}
+                          </strong>
+                          <span style={{ fontSize: 12, color: "var(--ink-muted)" }}>
+                            {(chatProfile?.bio?.trim() || activeChatUser?.displayName?.trim()) ?? t("NO_BIO_YET")}
+                          </span>
+                        </div>
+                      </div>
+                      <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+                        {chatProfile?.isFriend ? <span className="social-chat-badge">{t("FRIENDS")}</span> : null}
+                        {chatProfile?.blockedByMe ? <span className="social-chat-badge muted">{t("BLOCK")}</span> : null}
+                        {chatProfile?.blockedMe ? <span className="social-chat-badge muted">{t("BLOCKED")}</span> : null}
+                      </div>
+                    </div>
+                  )}
+                  {chatNotifications.length > 0 && (
+                    <div className="social-chat-notification-strip">
+                      {chatNotifications.map((item) => (
+                        <div key={item.id} className="social-chat-notification-pill">
+                          {item.text}
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                  <div ref={chatScrollRef} className="social-chat-messages">
+                    {chatLoading ? (
+                      <p style={{ margin: 0, fontSize: 13, color: "var(--ink-muted)" }}>{t("LOADING_CONVERSATION")}</p>
+                    ) : chatMessages.length === 0 ? (
+                      <p style={{ margin: 0, fontSize: 13, color: "var(--ink-muted)" }}>{t("NO_MESSAGES")}</p>
                     ) : (
-                      <p style={{ margin: "4px 0 0", fontSize: 11, color: "var(--ink-muted)" }}>{t("NO_AVATAR")}</p>
-                    )}
-                  </div>
-                )}
-                {chatLoading ? (
-                  <p style={{ margin: 0, fontSize: 13, color: "var(--ink-muted)" }}>{t("LOADING_CONVERSATION")}</p>
-                ) : chatMessages.length === 0 ? (
-                  <p style={{ margin: 0, fontSize: 13, color: "var(--ink-muted)" }}>{t("NO_MESSAGES")}</p>
-                ) : (
-                  <div style={{ display: "grid", gap: 6 }}>
+                      <div style={{ display: "grid", gap: 8 }}>
                     {chatMessages.map((msg) => {
                       const readInfo = readReceipts.get(msg.id);
                       const sentByMe = msg.fromUserId === user?.id;
-                      const senderLabel = sentByMe ? "Tu" : `@${chatTarget}`;
+                      const senderLabel = sentByMe ? t("YOU") : `@${chatTarget}`;
                       return (
                         <div key={msg.id} style={{ border: "1px solid rgba(0, 240, 255, 0.1)", padding: 8, fontSize: 12 }}>
                           <div style={{ marginBottom: 4, color: sentByMe ? "#9ef8ff" : "var(--ink-muted)", fontSize: 11, fontWeight: 700 }}>
@@ -961,16 +1166,17 @@ export default function SocialPanel({ token }: { token: string | null }) {
                   </p>
                 )}
               </div>
-              <form onSubmit={sendChatMessage} style={{ display: "flex", gap: 8, marginTop: 8 }}>
+              <form onSubmit={sendChatMessage} className="social-chat-compose">
                 <input
                   value={chatInput}
                   onChange={(e) => void handleChatInputChange(e.target.value)}
                   placeholder={t("MESSAGE_FOR", { username: chatTarget })}
+                  disabled={Boolean(chatProfile?.blockedByMe || chatProfile?.blockedMe)}
                   style={{ flex: 1, padding: 10, border: "1px solid rgba(255, 255, 255, 0.16)", backgroundColor: "rgba(8, 10, 20, 0.86)" }}
                 />
                 <button
                   type="submit"
-                  disabled={actionLoading || !chatInput.trim()}
+                  disabled={actionLoading || !chatInput.trim() || Boolean(chatProfile?.blockedByMe || chatProfile?.blockedMe)}
                   style={{ padding: "10px 14px", border: "1px solid rgba(0, 240, 255, 0.55)", backgroundColor: "rgba(0, 240, 255, 0.18)", color: "#9ef8ff", cursor: "pointer" }}
                 >
                   {t("SEND")}
@@ -978,8 +1184,10 @@ export default function SocialPanel({ token }: { token: string | null }) {
               </form>
             </>
           )}
+            </div>
+          </div>
         </section>
-
+        )}
         <section>
           <h3 style={{ margin: "8px 0", fontSize: 13, color: "var(--ink-strong)" }}>{t("OUTGOING_REQUESTS")}</h3>
           {overview.outgoingRequests.length === 0 ? (

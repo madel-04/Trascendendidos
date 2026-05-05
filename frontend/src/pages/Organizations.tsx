@@ -1,6 +1,7 @@
 import { FormEvent, useEffect, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { useAuth } from "../context/AuthContext";
+import OrganizationChatPanel from "../components/OrganizationChatPanel";
 
 const API = import.meta.env.VITE_API_BASE ?? "http://localhost:3000";
 
@@ -654,42 +655,14 @@ export default function Organizations() {
               </div>
             </div>
 
-            <div className="profile-panel">
-              <div className="organization-head">
-                <div>
-                  <h2>Chat</h2>
-                  <p>Habla con los miembros de la organizacion.</p>
-                </div>
-                <span>{chatMessages.length} mensajes</span>
-              </div>
-              <div className="organization-chat-list">
-                {chatMessages.length === 0 ? (
-                  <p className="muted">Todavia no hay mensajes en esta organizacion.</p>
-                ) : (
-                  chatMessages.map((chatMessage) => (
-                    <article key={chatMessage.id} className="organization-chat-message">
-                      <div className="organization-chat-message-head">
-                        <strong>@{chatMessage.author.username}</strong>
-                        <span>{formatDate(chatMessage.createdAt)}</span>
-                      </div>
-                      <p>{chatMessage.content}</p>
-                    </article>
-                  ))
-                )}
-              </div>
-              <form className="organization-chat-form" onSubmit={handleSendChatMessage}>
-                <textarea
-                  value={chatDraft}
-                  onChange={(event) => setChatDraft(event.target.value)}
-                  rows={3}
-                  maxLength={1000}
-                  placeholder="Escribe un mensaje para la organizacion"
-                />
-                <button className="btn-premium" type="submit" disabled={chatLoading || !chatDraft.trim()}>
-                  {chatLoading ? "Enviando..." : "Enviar mensaje"}
-                </button>
-              </form>
-            </div>
+            <OrganizationChatPanel
+              messages={chatMessages}
+              draft={chatDraft}
+              loading={chatLoading}
+              onDraftChange={setChatDraft}
+              onSubmit={handleSendChatMessage}
+              formatDate={formatDate}
+            />
 
             {canReviewRequests ? (
               <div className="profile-panel">

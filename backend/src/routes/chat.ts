@@ -7,6 +7,7 @@ type UserRow = {
   username: string;
   display_name: string | null;
   avatar_url: string | null;
+  bio?: string | null;
 };
 
 type ConversationParams = { username: string };
@@ -38,8 +39,16 @@ const QuerySchema = z.object({
 
 async function findUserByUsername(username: string): Promise<UserRow | undefined> {
   const [user] = await query<UserRow>(
-    "SELECT id, username, display_name, avatar_url FROM users WHERE username = $1",
+    "SELECT id, username, display_name, avatar_url, bio FROM users WHERE username = $1",
     [username]
+  );
+  return user;
+}
+
+async function findUserById(userId: number): Promise<UserRow | undefined> {
+  const [user] = await query<UserRow>(
+    "SELECT id, username, display_name, avatar_url, bio FROM users WHERE id = $1",
+    [userId]
   );
   return user;
 }
@@ -229,13 +238,21 @@ export async function chatRoutes(app: FastifyInstance) {
     try {
       const user = request.user as any;
       const userId = user.userId as number;
-      const fromUsername = user.username as string;
       const { username } = UsernameParamsSchema.parse(request.params);
       const body = TypingSchema.parse(request.body);
+      const fromUser = await findUserById(userId);
       const targetUser = await findUserByUsername(username);
 
       if (!targetUser) {
         return reply.code(404).send({ error: "Usuario no encontrado" });
+      }
+      if (!fromUser) {
+        return reply.code(404).send({ error: "Usuario autenticado no encontrado" });
+      }
+
+      const friend = await areFriends(userId, targetUser.id);
+      if (!friend) {
+        return reply.code(403).send({ error: "Solo puedes compartir estado de escritura con amigos" });
       }
 
       const blocked = await hasBlockBetween(userId, targetUser.id);
@@ -244,7 +261,7 @@ export async function chatRoutes(app: FastifyInstance) {
       }
 
       app.notifySocialUser(targetUser.id, body.typing ? "typing_indicator" : "typing_stopped", {
-        fromUsername,
+        fromUsername: fromUser.username,
         toUsername: targetUser.username,
       });
 
@@ -288,10 +305,12 @@ export async function chatRoutes(app: FastifyInstance) {
          RETURNING id, sender_id, receiver_id, content, created_at, read_at`,
         [userId, targetUser.id, body.content]
       );
+      const fromUser = await findUserById(userId);
 
       app.notifySocialUser(targetUser.id, "chat_message_received", {
         messageId: message.id,
         fromUserId: userId,
+        fromUsername: fromUser?.username,
         contentPreview: body.content.slice(0, 80),
       });
 
@@ -340,6 +359,10 @@ export async function chatRoutes(app: FastifyInstance) {
       app.notifySocialUser(userId, "you_blocked_user", {
         username: targetUser.username,
         blockedId: targetUser.id,
+      });
+      app.notifySocialUser(targetUser.id, "user_blocked_you", {
+        username: targetUser.username,
+        blockerId: userId,
       });
 
       return reply.code(200).send({ message: `Has bloqueado a @${targetUser.username}` });
