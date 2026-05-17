@@ -398,15 +398,30 @@ export default function Profile() {
               <div className="password-meter-track">
                 <div className={`password-meter-fill ${passwordStrength.level}`} style={{ width: `${(passwordStrength.score / passwordStrength.rules.length) * 100}%` }} />
               </div>
-              <div className="password-meter-label">Fortaleza: {passwordStrength.level === "strong" ? "Fuerte" : passwordStrength.level === "medium" ? "Media" : "Debil"}</div>
+              <p style={{ margin: "8px 0 0", fontSize: 12 }}>
+                {t("STRENGTH_LABEL")}:{" "}
+                <span
+                  style={{
+                    fontWeight: 700,
+                    color:
+                      passwordStrength.level === "strong"
+                        ? "#00ff9d"
+                        : passwordStrength.level === "medium"
+                        ? "#ffcc00"
+                        : "#ff3366",
+                  }}
+                >
+                  {t(`STRENGTH_LEVEL_${passwordStrength.level.toUpperCase()}`)}
+                </span>
+              </p>
             </div>
             <input type="password" value={confirmNewPassword} onChange={(event) => setConfirmNewPassword(event.target.value)} placeholder={t("CONFIRM_NEW_PASSWORD")} minLength={12} required />
             <button className="btn-premium" type="submit" disabled={loading}>{t("UPDATE_PASSWORD")}</button>
           </form>
 
-          <div>
-            <h2>Two-Factor Authentication</h2>
-            <p className="muted">Anade una capa extra de seguridad a tu cuenta.</p>
+          <div style={{ padding: 24, border: "1px solid rgba(255, 255, 255, 0.16)", borderRadius: 12, background: "rgba(8, 10, 20, 0.45)" }}>
+            <h3 style={{ margin: "0 0 8px", fontSize: 16, color: "#fff" }}>{t("TWO_FACTOR_AUTH")}</h3>
+            <p style={{ margin: "0 0 20px", fontSize: 14, color: "var(--ink-muted)" }}>{t("2FA_DESC")}</p>
             {!twoFAEnabled && !showSetup && <button className="btn-premium secondary" type="button" onClick={handleSetup2FA} disabled={loading}>{t("ENABLE_2FA")}</button>}
             {!twoFAEnabled && showSetup && qrCodeUrl && (
               <div className="profile-2fa-box">
@@ -444,7 +459,7 @@ export default function Profile() {
               </button>
             ))}
           </div>
-          {loadingStats ? <p className="muted">Cargando estadisticas...</p> : (
+          {loadingStats ? <p className="muted">{t("LOADING_STATS")}</p> : (
             <div key={statsView} className="profile-subview profile-subview-enter">
               {statsView === "local" && (
                 <div className="profile-grid-2col">
@@ -453,17 +468,17 @@ export default function Profile() {
                       {statCard(t("GAMES_PLAYED"), localBotStats.totalPlayed)}
                       {statCard(t("GAMES_WON"), localBotStats.wins, "#9bf2bd")}
                       {statCard(t("GAMES_LOST"), localBotStats.losses, "#ff8da1")}
-                      {statCard("Rival", "Bot", "#f9cb28")}
+                      {statCard(t("Rival"), t("Bot"), "#f9cb28")}
                     </div>
                   </div>
                   <div>
                     <h3>{t("LOCAL_BOT_HISTORY")}</h3>
-                    {localBotStats.matches.length === 0 ? <p className="muted">Todavia no tienes partidas locales registradas en este navegador.</p> : (
+                    {localBotStats.matches.length === 0 ? <p className="muted">{t("NO_LOCAL_HISTORY")}</p> : (
                       <div className="match-history-list">
                         {localBotStats.matches.slice(0, 10).map((match) => (
                           <article key={match.id} className={`match-history-card ${match.result}`}>
-                            <div><strong>{match.result.toUpperCase()} vs Bot</strong><span>{new Date(match.playedAt).toLocaleString()}</span></div>
-                            <p>Dificultad {match.difficulty} · Objetivo {match.targetScore} · Control {match.controlMode === "mouse" ? "raton" : "teclado"}</p>
+                            <div><strong>{match.result.toUpperCase()} vs {t("Bot")}</strong><span>{new Date(match.playedAt).toLocaleString()}</span></div>
+                            <p>{t("DIFICULTAD")} {match.difficulty} · {t("OBJETIVO")} {match.targetScore} · {t("CONTROL")} {match.controlMode === "mouse" ? t("RATON") : t("TECLADO")}</p>
                           </article>
                         ))}
                       </div>
@@ -475,41 +490,67 @@ export default function Profile() {
               {statsView === "multiplayer" && (
                 <div className="profile-grid-2col">
                   <div>
-                    <div className="profile-stats-grid">
-                      {statCard(t("GAMES_PLAYED"), multiplayerSummary.totalPlayed)}
-                      {statCard("Ranking", gameStats?.ranking ? `#${gameStats.ranking}` : "Sin rank", "#9ef8ff")}
-                      {statCard("Rating", gameStats?.rating ?? 1000)}
-                      {statCard("Nivel", gameStats?.progression.level ?? 1, "#f9cb28")}
-                      {statCard("Win rate", `${gameStats?.winRate ?? 0}%`, "#9bf2bd")}
-                      {statCard(t("GAMES_WON"), gameStats?.wins ?? 0, "#9bf2bd")}
-                      {statCard(t("GAMES_LOST"), gameStats?.losses ?? 0, "#ff8da1")}
-                    </div>
-                    <div className="profile-progress" style={{ marginTop: "24px" }}>
-                      <div><strong>Progreso</strong><span>{gameStats?.progression.xp ?? 0} XP</span></div>
-                      <div className="profile-progress-track"><span style={{ width: `${levelProgress}%` }} /></div>
+                    <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 16, marginBottom: 24 }}>
+                      {[
+                        { label: "GAMES_PLAYED", value: multiplayerSummary.totalPlayed },
+                        { label: "GAMES_WON", value: multiplayerSummary.wins },
+                        { label: "GAMES_LOST", value: multiplayerSummary.losses },
+                      ].map(({ label, value }) => (
+                        <div key={label} style={{ textAlign: "center", padding: 16, border: "1px solid rgba(255, 255, 255, 0.12)", background: "rgba(255, 255, 255, 0.03)", borderRadius: 8 }}>
+                          <div style={{ fontSize: 12, textTransform: "uppercase", letterSpacing: "1px", color: "var(--ink-muted)", marginBottom: 8 }}>{t(label)}</div>
+                          <div style={{ fontSize: 24, fontWeight: 700, color: "var(--ink-strong)" }}>{value}</div>
+                        </div>
+                      ))}
                     </div>
 
-                    <h3 style={{ marginTop: "30px" }}>Achievements</h3>
-                    <div className="achievement-grid">
-                      {(gameStats?.achievements ?? []).map((achievement) => (
-                        <article key={achievement.key} className={`achievement-card ${achievement.unlocked ? "unlocked" : ""}`}>
-                          <strong>{achievement.unlocked ? "Unlocked" : "Locked"} · {achievement.title}</strong>
-                          <p>{achievement.description}</p>
-                          <span>{achievement.progress}/{achievement.target}</span>
-                        </article>
+                    <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(130px, 1fr))", gap: 16, marginBottom: 32 }}>
+                      {[
+                        { label: "RANKING", value: gameStats?.ranking ? `#${gameStats.ranking}` : t("NO_RANK") },
+                        { label: "RATING", value: Math.floor(gameStats?.rating ?? 1000) },
+                        { label: "LEVEL", value: gameStats?.progression.level ?? 1 },
+                        { label: "WIN_RATE", value: `${Math.round(gameStats?.winRate ?? 0)}%` },
+                      ].map(({ label, value }) => (
+                        <div key={label} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "12px 16px", border: "1px solid rgba(255, 255, 255, 0.08)", background: "rgba(255, 255, 255, 0.02)", borderRadius: 8 }}>
+                          <span style={{ fontSize: 12, color: "var(--ink-muted)" }}>{t(label)}</span>
+                          <span style={{ fontSize: 14, fontWeight: 700, color: "var(--ink-strong)" }}>{value}</span>
+                        </div>
                       ))}
+                    </div>
+
+                    <div style={{ marginBottom: 32 }}>
+                      <h3 style={{ margin: "0 0 16px", fontSize: 15, color: "var(--ink-strong)", borderLeft: "3px solid #00f0ff", paddingLeft: 12 }}>{t("ACHIEVEMENTS")}</h3>
+                      <div className="achievement-grid">
+                        {(gameStats?.achievements ?? []).map((achievement) => (
+                          <div key={achievement.key} style={{ display: "flex", gap: 16, padding: 16, border: "1px solid rgba(255, 255, 255, 0.08)", background: achievement.unlocked ? "rgba(0, 240, 255, 0.04)" : "rgba(255, 255, 255, 0.02)", borderRadius: 12, opacity: achievement.unlocked ? 1 : 0.6 }}>
+                            <div style={{ fontSize: 24 }}>{achievement.unlocked ? "🏆" : "🔒"}</div>
+                            <div style={{ flex: 1 }}>
+                              <p style={{ margin: "0 0 4px", fontSize: 14, color: "var(--ink-strong)" }}>
+                                <strong>{t(achievement.unlocked ? "ACHIEVEMENTS_UNLOCKED" : "ACHIEVEMENTS_LOCKED")} · {t(`ACHIEVEMENT_${achievement.key}_TITLE`)}</strong>
+                              </p>
+                              <p style={{ margin: "0 0 10px", fontSize: 13, color: "var(--ink-muted)", lineHeight: 1.4 }}>{t(`ACHIEVEMENT_${achievement.key}_DESC`)}</p>
+                              <div style={{ height: 4, background: "rgba(255,255,255,0.06)", borderRadius: 2, overflow: "hidden" }}>
+                                <div style={{ height: "100%", width: `${(achievement.progress / achievement.target) * 100}%`, background: achievement.unlocked ? "#00f0ff" : "var(--ink-muted)" }} />
+                              </div>
+                              <div style={{ display: "flex", justifyContent: "space-between", marginTop: 4, fontSize: 10, color: "var(--ink-muted)", textTransform: "uppercase" }}>
+                                <span>{t("PROGRESS")}</span>
+                                <span>{achievement.progress} / {achievement.target}</span>
+                              </div>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
                     </div>
                   </div>
 
                   <div style={{ display: "flex", flexDirection: "column", gap: "24px" }}>
                     <div>
-                      <h3>Match history</h3>
-                      {matchHistory.length === 0 ? <p className="muted">Todavia no tienes partidas registradas.</p> : (
+                      <h3 style={{ margin: "0 0 16px", fontSize: 15, color: "var(--ink-strong)", borderLeft: "3px solid #00f0ff", paddingLeft: 12 }}>{t("MATCH_HISTORY")}</h3>
+                      {matchHistory.length === 0 ? <p style={{ margin: 0, fontSize: 14, color: "var(--ink-muted)" }}>{t("NO_MATCH_HISTORY")}</p> : (
                         <div className="match-history-list">
                           {matchHistory.map((match) => (
                             <article key={match.id} className={`match-history-card ${match.result}`}>
                               <div><strong>{match.result.toUpperCase()} vs @{match.opponentUsername}</strong><span>{new Date(match.endedAt).toLocaleString()}</span></div>
-                              <p>1v1 · {match.reason} · {match.scoreFor} - {match.scoreAgainst}</p>
+                              <p style={{ margin: "12px 0 6px", fontSize: 13, color: "var(--ink-muted)" }}>1v1 · {match.reason} · {match.scoreFor} - {match.scoreAgainst}</p>
                             </article>
                           ))}
                         </div>
@@ -517,7 +558,7 @@ export default function Profile() {
                     </div>
 
                     <div>
-                      <h3>Leaderboard</h3>
+                      <h3>{t("LEADERBOARD")}</h3>
                       <div className="leaderboard-list">
                         {leaderboard.map((player) => (
                           <div key={player.id} className={`leaderboard-row ${player.id === user?.id ? "me" : ""}`}>
