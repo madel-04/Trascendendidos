@@ -43,14 +43,14 @@ const GameView: React.FC<GameViewProps> = ({ onExit, isMultiplayer, multiplayerS
     ? multiplayerSide === 'right' ? playerUsername : opponentUsername
     : localHumanSide === 'right' ? playerUsername : t('BOT');
   const leftPlayerHint = isMultiplayer
-    ? t('W / S to move')
+    ? t('W_S_TO_MOVE')
     : localHumanSide === 'left'
-      ? (localControlMode === 'mouse' ? t('Mouse to move') : t('Up / Down to move'))
+      ? (localControlMode === 'mouse' ? t('MOUSE_TO_MOVE') : t('UP_DOWN_TO_MOVE'))
       : t('AI_OPPONENT_HINT');
   const rightPlayerHint = isMultiplayer
-    ? t('Up / Down to move')
+    ? t('UP_DOWN_TO_MOVE')
     : localHumanSide === 'right'
-      ? (localControlMode === 'mouse' ? t('Mouse to move') : t('Up / Down to move'))
+      ? (localControlMode === 'mouse' ? t('MOUSE_TO_MOVE') : t('UP_DOWN_TO_MOVE'))
       : t('AI_OPPONENT_HINT');
   const winnerLabel = winner === 'left' ? leftPlayerLabel : rightPlayerLabel;
 
@@ -141,7 +141,7 @@ const GameView: React.FC<GameViewProps> = ({ onExit, isMultiplayer, multiplayerS
   React.useEffect(() => {
     if (isMultiplayer) {
       const handleOpponentDisconnected = () => {
-        alert(t('Opponent disconnected or left! Match ended.'));
+        alert(t('OPPONENT_DISCONNECTED'));
         onExit();
       };
 
@@ -206,17 +206,17 @@ const GameView: React.FC<GameViewProps> = ({ onExit, isMultiplayer, multiplayerS
     <div className="game-container">
       <div className="glass-panel game-player-bar">
         <div className="game-player-card">
-          <span className="game-player-side">{t('LEFT SIDE')}</span>
+          <span className="game-player-side">{t('LEFT_SIDE')}</span>
           <strong>{leftPlayerLabel}</strong>
           <small>{leftPlayerHint}</small>
         </div>
         <div className="game-player-card game-player-card-center">
-          <span className="game-player-side">{isMultiplayer ? t('ONLINE MATCH') : t('LOCAL MATCH')}</span>
-          <strong>NEON PONG</strong>
-          <small>{isMultiplayer ? t('WAITING FOR OPPONENT') : t('BOT')}</small>
+          <span className="game-player-side">{isMultiplayer ? t('ONLINE_MATCH') : t('LOCAL_MATCH')}</span>
+          <strong>{t('NEON_PONG')}</strong>
+          <small>{isMultiplayer ? t('WAITING_FOR_OPPONENT') : t('BOT')}</small>
         </div>
         <div className="game-player-card">
-          <span className="game-player-side">{t('RIGHT SIDE')}</span>
+          <span className="game-player-side">{t('RIGHT_SIDE')}</span>
           <strong>{rightPlayerLabel}</strong>
           <small>{rightPlayerHint}</small>
         </div>
@@ -237,7 +237,7 @@ const GameView: React.FC<GameViewProps> = ({ onExit, isMultiplayer, multiplayerS
           />
         ) : (
           <div className="game-sync-wait">
-            <span>Esperando a que ambos jugadores sincronicen la partida...</span>
+            <span>{t('WAITING_SYNC')}</span>
           </div>
         )}
 
@@ -257,14 +257,14 @@ const GameView: React.FC<GameViewProps> = ({ onExit, isMultiplayer, multiplayerS
               <h2 className="title-glow game-overlay-title">
                 {t('PAUSED')}
               </h2>
-              <p className="game-overlay-text">{t('Press ESC to continue')}</p>
+              <p className="game-overlay-text">{t('PRESS_ESC_CONTINUE')}</p>
             </div>
             <div className="game-overlay-actions">
               <button className="btn-premium" onClick={closePauseMenu}>
                 {t('RESUME')}
               </button>
               <button className="btn-premium secondary" onClick={handleExit}>
-                {exitLabel ?? t('EXIT TO MENU')}
+                {exitLabel ?? t('EXIT_TO_MENU')}
               </button>
             </div>
           </div>
@@ -287,7 +287,7 @@ const GameView: React.FC<GameViewProps> = ({ onExit, isMultiplayer, multiplayerS
                   handleExit();
                 }}
               >
-                {exitLabel ?? t('EXIT TO MENU')}
+                {exitLabel ?? t('EXIT_TO_MENU')}
               </button>
               {allowRematch ? (
                 <button
@@ -308,7 +308,7 @@ const GameView: React.FC<GameViewProps> = ({ onExit, isMultiplayer, multiplayerS
                   disabled={rematchRequested}
                   style={{ opacity: rematchRequested ? 0.6 : 1 }}
                 >
-                  {rematchRequested ? t('WAITING FOR OPPONENT') : t('NEW GAME')}
+                  {rematchRequested ? t('WAITING_FOR_OPPONENT') : t('NEW_GAME')}
                 </button>
               ) : null}
             </div>

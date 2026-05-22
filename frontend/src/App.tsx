@@ -159,6 +159,7 @@ export default function App() {
             {user ? <NavLink className={({ isActive }) => `nav-link${isActive ? " nav-link-active" : ""}`} to="/organizations">{t("ORG_NAV")}</NavLink> : null}
 
             <div className="user-strip">
+              <LanguageSwitcher />
               {user ? (
                 <>
                   <div className="notif-wrap">
@@ -178,7 +179,6 @@ export default function App() {
                       </div>
                     )}
                   </div>
-                  <LanguageSwitcher />
                   <NavLink className={({ isActive }) => `nav-link${isActive ? " nav-link-active" : ""}`} to="/profile" style={{ display: "flex", alignItems: "center", gap: "8px", padding: "4px 12px 4px 4px" }}>
                     {user.avatarUrl ? (
                       <img 
@@ -251,14 +251,16 @@ export default function App() {
           </Routes>
         </main>
 
-        <footer className={`footer${isHomeRoute ? " footer-home" : ""}`}>
-          <div>{t("TRANSCENDENCE_PROJECT")}</div>
-          <div>
-            <Link to="/privacy">{t("Privacy Policy")}</Link>
-            {" · "}
-            <Link to="/terms">{t("Terms of Service")}</Link>
-          </div>
-        </footer>
+        {!isHomeRoute && !isPlayRoute ? (
+          <footer className="footer">
+            <div>{t("TRANSCENDENCE_PROJECT")}</div>
+            <div>
+              <Link to="/privacy">{t("PRIVACY_POLICY")}</Link>
+              {" · "}
+              <Link to="/terms">{t("TERMS_OF_SERVICE")}</Link>
+            </div>
+          </footer>
+        ) : null}
       </div>
     </div>
   );

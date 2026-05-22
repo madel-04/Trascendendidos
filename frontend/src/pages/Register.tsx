@@ -1,4 +1,5 @@
 import { FormEvent, useEffect, useMemo, useRef, useState } from "react";
+import { useTranslation } from "react-i18next";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
 import { evaluatePasswordStrength } from "../utils/passwordStrength";
@@ -22,28 +23,29 @@ const OAUTH_LOGO_BUTTONS: OAuthLogoButton[] = [
   { key: "github", label: "GitHub", imageSrc: "/github_logo.png" },
 ];
 
-function getPasswordSecurityError(password: string, email: string, username: string): string | null {
-  if (password.length < 12) return "La contrasena debe tener al menos 12 caracteres";
-  if (!/[A-Z]/.test(password)) return "Incluye al menos una letra mayuscula";
-  if (!/[a-z]/.test(password)) return "Incluye al menos una letra minuscula";
-  if (!/\d/.test(password)) return "Incluye al menos un numero";
-  if (!/[^A-Za-z0-9]/.test(password)) return "Incluye al menos un caracter especial";
-  if (/\s/.test(password)) return "No uses espacios en la contrasena";
+function getPasswordSecurityError(t: (key: string) => string, password: string, email: string, username: string): string | null {
+  if (password.length < 12) return t("PASSWORD_MIN_LENGTH");
+  if (!/[A-Z]/.test(password)) return t("PASSWORD_UPPERCASE");
+  if (!/[a-z]/.test(password)) return t("PASSWORD_LOWERCASE");
+  if (!/\d/.test(password)) return t("PASSWORD_NUMBER");
+  if (!/[^A-Za-z0-9]/.test(password)) return t("PASSWORD_SPECIAL");
+  if (/\s/.test(password)) return t("PASSWORD_NO_SPACES");
 
   const lowered = password.toLowerCase();
   if (username.trim().length >= 3 && lowered.includes(username.trim().toLowerCase())) {
-    return "La contrasena no debe contener tu username";
+    return t("PASSWORD_NO_USERNAME");
   }
 
   const localEmail = email.split("@")[0]?.trim().toLowerCase();
   if (localEmail && localEmail.length >= 3 && lowered.includes(localEmail)) {
-    return "La contrasena no debe contener tu email";
+    return t("PASSWORD_NO_EMAIL");
   }
 
   return null;
 }
 
 export default function Register() {
+  const { t } = useTranslation();
   const { register } = useAuth();
   const navigate = useNavigate();
   const timeoutRef = useRef<number | null>(null);
@@ -87,16 +89,16 @@ export default function Register() {
     setError("");
 
     if (password !== confirmPassword) {
-      setError("Las contrasenas no coinciden");
+      setError(t("PASSWORDS_DONT_MATCH"));
       return;
     }
 
     if (password.length < 12) {
-      setError("La contrasena debe tener al menos 12 caracteres");
+      setError(t("PASSWORD_MIN_LENGTH"));
       return;
     }
 
-    const passwordError = getPasswordSecurityError(password, email, username);
+    const passwordError = getPasswordSecurityError(t, password, email, username);
     if (passwordError) {
       setError(passwordError);
       return;
@@ -108,7 +110,7 @@ export default function Register() {
       await register(email, password, username);
       navigate("/play");
     } catch (err: any) {
-      setError(err.message || "Error en el registro");
+      setError(err.message || t("REGISTER_ERROR"));
     } finally {
       setLoading(false);
     }
@@ -131,22 +133,22 @@ export default function Register() {
         <div className="auth-hub-inner">
           <div className="auth-card auth-card-hub">
             <div className="auth-hub-copy auth-hub-copy-left">
-              <h1 className="title-glow auth-hub-title">REGISTRARSE</h1>
-              <p className="auth-hub-subtitle">Crea tu cuenta manteniendo la misma identidad visual para que el salto entre pantallas no sea brusco.</p>
+              <h1 className="title-glow auth-hub-title">{t("REGISTER")}</h1>
+              <p className="auth-hub-subtitle">{t("REGISTER_SUBTITLE")}</p>
             </div>
             <form onSubmit={handleSubmit} className="auth-form">
               <div className="auth-field">
-                <label className="auth-label" htmlFor="username">Username</label>
+                <label className="auth-label" htmlFor="username">{t("USERNAME")}</label>
                 <input className="auth-input" id="username" type="text" value={username} onChange={(e) => setUsername(e.target.value)} required minLength={3} maxLength={50} />
               </div>
 
               <div className="auth-field">
-                <label className="auth-label" htmlFor="email">Email</label>
+                <label className="auth-label" htmlFor="email">{t("EMAIL")}</label>
                 <input className="auth-input" id="email" type="email" value={email} onChange={(e) => setEmail(e.target.value)} required />
               </div>
 
               <div className="auth-field">
-                <label className="auth-label" htmlFor="password">Password</label>
+                <label className="auth-label" htmlFor="password">{t("PASSWORD")}</label>
                 <input className="auth-input" id="password" type="password" value={password} onChange={(e) => setPassword(e.target.value)} required minLength={12} />
 
                 <div className="password-meter">
@@ -157,12 +159,12 @@ export default function Register() {
                     />
                   </div>
                   <div className="password-meter-label">
-                    Fortaleza: {passwordStrength.level === "strong" ? "Fuerte" : passwordStrength.level === "medium" ? "Media" : "Debil"}
+                    {t("STRENGTH_LABEL")}: {t(`STRENGTH_LEVEL_${passwordStrength.level.toUpperCase()}`)}
                   </div>
                   <ul className="password-rules">
                     {passwordStrength.rules.map((rule) => (
                       <li key={rule.key} className={`password-rule ${rule.passed ? "ok" : ""}`}>
-                        {rule.label}
+                        {t(rule.label)}
                       </li>
                     ))}
                   </ul>
@@ -170,29 +172,29 @@ export default function Register() {
               </div>
 
               <div className="auth-field">
-                <label className="auth-label" htmlFor="confirmPassword">Confirm Password</label>
+                <label className="auth-label" htmlFor="confirmPassword">{t("CONFIRM_PASSWORD")}</label>
                 <input className="auth-input" id="confirmPassword" type="password" value={confirmPassword} onChange={(e) => setConfirmPassword(e.target.value)} required />
               </div>
 
               {error ? <div className="auth-error">{error}</div> : null}
 
               <button className="btn-premium auth-submit" type="submit" disabled={loading}>
-                {loading ? "CREANDO..." : "REGISTRARSE"}
+                {loading ? t("PROCESSING") : t("REGISTER")}
               </button>
             </form>
 
             <p className="auth-linkline">
-              Ya tienes cuenta?{" "}
+              {t("ALREADY_HAVE_ACCOUNT")}{" "}
               <button className="auth-inline-link" type="button" onClick={() => handleSoftNavigate("/login")}>
-                Inicia sesion aqui
+                {t("LOGIN_HERE")}
               </button>
             </p>
           </div>
 
           <div className="auth-brand-panel">
             <div className="auth-brand-copy">
-              <h2>Accesos disponibles</h2>
-              <p>Tambien puedes registrarte usando uno de los proveedores conectados del hub.</p>
+              <h2>{t("AVAILABLE_LOGINS")}</h2>
+              <p>{t("REGISTER_BRAND_DESC")}</p>
             </div>
             <div className="auth-brand-grid">
               {OAUTH_LOGO_BUTTONS.map((logoButton) => {
@@ -203,7 +205,7 @@ export default function Register() {
                     type="button"
                     className={`auth-brand-tile auth-brand-tile-button auth-brand-tile-${logoButton.key}${provider ? "" : " is-disabled"}`}
                     aria-label={logoButton.label}
-                    title={provider ? `Continuar con ${logoButton.label}` : `${logoButton.label} no disponible`}
+                    title={provider ? t("CONTINUE_WITH", { provider: logoButton.label }) : t("NOT_AVAILABLE", { provider: logoButton.label })}
                     onClick={() => {
                       if (provider) {
                         startOAuthLogin(provider.id);

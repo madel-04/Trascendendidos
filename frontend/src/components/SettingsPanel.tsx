@@ -19,7 +19,7 @@ const SettingsPanel: React.FC<SettingsPanelProps> = ({ currentSettings, onSave, 
         
         <div className="settings-fields">
           <label>
-            <h3 style={{ margin: '0 0 10px 0' }}>{t('TARGET SCORE')}</h3>
+            <h3 style={{ margin: '0 0 10px 0' }}>{t('TARGET_SCORE')}</h3>
             <div className="settings-stepper">
               <button 
                 type="button"
@@ -45,7 +45,7 @@ const SettingsPanel: React.FC<SettingsPanelProps> = ({ currentSettings, onSave, 
           </label>
 
           <label>
-            <h3 style={{ margin: '0 0 10px 0' }}>{t('LOCAL DIFFICULTY')}</h3>
+            <h3 style={{ margin: '0 0 10px 0' }}>{t('LOCAL_DIFFICULTY')}</h3>
             <select 
               value={difficulty} 
               onChange={(e) => setDifficulty(e.target.value)}

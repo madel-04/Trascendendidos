@@ -449,14 +449,14 @@ export default function SocialPanel({ token }: { token: string | null }) {
       });
       const data = await response.json();
       if (!response.ok) {
-        setMessage({ type: "error", text: data.error || "No se pudo enviar la solicitud" });
+        setMessage({ type: "error", text: data.error || "SEND_REQUEST_ERROR", isKey: !data.error });
         return;
       }
       setFriendUsername("");
-      setMessage({ type: "success", text: "Solicitud enviada" });
+      setMessage({ type: "success", text: "REQUEST_SENT", isKey: true });
       await fetchOverview();
     } catch (_error) {
-      setMessage({ type: "error", text: "Error de conexion al enviar la solicitud" });
+      setMessage({ type: "error", text: "SEND_REQUEST_CONNECTION_ERROR", isKey: true });
     } finally {
       setActionLoading(false);
     }
@@ -482,10 +482,10 @@ export default function SocialPanel({ token }: { token: string | null }) {
         return;
       }
       setBlockUsername("");
-      setMessage({ type: "success", text: "Usuario bloqueado correctamente" });
+      setMessage({ type: "success", text: "BLOCK_SUCCESS", isKey: true });
       await fetchOverview();
     } catch (_error) {
-      setMessage({ type: "error", text: "Error de conexion al bloquear usuario" });
+      setMessage({ type: "error", text: "BLOCK_CONNECTION_ERROR", isKey: true });
     } finally {
       setActionLoading(false);
     }
@@ -502,13 +502,13 @@ export default function SocialPanel({ token }: { token: string | null }) {
       });
       const data = await response.json();
       if (!response.ok) {
-        setMessage({ type: "error", text: data.error || "No se pudo actualizar la solicitud" });
+        setMessage({ type: "error", text: data.error || "UPDATE_REQUEST_ERROR", isKey: !data.error });
         return;
       }
-      setMessage({ type: "success", text: action === "accept" ? "Solicitud aceptada" : "Solicitud rechazada" });
+      setMessage({ type: "success", text: action === "accept" ? "REQUEST_ACCEPTED" : "REQUEST_REJECTED", isKey: true });
       await fetchOverview();
     } catch (_error) {
-      setMessage({ type: "error", text: "Error de conexion al procesar solicitud" });
+      setMessage({ type: "error", text: "UPDATE_REQUEST_CONNECTION_ERROR", isKey: true });
     } finally {
       setActionLoading(false);
     }
@@ -525,13 +525,13 @@ export default function SocialPanel({ token }: { token: string | null }) {
       });
       const data = await response.json();
       if (!response.ok) {
-        setMessage({ type: "error", text: data.error || "No se pudo desbloquear al usuario" });
+        setMessage({ type: "error", text: data.error || "UNBLOCK_ERROR", isKey: !data.error });
         return;
       }
-      setMessage({ type: "success", text: "Usuario desbloqueado" });
+      setMessage({ type: "success", text: "UNBLOCK_SUCCESS", isKey: true });
       await fetchOverview();
     } catch (_error) {
-      setMessage({ type: "error", text: "Error de conexion al desbloquear" });
+      setMessage({ type: "error", text: "UNBLOCK_CONNECTION_ERROR", isKey: true });
     } finally {
       setActionLoading(false);
     }
@@ -555,7 +555,7 @@ export default function SocialPanel({ token }: { token: string | null }) {
         setMessage({ type: "error", text: data.error || "BLOCK_ERROR", isKey: !data.error });
         return;
       }
-      setMessage({ type: "success", text: "Usuario bloqueado" });
+      setMessage({ type: "success", text: "BLOCK_SUCCESS", isKey: true });
       await fetchOverview();
     } catch (_error) {
       setMessage({ type: "error", text: "BLOCK_CONNECTION_ERROR", isKey: true });
@@ -584,10 +584,10 @@ export default function SocialPanel({ token }: { token: string | null }) {
         return;
       }
       setInviteUsername("");
-      setMessage({ type: "success", text: "Invitacion de partida enviada" });
+      setMessage({ type: "success", text: "INVITE_SENT", isKey: true });
       await fetchInvites();
     } catch (_error) {
-      setMessage({ type: "error", text: "Error de conexion al invitar partida" });
+      setMessage({ type: "error", text: "INVITE_CONNECTION_ERROR", isKey: true });
     } finally {
       setActionLoading(false);
     }

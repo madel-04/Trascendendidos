@@ -14,13 +14,13 @@ const MainMenu: React.FC<MainMenuProps> = ({ onStartGame, onStartMultiplayer, on
     <div className="glass-panel main-menu main-menu-options-shell play-hub-panel play-hub-panel-enter">
       <div className="main-menu-options-content">
         <div className="main-menu-options-header">
-          <div className="main-menu-kicker">{t("CHOOSE YOUR MODE")}</div>
-          <h1 className="title-glow main-menu-options-title">NEON PONG</h1>
+          <div className="main-menu-kicker">{t("CHOOSE_YOUR_MODE")}</div>
+          <h1 className="title-glow main-menu-options-title">{t("NEON_PONG")}</h1>
         </div>
 
         <div className="menu-buttons">
           <button className="btn-premium" onClick={onStartGame}>
-            {t('PLAY LOCAL (2P)')}
+            {t('PLAY_LOCAL')}
           </button>
           <button className="btn-premium secondary" onClick={onStartMultiplayer}>
             {t('MULTIPLAYER')}

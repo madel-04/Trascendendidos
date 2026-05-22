@@ -37,7 +37,7 @@ export class Board {
     // 1. Dibuja la línea central discontinua
     ctx.setLineDash([15, 15]);
     ctx.beginPath();
-    ctx.moveTo(this.width / 2, 0);
+    ctx.moveTo(this.width / 2, 80);
     ctx.lineTo(this.width / 2, this.height);
     ctx.strokeStyle = this.color;
     ctx.lineWidth = 4;

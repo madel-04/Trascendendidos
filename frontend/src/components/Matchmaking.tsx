@@ -29,13 +29,13 @@ export default function Matchmaking({ onMatchFound, onCancel }: MatchmakingProps
 
     const handleConnectError = (error: Error) => {
       const reason = error.message === "auth_required" || error.message === "auth_invalid"
-        ? "Sesion no valida. Vuelve a iniciar sesion."
-        : `No se pudo conectar con matchmaking: ${error.message}`;
+        ? t("INVALID_SESSION")
+        : t("MATCHMAKING_CONNECTION_ERROR", { error: error.message });
       setConnectionError(reason);
     };
 
     const handleMatchmakingError = (payload: { message?: string }) => {
-      setConnectionError(payload.message || "No se pudo entrar en la cola.");
+      setConnectionError(payload.message || t("MATCHMAKING_QUEUE_ERROR"));
     };
 
     socket.on("connect", handleConnect);
@@ -68,8 +68,8 @@ export default function Matchmaking({ onMatchFound, onCancel }: MatchmakingProps
   return (
     <div className="glass-panel matchmaking-panel play-hub-panel play-hub-panel-enter">
       <div style={{ width: "100%", maxWidth: 960, display: "grid", justifyItems: "center", textAlign: "center" }}>
-        <h2 className="title-glow" style={{ width: "100%", textAlign: "center" }}>{t("MATCHMAKING...")}</h2>
-        <p style={{ textAlign: "center" }}>{t("Searching for an opponent in the queue")}</p>
+        <h2 className="title-glow" style={{ width: "100%", textAlign: "center" }}>{t("MATCHMAKING")}</h2>
+        <p style={{ textAlign: "center" }}>{t("MATCHMAKING_SEARCHING")}</p>
         {connectionError && (
           <p style={{ color: "var(--accent-magenta)", marginTop: "0.75rem", textAlign: "center" }}>
             {connectionError}

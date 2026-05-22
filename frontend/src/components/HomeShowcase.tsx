@@ -106,7 +106,7 @@ export default function HomeShowcase() {
       context.setTransform(1, 0, 0, 1, 0, 0);
       context.clearRect(0, 0, canvas.width, canvas.height);
 
-      const scale = Math.max(canvas.width / board.width, canvas.height / board.height);
+      const scale = Math.min(canvas.width / board.width, canvas.height / board.height);
       const offsetX = (canvas.width - board.width * scale) / 2;
       const offsetY = (canvas.height - board.height * scale) / 2;
       context.setTransform(scale, 0, 0, scale, offsetX, offsetY);
@@ -280,7 +280,7 @@ export default function HomeShowcase() {
 
         <div className="home-showcase-content">
           <div className="home-showcase-kicker">{t("HOME_SHOWCASE_KICKER")}</div>
-          <h1 className="home-showcase-title">NEON PONG</h1>
+          <h1 className="home-showcase-title">{t("NEON_PONG")}</h1>
           <p className="home-showcase-copy">{t("HOME_SHOWCASE_COPY")}</p>
           <button className="btn home-showcase-cta" type="button" onClick={handlePlay}>
             {t("PLAY")}
