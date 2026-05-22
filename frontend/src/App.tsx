@@ -151,59 +151,61 @@ export default function App() {
   return (
     <div className={`app-shell${isWideHubRoute ? " app-shell-play" : ""}${isHomeRoute ? " app-shell-home" : ""}`}>
       <div className={`app-frame${isWideHubRoute ? " app-frame-play" : ""}${isHomeRoute ? " app-frame-home" : ""}`}>
-        <header className="topbar">
-          <NavLink className={({ isActive }) => `nav-link${isActive ? " nav-link-active" : ""}`} to="/">{t("HOME")}</NavLink>
-          <NavLink className={({ isActive }) => `nav-link${isActive ? " nav-link-active" : ""}`} to="/play">{t("MENU")}</NavLink>
-          {user ? <NavLink className={({ isActive }) => `nav-link${isActive ? " nav-link-active" : ""}`} to="/tournament">{t("TOURNAMENT")}</NavLink> : null}
-          {user ? <NavLink className={({ isActive }) => `nav-link${isActive ? " nav-link-active" : ""}`} to="/organizations">{t("ORG_NAV")}</NavLink> : null}
+        {!isHomeRoute ? (
+          <header className="topbar">
+            <NavLink className={({ isActive }) => `nav-link${isActive ? " nav-link-active" : ""}`} to="/">{t("HOME")}</NavLink>
+            <NavLink className={({ isActive }) => `nav-link${isActive ? " nav-link-active" : ""}`} to="/play">{t("MENU")}</NavLink>
+            {user ? <NavLink className={({ isActive }) => `nav-link${isActive ? " nav-link-active" : ""}`} to="/tournament">{t("TOURNAMENT")}</NavLink> : null}
+            {user ? <NavLink className={({ isActive }) => `nav-link${isActive ? " nav-link-active" : ""}`} to="/organizations">{t("ORG_NAV")}</NavLink> : null}
 
-          <div className="user-strip">
-            <LanguageSwitcher />
-            {user ? (
-              <>
-                <div className="notif-wrap">
-                  <button className="notif-btn" onClick={() => setNotifOpen((v) => !v)} type="button">
-                    {t("NOTIFS")}
-                    {notifications.length > 0 && <span className="notif-badge">{notifications.length}</span>}
-                  </button>
-                  {notifOpen && (
-                    <div className="notif-panel">
-                      {notifications.length === 0 ? (
-                        <div className="notif-item">{t("NO_NOTIFICATIONS")}</div>
-                      ) : (
-                        notifications.map((notif) => (
-                          <div key={notif.id} className="notif-item">{notif.text}</div>
-                        ))
-                      )}
-                    </div>
-                  )}
-                </div>
-                <NavLink className={({ isActive }) => `nav-link${isActive ? " nav-link-active" : ""}`} to="/profile" style={{ display: "flex", alignItems: "center", gap: "8px", padding: "4px 12px 4px 4px" }}>
-                  {user.avatarUrl ? (
-                    <img 
-                      src={resolveAvatarUrl(API, user.avatarUrl) || ""} 
-                      alt={user.username} 
-                      style={{ width: "28px", height: "28px", borderRadius: "50%", objectFit: "cover" }} 
-                    />
-                  ) : (
-                    <div style={{ width: "28px", height: "28px", borderRadius: "50%", background: "rgba(255,255,255,0.1)", display: "flex", alignItems: "center", justifyContent: "center" }}>
-                      <svg viewBox="0 0 24 24" fill="currentColor" width="18" height="18">
-                        <path d="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z"/>
-                      </svg>
-                    </div>
-                  )}
-                  <span>{user.username}</span>
-                </NavLink>
-                <button className="btn btn-outline" onClick={logout}>{t("LOGOUT")}</button>
-              </>
-            ) : (
-              <>
-                <NavLink className={({ isActive }) => `nav-link${isActive ? " nav-link-active" : ""}`} to="/login">{t("LOGIN")}</NavLink>
-                <NavLink className={({ isActive }) => `nav-link${isActive ? " nav-link-active" : ""}`} to="/register">{t("REGISTER")}</NavLink>
-              </>
-            )}
-          </div>
-        </header>
+            <div className="user-strip">
+              <LanguageSwitcher />
+              {user ? (
+                <>
+                  <div className="notif-wrap">
+                    <button className="notif-btn" onClick={() => setNotifOpen((v) => !v)} type="button">
+                      {t("NOTIFS")}
+                      {notifications.length > 0 && <span className="notif-badge">{notifications.length}</span>}
+                    </button>
+                    {notifOpen && (
+                      <div className="notif-panel">
+                        {notifications.length === 0 ? (
+                          <div className="notif-item">{t("NO_NOTIFICATIONS")}</div>
+                        ) : (
+                          notifications.map((notif) => (
+                            <div key={notif.id} className="notif-item">{notif.text}</div>
+                          ))
+                        )}
+                      </div>
+                    )}
+                  </div>
+                  <NavLink className={({ isActive }) => `nav-link${isActive ? " nav-link-active" : ""}`} to="/profile" style={{ display: "flex", alignItems: "center", gap: "8px", padding: "4px 12px 4px 4px" }}>
+                    {user.avatarUrl ? (
+                      <img 
+                        src={resolveAvatarUrl(API, user.avatarUrl) || ""} 
+                        alt={user.username} 
+                        style={{ width: "28px", height: "28px", borderRadius: "50%", objectFit: "cover" }} 
+                      />
+                    ) : (
+                      <div style={{ width: "28px", height: "28px", borderRadius: "50%", background: "rgba(255,255,255,0.1)", display: "flex", alignItems: "center", justifyContent: "center" }}>
+                        <svg viewBox="0 0 24 24" fill="currentColor" width="18" height="18">
+                          <path d="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z"/>
+                        </svg>
+                      </div>
+                    )}
+                    <span>{user.username}</span>
+                  </NavLink>
+                  <button className="btn btn-outline" onClick={logout}>{t("LOGOUT")}</button>
+                </>
+              ) : (
+                <>
+                  <NavLink className={({ isActive }) => `nav-link${isActive ? " nav-link-active" : ""}`} to="/login">{t("LOGIN")}</NavLink>
+                  <NavLink className={({ isActive }) => `nav-link${isActive ? " nav-link-active" : ""}`} to="/register">{t("REGISTER")}</NavLink>
+                </>
+              )}
+            </div>
+          </header>
+        ) : null}
 
         <main className={`content-wrap${isPlayRoute ? " content-wrap-play" : ""}${isWidePanelRoute ? " content-wrap-wide-panel" : ""}${isHomeRoute ? " content-wrap-home" : ""}`}>
           <Routes>
@@ -249,14 +251,16 @@ export default function App() {
           </Routes>
         </main>
 
-        <footer className={`footer${isHomeRoute ? " footer-home" : ""}`}>
-          <div>{t("TRANSCENDENCE_PROJECT")}</div>
-          <div>
-            <Link to="/privacy">{t("PRIVACY_POLICY")}</Link>
-            {" · "}
-            <Link to="/terms">{t("TERMS_OF_SERVICE")}</Link>
-          </div>
-        </footer>
+        {!isHomeRoute && !isPlayRoute ? (
+          <footer className="footer">
+            <div>{t("TRANSCENDENCE_PROJECT")}</div>
+            <div>
+              <Link to="/privacy">{t("PRIVACY_POLICY")}</Link>
+              {" · "}
+              <Link to="/terms">{t("TERMS_OF_SERVICE")}</Link>
+            </div>
+          </footer>
+        ) : null}
       </div>
     </div>
   );

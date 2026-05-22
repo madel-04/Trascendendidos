@@ -478,7 +478,7 @@ export default function Profile() {
                         {localBotStats.matches.slice(0, 10).map((match) => (
                           <article key={match.id} className={`match-history-card ${match.result}`}>
                             <div><strong>{t(match.result.toUpperCase())} vs {t("BOT")}</strong><span>{new Date(match.playedAt).toLocaleString()}</span></div>
-                            <p>{t("DIFICULTAD")} {match.difficulty} · {t("OBJETIVO")} {match.targetScore} · {t("CONTROL")} {match.controlMode === "mouse" ? t("RATON") : t("TECLADO")}</p>
+                            <p>{t("DIFFICULTY")} {match.difficulty} · {t("TARGET")} {match.targetScore} · {t("CONTROL")} {match.controlMode === "mouse" ? t("MOUSE_LABEL") : t("KEYBOARD_LABEL")}</p>
                           </article>
                         ))}
                       </div>

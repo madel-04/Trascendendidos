@@ -346,7 +346,7 @@ export default function Play() {
                 }}
               >
                 <KeyboardArrowsIcon />
-                <span>{t("ARROW KEYS")}</span>
+                <span>{t("ARROW_KEYS")}</span>
               </button>
               <button
                 className="btn-premium secondary play-control-option"
