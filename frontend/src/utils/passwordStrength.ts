@@ -19,20 +19,20 @@ export function evaluatePasswordStrength(
   const username = context?.username?.trim().toLowerCase() ?? "";
 
   const rules: PasswordRule[] = [
-    { key: "length", label: "Al menos 12 caracteres", passed: password.length >= 12 },
-    { key: "upper", label: "Una letra mayuscula", passed: /[A-Z]/.test(password) },
-    { key: "lower", label: "Una letra minuscula", passed: /[a-z]/.test(password) },
-    { key: "digit", label: "Un numero", passed: /\d/.test(password) },
-    { key: "symbol", label: "Un simbolo especial", passed: /[^A-Za-z0-9]/.test(password) },
-    { key: "space", label: "Sin espacios", passed: !/\s/.test(password) },
+    { key: "length", label: "PASSWORD_RULE_LENGTH", passed: password.length >= 12 },
+    { key: "upper", label: "PASSWORD_RULE_UPPER", passed: /[A-Z]/.test(password) },
+    { key: "lower", label: "PASSWORD_RULE_LOWER", passed: /[a-z]/.test(password) },
+    { key: "digit", label: "PASSWORD_RULE_DIGIT", passed: /\d/.test(password) },
+    { key: "symbol", label: "PASSWORD_RULE_SYMBOL", passed: /[^A-Za-z0-9]/.test(password) },
+    { key: "space", label: "PASSWORD_RULE_SPACE", passed: !/\s/.test(password) },
     {
       key: "username",
-      label: "No contiene tu username",
+      label: "PASSWORD_RULE_USERNAME",
       passed: username.length < 3 || !lowered.includes(username),
     },
     {
       key: "email",
-      label: "No contiene tu email",
+      label: "PASSWORD_RULE_EMAIL",
       passed: emailLocal.length < 3 || !lowered.includes(emailLocal),
     },
   ];

@@ -134,7 +134,7 @@ export default function Profile() {
         if (historyResponse.ok) setMatchHistory((await historyResponse.json()).matches ?? []);
         if (leaderboardResponse.ok) setLeaderboard((await leaderboardResponse.json()).players ?? []);
       } catch (_error) {
-        setMessage({ type: "error", text: "No se pudieron cargar las estadisticas de juego" });
+        setMessage({ type: "error", text: t("ERROR_LOADING_STATS") });
       } finally {
         setLoadingStats(false);
       }
@@ -144,10 +144,10 @@ export default function Profile() {
   }, [token]);
 
   const profileValidationError = useMemo(() => {
-    if (username.trim().length < 3 || username.trim().length > 50) return "El username debe tener entre 3 y 50 caracteres";
-    if (displayName.trim().length > 0 && displayName.trim().length < 2) return "El nombre visible debe tener al menos 2 caracteres";
-    if (displayName.trim().length > 80) return "El nombre visible no puede superar 80 caracteres";
-    if (bio.trim().length > 280) return "La bio no puede superar 280 caracteres";
+    if (username.trim().length < 3 || username.trim().length > 50) return t("ERROR_USERNAME_LENGTH");
+    if (displayName.trim().length > 0 && displayName.trim().length < 2) return t("ERROR_DISPLAY_NAME_MIN");
+    if (displayName.trim().length > 80) return t("ERROR_DISPLAY_NAME_MAX");
+    if (bio.trim().length > 280) return t("ERROR_BIO_MAX");
     return null;
   }, [bio, displayName, username]);
 
@@ -157,7 +157,7 @@ export default function Profile() {
     event.preventDefault();
     setMessage(null);
     if (!token || profileValidationError) {
-      setMessage({ type: "error", text: profileValidationError ?? "Sesion expirada. Inicia sesion de nuevo" });
+      setMessage({ type: "error", text: profileValidationError ?? t("ERROR_SESSION_EXPIRED") });
       return;
     }
 
@@ -169,11 +169,11 @@ export default function Profile() {
         body: JSON.stringify({ username: username.trim(), displayName: displayName.trim() || undefined, bio: bio.trim() || undefined }),
       });
       const data = await response.json();
-      if (!response.ok) throw new Error(data.error || "No se pudo actualizar el perfil");
+      if (!response.ok) throw new Error(data.error || t("TOURNAMENT_UPDATE_ERROR"));
       setCurrentUser(data.user);
-      setMessage({ type: "success", text: "Perfil actualizado correctamente" });
+      setMessage({ type: "success", text: t("SUCCESS_PROFILE_UPDATED") });
     } catch (error) {
-      setMessage({ type: "error", text: error instanceof Error ? error.message : "Error de conexion" });
+      setMessage({ type: "error", text: error instanceof Error ? error.message : t("ERROR_CONNECTION") });
     } finally {
       setLoading(false);
     }
@@ -182,11 +182,11 @@ export default function Profile() {
   const handleAvatarUpload = async () => {
     setMessage(null);
     if (!token || !avatarFile) {
-      setMessage({ type: "error", text: "Selecciona una imagen antes de subir" });
+      setMessage({ type: "error", text: t("ERROR_SELECT_IMAGE") });
       return;
     }
     if (avatarFile.size > 2 * 1024 * 1024) {
-      setMessage({ type: "error", text: "El archivo supera el limite de 2MB" });
+      setMessage({ type: "error", text: t("ERROR_FILE_TOO_LARGE") });
       return;
     }
 
@@ -196,13 +196,13 @@ export default function Profile() {
       formData.append("avatar", avatarFile);
       const response = await fetch(`${API}/api/auth/profile/avatar`, { method: "POST", headers: { Authorization: `Bearer ${token}` }, body: formData });
       const data = await response.json();
-      if (!response.ok) throw new Error(data.error || "No se pudo subir el avatar");
+      if (!response.ok) throw new Error(data.error || t("TOURNAMENT_CREATE_ERROR"));
       setCurrentUser(data.user);
       setAvatarUrl(data.user.avatarUrl ?? "");
       setAvatarFile(null);
-      setMessage({ type: "success", text: "Avatar actualizado correctamente" });
+      setMessage({ type: "success", text: t("SUCCESS_AVATAR_UPDATED") });
     } catch (error) {
-      setMessage({ type: "error", text: error instanceof Error ? error.message : "Error de conexion" });
+      setMessage({ type: "error", text: error instanceof Error ? error.message : t("ERROR_CONNECTION") });
     } finally {
       setLoading(false);
     }
@@ -214,13 +214,13 @@ export default function Profile() {
     try {
       const response = await fetch(`${API}/api/auth/profile/avatar`, { method: "DELETE", headers: { Authorization: `Bearer ${token}` } });
       const data = await response.json();
-      if (!response.ok) throw new Error(data.error || "No se pudo eliminar el avatar");
+      if (!response.ok) throw new Error(data.error || t("TOURNAMENT_ACTION_ERROR"));
       setCurrentUser(data.user);
       setAvatarUrl("");
       setAvatarFile(null);
-      setMessage({ type: "success", text: "Avatar eliminado" });
+      setMessage({ type: "success", text: t("SUCCESS_AVATAR_DELETED") });
     } catch (error) {
-      setMessage({ type: "error", text: error instanceof Error ? error.message : "Error de conexion" });
+      setMessage({ type: "error", text: error instanceof Error ? error.message : t("ERROR_CONNECTION") });
     } finally {
       setLoading(false);
     }
@@ -230,7 +230,7 @@ export default function Profile() {
     event.preventDefault();
     setMessage(null);
     if (!token || newPassword !== confirmNewPassword || newPassword.length < 12 || passwordStrength.level === "weak") {
-      setMessage({ type: "error", text: "Revisa la nueva contrasena y sus requisitos de seguridad" });
+      setMessage({ type: "error", text: t("ERROR_PASSWORD_REQUIREMENTS") });
       return;
     }
 
@@ -242,13 +242,13 @@ export default function Profile() {
         body: JSON.stringify({ currentPassword, newPassword }),
       });
       const data = await response.json();
-      if (!response.ok) throw new Error(data.error || "No se pudo actualizar la contrasena");
+      if (!response.ok) throw new Error(data.error || t("TOURNAMENT_UPDATE_ERROR"));
       setCurrentPassword("");
       setNewPassword("");
       setConfirmNewPassword("");
-      setMessage({ type: "success", text: "Contrasena actualizada correctamente" });
+      setMessage({ type: "success", text: t("SUCCESS_PASSWORD_UPDATED") });
     } catch (error) {
-      setMessage({ type: "error", text: error instanceof Error ? error.message : "Error de conexion" });
+      setMessage({ type: "error", text: error instanceof Error ? error.message : t("ERROR_CONNECTION") });
     } finally {
       setLoading(false);
     }
@@ -261,13 +261,13 @@ export default function Profile() {
     try {
       const response = await fetch(`${API}/api/auth/2fa/setup`, { method: "POST", headers: authHeaders });
       const data = await response.json();
-      if (!response.ok) throw new Error(data.error || "Error al generar codigo QR");
+      if (!response.ok) throw new Error(data.error || t("TOURNAMENT_ACTION_ERROR"));
       setQrCodeUrl(data.qrCodeUrl);
       setSecret(data.secret);
       setShowSetup(true);
-      setMessage({ type: "success", text: "Escanea el codigo QR con tu app TOTP" });
+      setMessage({ type: "success", text: t("INSTRUCTION_SCAN_QR") });
     } catch (error) {
-      setMessage({ type: "error", text: error instanceof Error ? error.message : "Error de conexion" });
+      setMessage({ type: "error", text: error instanceof Error ? error.message : t("ERROR_CONNECTION") });
     } finally {
       setLoading(false);
     }
@@ -284,15 +284,15 @@ export default function Profile() {
         body: JSON.stringify({ token: verificationCode }),
       });
       const data = await response.json();
-      if (!response.ok) throw new Error(data.error || "Codigo incorrecto");
+      if (!response.ok) throw new Error(data.error || t("READY_ERROR"));
       setTwoFAEnabled(true);
       setShowSetup(false);
       setQrCodeUrl(null);
       setVerificationCode("");
       if (user) setCurrentUser({ ...user, twoFAEnabled: true });
-      setMessage({ type: "success", text: "2FA habilitado correctamente" });
+      setMessage({ type: "success", text: t("SUCCESS_2FA_ENABLED") });
     } catch (error) {
-      setMessage({ type: "error", text: error instanceof Error ? error.message : "Error de conexion" });
+      setMessage({ type: "error", text: error instanceof Error ? error.message : t("ERROR_CONNECTION") });
     } finally {
       setLoading(false);
     }
@@ -304,12 +304,12 @@ export default function Profile() {
     try {
       const response = await fetch(`${API}/api/auth/2fa/disable`, { method: "POST", headers: authHeaders });
       const data = await response.json();
-      if (!response.ok) throw new Error(data.error || "Error al deshabilitar 2FA");
+      if (!response.ok) throw new Error(data.error || t("TOURNAMENT_ACTION_ERROR"));
       setTwoFAEnabled(false);
       if (user) setCurrentUser({ ...user, twoFAEnabled: false });
-      setMessage({ type: "success", text: "2FA deshabilitado" });
+      setMessage({ type: "success", text: t("SUCCESS_2FA_DISABLED") });
     } catch (error) {
-      setMessage({ type: "error", text: error instanceof Error ? error.message : "Error de conexion" });
+      setMessage({ type: "error", text: error instanceof Error ? error.message : t("ERROR_CONNECTION") });
     } finally {
       setLoading(false);
     }
@@ -361,7 +361,7 @@ export default function Profile() {
                     <img src={resolveAvatarUrl(avatarUrl) ?? ""} alt="Avatar actual" style={{ width: "124px", height: "124px", borderRadius: "14px", objectFit: "cover", border: "1px solid rgba(255, 255, 255, 0.16)" }} />
                   ) : (
                     <div style={{ width: "124px", height: "124px", borderRadius: "14px", border: "1px solid rgba(255, 255, 255, 0.16)", background: "rgba(255, 255, 255, 0.05)", display: "flex", alignItems: "center", justifyContent: "center" }}>
-                      <span style={{ color: "var(--ink-muted)", fontSize: "0.8rem" }}>Sin imagen</span>
+                      <span style={{ color: "var(--ink-muted)", fontSize: "0.8rem" }}>{t("NO_IMAGE")}</span>
                     </div>
                   )}
                   <div style={{ display: "flex", flexDirection: "column", justifyContent: "space-between", flex: 1, minWidth: "220px", height: "124px" }}>
@@ -428,7 +428,7 @@ export default function Profile() {
                 <img src={qrCodeUrl} alt="QR Code for 2FA" />
                 <code>{secret}</code>
                 <input value={verificationCode} onChange={(event) => setVerificationCode(event.target.value.replace(/\D/g, "").slice(0, 6))} placeholder="000000" maxLength={6} />
-                <button className="btn-premium secondary" type="button" onClick={handleEnable2FA} disabled={loading || verificationCode.length !== 6}>Verificar y activar</button>
+                <button className="btn-premium secondary" type="button" onClick={handleEnable2FA} disabled={loading || verificationCode.length !== 6}>{t("2FA_VERIFY_AND_ACTIVATE")}</button>
               </div>
             )}
             {twoFAEnabled && <button className="btn-premium tertiary" type="button" onClick={handleDisable2FA} disabled={loading}>{t("DISABLE_2FA")}</button>}
@@ -477,7 +477,7 @@ export default function Profile() {
                       <div className="match-history-list">
                         {localBotStats.matches.slice(0, 10).map((match) => (
                           <article key={match.id} className={`match-history-card ${match.result}`}>
-                            <div><strong>{match.result.toUpperCase()} vs {t("Bot")}</strong><span>{new Date(match.playedAt).toLocaleString()}</span></div>
+                            <div><strong>{t(match.result.toUpperCase())} vs {t("BOT")}</strong><span>{new Date(match.playedAt).toLocaleString()}</span></div>
                             <p>{t("DIFICULTAD")} {match.difficulty} · {t("OBJETIVO")} {match.targetScore} · {t("CONTROL")} {match.controlMode === "mouse" ? t("RATON") : t("TECLADO")}</p>
                           </article>
                         ))}

@@ -77,19 +77,22 @@ textarea {
 }
 
 .app-shell {
-  width: min(100% - 24px, 1140px);
-  margin: clamp(10px, 3vh, 28px) auto;
+  width: min(100% - 24px, 1280px);
+  margin: clamp(10px, 4vh, 32px) auto;
   padding: 0;
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
 }
 
 .app-shell-play {
-  width: min(100% - 16px, 1680px);
-  margin: 8px auto;
+  width: min(100% - 16px, 1280px);
+  margin: clamp(8px, 2vh, 16px) auto;
 }
 
 .app-shell-home {
-  width: min(100% - 16px, 1840px);
-  margin: 4px auto;
+  width: min(100% - 16px, 1280px);
+  margin: clamp(4px, 1vh, 8px) auto;
 }
 
 .app-frame {
@@ -99,20 +102,14 @@ textarea {
   backdrop-filter: blur(12px);
   box-shadow: var(--shadow-soft);
   overflow: hidden;
-}
-
-.app-frame-play {
-  height: calc(100dvh - 16px);
   display: flex;
   flex-direction: column;
-  overflow: hidden; /* Prevent body scroll from children */
 }
 
+.app-frame-play,
 .app-frame-home {
-  min-height: calc(100dvh - 8px);
-  height: calc(100dvh - 8px);
-  display: flex;
-  flex-direction: column;
+  height: calc(100dvh - clamp(16px, 6vh, 64px));
+  min-height: 500px;
   position: relative;
 }
 
@@ -242,6 +239,7 @@ body.play-active-session .content-wrap-play {
   min-height: 0;
   height: 100%;
   padding: clamp(12px, 2vh, 20px) clamp(10px, 1.6vw, 18px) clamp(12px, 2vh, 20px);
+  overflow-y: auto;
 }
 
 .content-wrap-wide-panel {
@@ -251,6 +249,7 @@ body.play-active-session .content-wrap-play {
   min-height: 0;
   height: 100%;
   padding: clamp(12px, 2vh, 20px) clamp(10px, 1.6vw, 18px) clamp(12px, 2vh, 20px);
+  overflow-y: auto;
 }
 
 .content-wrap-home {
@@ -449,6 +448,7 @@ body.play-active-session .content-wrap-play {
   display: flex;
   flex-direction: column;
   min-height: 0;
+  overflow-y: auto;
 }
 
 .play-route-shell-center {
@@ -662,6 +662,8 @@ body.play-active-session .content-wrap-play {
   gap: 1.5rem;
   min-width: 0;
   transition: opacity 0.32s ease, transform 0.42s ease, filter 0.42s ease;
+  overflow-y: auto;
+  padding: 1rem;
 }
 
 .auth-hub-copy {
@@ -1954,7 +1956,8 @@ body.play-active-session .content-wrap-play {
   display: flex;
   flex-direction: column;
   gap: 1.25rem;
-  overflow: hidden;
+  overflow-y: auto;
+  padding-right: 4px;
 }
 
 .tournament-grid {

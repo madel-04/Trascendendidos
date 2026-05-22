@@ -15,7 +15,7 @@ const MainMenu: React.FC<MainMenuProps> = ({ onStartGame, onStartMultiplayer, on
       <div className="main-menu-options-content">
         <div className="main-menu-options-header">
           <div className="main-menu-kicker">{t("CHOOSE YOUR MODE")}</div>
-          <h1 className="title-glow main-menu-options-title">NEON PONG</h1>
+          <h1 className="title-glow main-menu-options-title">{t("NEON_PONG")}</h1>
         </div>
 
         <div className="menu-buttons">

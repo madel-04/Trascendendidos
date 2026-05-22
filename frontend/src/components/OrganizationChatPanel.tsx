@@ -1,4 +1,5 @@
 import React from "react";
+import { useTranslation } from "react-i18next";
 
 type OrganizationChatMessage = {
   id: number;
@@ -29,20 +30,22 @@ export default function OrganizationChatPanel({
   onSubmit,
   formatDate,
 }: OrganizationChatPanelProps) {
+  const { t } = useTranslation();
+
   return (
     <div className="profile-panel organization-chat-panel">
       <div className="organization-head">
         <div>
-          <h2>Chat</h2>
-          <p>Habla con los miembros de la organizacion.</p>
+          <h2>{t("CHAT")}</h2>
+          <p>{t("ORG_CHAT_SUBTITLE")}</p>
         </div>
-        <span>{messages.length} mensajes</span>
+        <span>{t("MESSAGES_COUNT", { count: messages.length })}</span>
       </div>
 
       <div className="organization-chat-list-shell">
         <div className="organization-chat-list">
           {messages.length === 0 ? (
-            <p className="muted">Todavia no hay mensajes en esta organizacion.</p>
+            <p className="muted">{t("NO_ORG_MESSAGES")}</p>
           ) : (
             messages.map((chatMessage) => (
               <article key={chatMessage.id} className="organization-chat-message">
@@ -64,10 +67,10 @@ export default function OrganizationChatPanel({
           onChange={(event) => onDraftChange(event.target.value)}
           rows={3}
           maxLength={1000}
-          placeholder="Escribe un mensaje para la organizacion"
+          placeholder={t("CHAT_PLACEHOLDER")}
         />
         <button className="btn-premium" type="submit" disabled={loading || !draft.trim()}>
-          {loading ? "Enviando..." : "Enviar mensaje"}
+          {loading ? t("SENDING") : t("SEND_MESSAGE")}
         </button>
       </form>
     </div>

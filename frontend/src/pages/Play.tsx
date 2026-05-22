@@ -318,7 +318,7 @@ export default function Play() {
           <div className="glass-panel play-hub-panel play-hub-panel-enter">
             <div className="play-card">
             <div>
-              <h2 className="title-glow" style={{ marginBottom: 8 }}>{t("CHOOSE CONTROLS")}</h2>
+              <h2 className="title-glow" style={{ marginBottom: 8 }}>{t("CHOOSE_CONTROLS")}</h2>
             </div>
             <div className="play-side-picker">
               <button
@@ -326,14 +326,14 @@ export default function Play() {
                 type="button"
                 onClick={() => setLocalPlayerSide("left")}
               >
-                <span>{t("LEFT SIDE")}</span>
+                <span>{t("LEFT_SIDE")}</span>
               </button>
               <button
                 className={`btn-premium secondary play-side-option${localPlayerSide === "right" ? " is-active" : ""}`}
                 type="button"
                 onClick={() => setLocalPlayerSide("right")}
               >
-                <span>{t("RIGHT SIDE")}</span>
+                <span>{t("RIGHT_SIDE")}</span>
               </button>
             </div>
             <div className="play-controls-grid">
