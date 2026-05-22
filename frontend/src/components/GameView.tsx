@@ -7,6 +7,7 @@ import { recordLocalBotMatch } from '../utils/localGameStats';
 
 interface GameViewProps {
   onExit: () => void;
+  onMultiplayerInterrupt?: (message: string) => void;
   isMultiplayer?: boolean;
   multiplayerSide?: 'left' | 'right';
   multiplayerOpponentUsername?: string;
@@ -21,7 +22,7 @@ interface GameViewProps {
   localPlayerSide?: 'left' | 'right';
 }
 
-const GameView: React.FC<GameViewProps> = ({ onExit, isMultiplayer, multiplayerSide, multiplayerOpponentUsername, roomId, joinInviteRoom, waitForRealtimeReady, allowRematch = true, exitLabel, onStatusChange, settings, localControlMode = 'keyboard', localPlayerSide = 'right' }) => {
+const GameView: React.FC<GameViewProps> = ({ onExit, onMultiplayerInterrupt, isMultiplayer, multiplayerSide, multiplayerOpponentUsername, roomId, joinInviteRoom, waitForRealtimeReady, allowRematch = true, exitLabel, onStatusChange, settings, localControlMode = 'keyboard', localPlayerSide = 'right' }) => {
   const { t } = useTranslation();
   const { user } = useAuth();
   const canvasRef = React.useRef<PongCanvasHandle | null>(null);
@@ -141,12 +142,11 @@ const GameView: React.FC<GameViewProps> = ({ onExit, isMultiplayer, multiplayerS
   React.useEffect(() => {
     if (isMultiplayer) {
       const handleOpponentDisconnected = () => {
-        alert(t('Opponent disconnected or left! Match ended.'));
-        onExit();
+        onMultiplayerInterrupt?.(t('Opponent disconnected or left! Match ended.'));
       };
 
       const handleReturnHome = () => {
-        onExit();
+        onMultiplayerInterrupt?.(t('Opponent disconnected or left! Match ended.'));
       };
 
       const handleInviteMatchReady = () => {
@@ -154,8 +154,7 @@ const GameView: React.FC<GameViewProps> = ({ onExit, isMultiplayer, multiplayerS
       };
 
       const handleMatchmakingError = (payload: { message?: string }) => {
-        alert(payload.message || t('CONNECTION_ERROR'));
-        onExit();
+        onMultiplayerInterrupt?.(payload.message || t('CONNECTION_ERROR'));
       };
 
       const handleMatchEndedPayload = (payload: { reason: string; winner: 'left' | 'right' | null }) => {
@@ -200,7 +199,7 @@ const GameView: React.FC<GameViewProps> = ({ onExit, isMultiplayer, multiplayerS
         socket.off('restart_match', handleRestartMatch);
       };
     }
-  }, [isMultiplayer, joinInviteRoom, onExit, roomId, t, onStatusChange]);
+  }, [isMultiplayer, joinInviteRoom, onExit, onMultiplayerInterrupt, roomId, t, onStatusChange]);
 
   const handleExit = () => {
     if (isMultiplayer) {

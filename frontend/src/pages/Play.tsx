@@ -42,6 +42,7 @@ type PersistedMultiplayerSession = {
 };
 
 const ACTIVE_MULTIPLAYER_SESSION_KEY = "activeMultiplayerSession";
+const PLAY_MENU_NOTICE_KEY = "playMenuNotice";
 
 function readActiveMultiplayerSession(): PersistedMultiplayerSession | null {
   if (typeof window === "undefined") return null;
@@ -85,6 +86,20 @@ function clearActiveMultiplayerSession(): void {
   window.localStorage.removeItem(ACTIVE_MULTIPLAYER_SESSION_KEY);
 }
 
+function readPlayMenuNotice(): string | null {
+  if (typeof window === "undefined") return null;
+  const notice = window.sessionStorage.getItem(PLAY_MENU_NOTICE_KEY);
+  if (notice) {
+    window.sessionStorage.removeItem(PLAY_MENU_NOTICE_KEY);
+  }
+  return notice;
+}
+
+function writePlayMenuNotice(notice: string): void {
+  if (typeof window === "undefined") return;
+  window.sessionStorage.setItem(PLAY_MENU_NOTICE_KEY, notice);
+}
+
 function KeyboardArrowsIcon() {
   return (
     <svg width="118" height="82" viewBox="0 0 118 82" role="img" aria-hidden="true" focusable="false">
@@ -125,6 +140,7 @@ export default function Play() {
   const [message, setMessage] = useState<{ type: "error" | "success"; text: string } | null>(null);
   const [persistedSession, setPersistedSession] = useState<PersistedMultiplayerSession | null>(() => readActiveMultiplayerSession());
   const [isResumingStoredMatch, setIsResumingStoredMatch] = useState(false);
+  const [menuNotice, setMenuNotice] = useState<string | null>(() => readPlayMenuNotice());
   const isActiveMatchView = localView === "game" || !!roomStatus?.gameStarted;
 
   const matchContext = useMemo(() => {
@@ -218,7 +234,11 @@ export default function Play() {
       if (!response.ok) {
         clearActiveMultiplayerSession();
         setPersistedSession(null);
-        setMessage({ type: "error", text: data.error || t("JOIN_ROOM_ERROR") });
+        setIsResumingStoredMatch(false);
+        const nextNotice = data.error || t("JOIN_ROOM_ERROR");
+        setMenuNotice(nextNotice);
+        writePlayMenuNotice(nextNotice);
+        navigate("/play", { replace: true });
         return;
       }
 
@@ -240,7 +260,11 @@ export default function Play() {
     } catch (error) {
       clearActiveMultiplayerSession();
       setPersistedSession(null);
-      setMessage({ type: "error", text: t("JOIN_ROOM_CONNECTION_ERROR") });
+      setIsResumingStoredMatch(false);
+      const nextNotice = t("JOIN_ROOM_CONNECTION_ERROR");
+      setMenuNotice(nextNotice);
+      writePlayMenuNotice(nextNotice);
+      navigate("/play", { replace: true });
     } finally {
       setLoading(false);
     }
@@ -335,6 +359,19 @@ export default function Play() {
     }
   }, [roomStatus?.gameStarted]);
 
+  const returnToPlayMenuWithNotice = useCallback((notice: string) => {
+    setRoomStatus(null);
+    setIsReady(false);
+    setMultiplayerState(null);
+    setIsMatchFinished(false);
+    setIsResumingStoredMatch(false);
+    clearActiveMultiplayerSession();
+    setPersistedSession(null);
+    setMenuNotice(notice);
+    writePlayMenuNotice(notice);
+    navigate("/play", { replace: true });
+  }, [navigate]);
+
   const markReady = async () => {
     if (!matchContext || !token || isReady) return;
 
@@ -390,6 +427,7 @@ export default function Play() {
               setIsResumingStoredMatch(false);
               clearActiveMultiplayerSession();
               setPersistedSession(null);
+              setMenuNotice(null);
               setLocalView("controls");
             }}
             onStartMultiplayer={() => {
@@ -398,9 +436,11 @@ export default function Play() {
               setIsResumingStoredMatch(false);
               clearActiveMultiplayerSession();
               setPersistedSession(null);
+              setMenuNotice(null);
               setLocalView("lobby");
             }}
             onOpenSettings={() => setLocalView("settings")}
+            notice={menuNotice}
           />
         )}
         {localView === "settings" && (
@@ -487,12 +527,10 @@ export default function Play() {
               setIsResumingStoredMatch(false);
               clearActiveMultiplayerSession();
               setPersistedSession(null);
-              if (multiplayerState) {
-                navigate("/");
-              } else {
-                setLocalView("menu");
-              }
+              setMenuNotice(null);
+              setLocalView("menu");
             }}
+            onMultiplayerInterrupt={returnToPlayMenuWithNotice}
             isMultiplayer={!!multiplayerState}
             multiplayerSide={multiplayerState?.side}
             multiplayerOpponentUsername={persistedSession?.source === "matchmaking" ? persistedSession.opponent : undefined}
@@ -615,14 +653,16 @@ export default function Play() {
             setIsResumingStoredMatch(false);
             clearActiveMultiplayerSession();
             setPersistedSession(null);
+            setMenuNotice(null);
             navigate(leaveMatchDestination);
           }}
+          onMultiplayerInterrupt={returnToPlayMenuWithNotice}
           isMultiplayer
           multiplayerSide={roomStatus.players.you.side}
           multiplayerOpponentUsername={roomStatus.players.opponent.username}
           roomId={roomStatus.roomId}
           joinInviteRoom
-          waitForRealtimeReady
+          waitForRealtimeReady={false}
           allowRematch={!isTournamentMatch}
           exitLabel={isTournamentMatch ? t("BACK_TO_TOURNAMENT") : undefined}
           onStatusChange={setIsMatchFinished}
