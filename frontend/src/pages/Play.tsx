@@ -124,6 +124,7 @@ export default function Play() {
   const [loading, setLoading] = useState(false);
   const [message, setMessage] = useState<{ type: "error" | "success"; text: string } | null>(null);
   const [persistedSession, setPersistedSession] = useState<PersistedMultiplayerSession | null>(() => readActiveMultiplayerSession());
+  const [isResumingStoredMatch, setIsResumingStoredMatch] = useState(false);
   const isActiveMatchView = localView === "game" || !!roomStatus?.gameStarted;
 
   const matchContext = useMemo(() => {
@@ -191,6 +192,7 @@ export default function Play() {
       return;
     }
 
+    setIsResumingStoredMatch(true);
     setMultiplayerState({ roomId: persistedSession.roomId, side: persistedSession.side! });
     setLocalView("game");
     setIsMatchFinished(false);
@@ -385,6 +387,7 @@ export default function Play() {
             onStartGame={() => {
               setMultiplayerState(null);
               setIsMatchFinished(false);
+              setIsResumingStoredMatch(false);
               clearActiveMultiplayerSession();
               setPersistedSession(null);
               setLocalView("controls");
@@ -392,6 +395,7 @@ export default function Play() {
             onStartMultiplayer={() => {
               setMultiplayerState(null);
               setIsMatchFinished(false);
+              setIsResumingStoredMatch(false);
               clearActiveMultiplayerSession();
               setPersistedSession(null);
               setLocalView("lobby");
@@ -466,6 +470,7 @@ export default function Play() {
             onMatchFound={(roomId, side) => {
               setMultiplayerState({ roomId, side });
               setIsMatchFinished(false);
+              setIsResumingStoredMatch(false);
               const nextSession: PersistedMultiplayerSession = { roomId, side, source: "matchmaking" };
               writeActiveMultiplayerSession(nextSession);
               setPersistedSession(nextSession);
@@ -479,6 +484,7 @@ export default function Play() {
             onExit={() => {
               setMultiplayerState(null);
               setIsMatchFinished(false);
+              setIsResumingStoredMatch(false);
               clearActiveMultiplayerSession();
               setPersistedSession(null);
               if (multiplayerState) {
@@ -491,8 +497,8 @@ export default function Play() {
             multiplayerSide={multiplayerState?.side}
             multiplayerOpponentUsername={persistedSession?.source === "matchmaking" ? persistedSession.opponent : undefined}
             roomId={multiplayerState?.roomId}
-            joinInviteRoom={!!multiplayerState}
-            waitForRealtimeReady={!!multiplayerState}
+            joinInviteRoom={isResumingStoredMatch}
+            waitForRealtimeReady={isResumingStoredMatch}
             onStatusChange={setIsMatchFinished}
             settings={settings}
             localControlMode={localControlMode}
@@ -606,6 +612,7 @@ export default function Play() {
           onExit={() => {
             setRoomStatus(null);
             setIsReady(false);
+            setIsResumingStoredMatch(false);
             clearActiveMultiplayerSession();
             setPersistedSession(null);
             navigate(leaveMatchDestination);
