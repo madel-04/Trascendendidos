@@ -244,6 +244,7 @@ export function registerSocketHandlers(io: IoServer, app: FastifyInstance): void
         `SELECT room_id, player1_id, player2_id
          FROM game_rooms
          WHERE room_id = $1
+           AND game_started = TRUE
          LIMIT 1`,
         [roomId]
       );

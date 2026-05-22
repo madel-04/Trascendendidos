@@ -346,6 +346,10 @@ export async function gameRoutes(app: FastifyInstance) {
           return reply.code(403).send({ error: "No eres parte de esta sala" });
         }
 
+        if (existingRoom.game_started) {
+          return reply.code(409).send({ error: "La partida ya ha comenzado" });
+        }
+
         const opponent = isPlayer1 ? existingRoom.player2_id : existingRoom.player1_id;
         const opponentUser = await query<UserRow>(
           `SELECT id, username FROM users WHERE id = $1`,

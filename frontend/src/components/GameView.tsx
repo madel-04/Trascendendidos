@@ -7,7 +7,6 @@ import { recordLocalBotMatch } from '../utils/localGameStats';
 
 interface GameViewProps {
   onExit: () => void;
-  onMultiplayerInterrupt?: (message: string) => void;
   isMultiplayer?: boolean;
   multiplayerSide?: 'left' | 'right';
   multiplayerOpponentUsername?: string;
@@ -22,7 +21,7 @@ interface GameViewProps {
   localPlayerSide?: 'left' | 'right';
 }
 
-const GameView: React.FC<GameViewProps> = ({ onExit, onMultiplayerInterrupt, isMultiplayer, multiplayerSide, multiplayerOpponentUsername, roomId, joinInviteRoom, waitForRealtimeReady, allowRematch = true, exitLabel, onStatusChange, settings, localControlMode = 'keyboard', localPlayerSide = 'right' }) => {
+const GameView: React.FC<GameViewProps> = ({ onExit, isMultiplayer, multiplayerSide, multiplayerOpponentUsername, roomId, joinInviteRoom, waitForRealtimeReady, allowRematch = true, exitLabel, onStatusChange, settings, localControlMode = 'keyboard', localPlayerSide = 'right' }) => {
   const { t } = useTranslation();
   const { user } = useAuth();
   const canvasRef = React.useRef<PongCanvasHandle | null>(null);
@@ -142,19 +141,16 @@ const GameView: React.FC<GameViewProps> = ({ onExit, onMultiplayerInterrupt, isM
   React.useEffect(() => {
     if (isMultiplayer) {
       const handleOpponentDisconnected = () => {
-        onMultiplayerInterrupt?.(t('Opponent disconnected or left! Match ended.'));
+        alert(t('Opponent disconnected or left! Match ended.'));
+        onExit();
       };
 
       const handleReturnHome = () => {
-        onMultiplayerInterrupt?.(t('Opponent disconnected or left! Match ended.'));
+        onExit();
       };
 
       const handleInviteMatchReady = () => {
         setRealtimeReady(true);
-      };
-
-      const handleMatchmakingError = (payload: { message?: string }) => {
-        onMultiplayerInterrupt?.(payload.message || t('CONNECTION_ERROR'));
       };
 
       const handleMatchEndedPayload = (payload: { reason: string; winner: 'left' | 'right' | null }) => {
@@ -178,7 +174,6 @@ const GameView: React.FC<GameViewProps> = ({ onExit, onMultiplayerInterrupt, isM
       socket.on('opponent_disconnected', handleOpponentDisconnected);
       socket.on('returned_to_home', handleReturnHome);
       socket.on('invite_match_ready', handleInviteMatchReady);
-      socket.on('matchmaking_error', handleMatchmakingError);
       socket.on('match_ended', handleMatchEndedPayload);
       socket.on('restart_match', handleRestartMatch);
 
@@ -194,12 +189,11 @@ const GameView: React.FC<GameViewProps> = ({ onExit, onMultiplayerInterrupt, isM
         socket.off('opponent_disconnected', handleOpponentDisconnected);
         socket.off('returned_to_home', handleReturnHome);
         socket.off('invite_match_ready', handleInviteMatchReady);
-        socket.off('matchmaking_error', handleMatchmakingError);
         socket.off('match_ended', handleMatchEndedPayload);
         socket.off('restart_match', handleRestartMatch);
       };
     }
-  }, [isMultiplayer, joinInviteRoom, onExit, onMultiplayerInterrupt, roomId, t, onStatusChange]);
+  }, [isMultiplayer, joinInviteRoom, onExit, roomId, t, onStatusChange]);
 
   const handleExit = () => {
     if (isMultiplayer) {

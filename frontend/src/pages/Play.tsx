@@ -32,73 +32,6 @@ type GameRoomStatus = {
 
 type LocalControlMode = "keyboard" | "mouse";
 type LocalPlayerSide = "left" | "right";
-type PersistedMultiplayerSession = {
-  roomId: string;
-  source: "matchmaking" | "invite" | "tournament";
-  side?: "left" | "right";
-  opponent?: string;
-  tournamentId?: string;
-  matchId?: string;
-};
-
-const ACTIVE_MULTIPLAYER_SESSION_KEY = "activeMultiplayerSession";
-const PLAY_MENU_NOTICE_KEY = "playMenuNotice";
-
-function readActiveMultiplayerSession(): PersistedMultiplayerSession | null {
-  if (typeof window === "undefined") return null;
-
-  try {
-    const raw = window.localStorage.getItem(ACTIVE_MULTIPLAYER_SESSION_KEY);
-    if (!raw) return null;
-
-    const parsed = JSON.parse(raw) as Partial<PersistedMultiplayerSession>;
-    if (!parsed?.roomId || !parsed?.source) return null;
-
-    if (parsed.source === "matchmaking") {
-      if (parsed.side !== "left" && parsed.side !== "right") return null;
-      return {
-        roomId: parsed.roomId,
-        source: "matchmaking",
-        side: parsed.side,
-        opponent: parsed.opponent?.trim() || "",
-      };
-    }
-
-    return {
-      roomId: parsed.roomId,
-      source: parsed.source === "tournament" ? "tournament" : "invite",
-      opponent: parsed.opponent?.trim() || "",
-      tournamentId: parsed.tournamentId?.trim() || "",
-      matchId: parsed.matchId?.trim() || "",
-    };
-  } catch {
-    return null;
-  }
-}
-
-function writeActiveMultiplayerSession(session: PersistedMultiplayerSession): void {
-  if (typeof window === "undefined") return;
-  window.localStorage.setItem(ACTIVE_MULTIPLAYER_SESSION_KEY, JSON.stringify(session));
-}
-
-function clearActiveMultiplayerSession(): void {
-  if (typeof window === "undefined") return;
-  window.localStorage.removeItem(ACTIVE_MULTIPLAYER_SESSION_KEY);
-}
-
-function readPlayMenuNotice(): string | null {
-  if (typeof window === "undefined") return null;
-  const notice = window.sessionStorage.getItem(PLAY_MENU_NOTICE_KEY);
-  if (notice) {
-    window.sessionStorage.removeItem(PLAY_MENU_NOTICE_KEY);
-  }
-  return notice;
-}
-
-function writePlayMenuNotice(notice: string): void {
-  if (typeof window === "undefined") return;
-  window.sessionStorage.setItem(PLAY_MENU_NOTICE_KEY, notice);
-}
 
 function KeyboardArrowsIcon() {
   return (
@@ -138,9 +71,6 @@ export default function Play() {
   const [multiplayerState, setMultiplayerState] = useState<{ roomId: string; side: "left" | "right" } | null>(null);
   const [loading, setLoading] = useState(false);
   const [message, setMessage] = useState<{ type: "error" | "success"; text: string } | null>(null);
-  const [persistedSession, setPersistedSession] = useState<PersistedMultiplayerSession | null>(() => readActiveMultiplayerSession());
-  const [isResumingStoredMatch, setIsResumingStoredMatch] = useState(false);
-  const [menuNotice, setMenuNotice] = useState<string | null>(() => readPlayMenuNotice());
   const isActiveMatchView = localView === "game" || !!roomStatus?.gameStarted;
 
   const matchContext = useMemo(() => {
@@ -151,21 +81,11 @@ export default function Play() {
     const matchId = searchParams.get("matchId")?.trim() || "";
 
     if (!roomId || (source !== "invite" && source !== "tournament")) {
-      if (!persistedSession || persistedSession.source === "matchmaking") {
-        return null;
-      }
-
-      return {
-        roomId: persistedSession.roomId,
-        opponent: persistedSession.opponent ?? "",
-        source: persistedSession.source,
-        tournamentId: persistedSession.tournamentId ?? "",
-        matchId: persistedSession.matchId ?? "",
-      };
+      return null;
     }
 
     return { roomId, opponent, source, tournamentId, matchId };
-  }, [persistedSession, searchParams]);
+  }, [searchParams]);
 
   const leaveMatchDestination = useMemo(() => {
     if (!matchContext) return "/";
@@ -177,42 +97,6 @@ export default function Play() {
   }, [matchContext]);
 
   const isTournamentMatch = matchContext?.source === "tournament";
-
-  useEffect(() => {
-    if (!matchContext) return;
-
-    const nextSession: PersistedMultiplayerSession = {
-      roomId: matchContext.roomId,
-      source: matchContext.source,
-      opponent: matchContext.opponent,
-      tournamentId: matchContext.tournamentId,
-      matchId: matchContext.matchId,
-    };
-
-    if (
-      persistedSession?.roomId === nextSession.roomId &&
-      persistedSession.source === nextSession.source &&
-      (persistedSession.opponent ?? "") === (nextSession.opponent ?? "") &&
-      (persistedSession.tournamentId ?? "") === (nextSession.tournamentId ?? "") &&
-      (persistedSession.matchId ?? "") === (nextSession.matchId ?? "")
-    ) {
-      return;
-    }
-
-    writeActiveMultiplayerSession(nextSession);
-    setPersistedSession(nextSession);
-  }, [matchContext, persistedSession]);
-
-  useEffect(() => {
-    if (matchContext || multiplayerState || !persistedSession || persistedSession.source !== "matchmaking") {
-      return;
-    }
-
-    setIsResumingStoredMatch(true);
-    setMultiplayerState({ roomId: persistedSession.roomId, side: persistedSession.side! });
-    setLocalView("game");
-    setIsMatchFinished(false);
-  }, [matchContext, multiplayerState, persistedSession]);
 
   // Join game room when component mounts or roomId changes
   const joinRoom = useCallback(async () => {
@@ -232,13 +116,7 @@ export default function Play() {
       const data = await response.json();
 
       if (!response.ok) {
-        clearActiveMultiplayerSession();
-        setPersistedSession(null);
-        setIsResumingStoredMatch(false);
-        const nextNotice = data.error || t("JOIN_ROOM_ERROR");
-        setMenuNotice(nextNotice);
-        writePlayMenuNotice(nextNotice);
-        navigate("/play", { replace: true });
+        setMessage({ type: "error", text: data.error || t("JOIN_ROOM_ERROR") });
         return;
       }
 
@@ -258,13 +136,7 @@ export default function Play() {
         setIsReady(statusData.players.you.ready);
       }
     } catch (error) {
-      clearActiveMultiplayerSession();
-      setPersistedSession(null);
-      setIsResumingStoredMatch(false);
-      const nextNotice = t("JOIN_ROOM_CONNECTION_ERROR");
-      setMenuNotice(nextNotice);
-      writePlayMenuNotice(nextNotice);
-      navigate("/play", { replace: true });
+      setMessage({ type: "error", text: t("JOIN_ROOM_CONNECTION_ERROR") });
     } finally {
       setLoading(false);
     }
@@ -359,19 +231,6 @@ export default function Play() {
     }
   }, [roomStatus?.gameStarted]);
 
-  const returnToPlayMenuWithNotice = useCallback((notice: string) => {
-    setRoomStatus(null);
-    setIsReady(false);
-    setMultiplayerState(null);
-    setIsMatchFinished(false);
-    setIsResumingStoredMatch(false);
-    clearActiveMultiplayerSession();
-    setPersistedSession(null);
-    setMenuNotice(notice);
-    writePlayMenuNotice(notice);
-    navigate("/play", { replace: true });
-  }, [navigate]);
-
   const markReady = async () => {
     if (!matchContext || !token || isReady) return;
 
@@ -424,23 +283,14 @@ export default function Play() {
             onStartGame={() => {
               setMultiplayerState(null);
               setIsMatchFinished(false);
-              setIsResumingStoredMatch(false);
-              clearActiveMultiplayerSession();
-              setPersistedSession(null);
-              setMenuNotice(null);
               setLocalView("controls");
             }}
             onStartMultiplayer={() => {
               setMultiplayerState(null);
               setIsMatchFinished(false);
-              setIsResumingStoredMatch(false);
-              clearActiveMultiplayerSession();
-              setPersistedSession(null);
-              setMenuNotice(null);
               setLocalView("lobby");
             }}
             onOpenSettings={() => setLocalView("settings")}
-            notice={menuNotice}
           />
         )}
         {localView === "settings" && (
@@ -510,10 +360,6 @@ export default function Play() {
             onMatchFound={(roomId, side) => {
               setMultiplayerState({ roomId, side });
               setIsMatchFinished(false);
-              setIsResumingStoredMatch(false);
-              const nextSession: PersistedMultiplayerSession = { roomId, side, source: "matchmaking" };
-              writeActiveMultiplayerSession(nextSession);
-              setPersistedSession(nextSession);
               setLocalView("game");
             }}
             onCancel={() => setLocalView("menu")}
@@ -524,19 +370,15 @@ export default function Play() {
             onExit={() => {
               setMultiplayerState(null);
               setIsMatchFinished(false);
-              setIsResumingStoredMatch(false);
-              clearActiveMultiplayerSession();
-              setPersistedSession(null);
-              setMenuNotice(null);
-              setLocalView("menu");
+              if (multiplayerState) {
+                navigate("/");
+              } else {
+                setLocalView("menu");
+              }
             }}
-            onMultiplayerInterrupt={returnToPlayMenuWithNotice}
             isMultiplayer={!!multiplayerState}
             multiplayerSide={multiplayerState?.side}
-            multiplayerOpponentUsername={persistedSession?.source === "matchmaking" ? persistedSession.opponent : undefined}
             roomId={multiplayerState?.roomId}
-            joinInviteRoom={isResumingStoredMatch}
-            waitForRealtimeReady={isResumingStoredMatch}
             onStatusChange={setIsMatchFinished}
             settings={settings}
             localControlMode={localControlMode}
@@ -650,13 +492,8 @@ export default function Play() {
           onExit={() => {
             setRoomStatus(null);
             setIsReady(false);
-            setIsResumingStoredMatch(false);
-            clearActiveMultiplayerSession();
-            setPersistedSession(null);
-            setMenuNotice(null);
             navigate(leaveMatchDestination);
           }}
-          onMultiplayerInterrupt={returnToPlayMenuWithNotice}
           isMultiplayer
           multiplayerSide={roomStatus.players.you.side}
           multiplayerOpponentUsername={roomStatus.players.opponent.username}
