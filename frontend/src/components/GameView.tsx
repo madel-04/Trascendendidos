@@ -153,6 +153,11 @@ const GameView: React.FC<GameViewProps> = ({ onExit, isMultiplayer, multiplayerS
         setRealtimeReady(true);
       };
 
+      const handleMatchmakingError = (payload: { message?: string }) => {
+        alert(payload.message || t('CONNECTION_ERROR'));
+        onExit();
+      };
+
       const handleMatchEndedPayload = (payload: { reason: string; winner: 'left' | 'right' | null }) => {
         if (payload.reason === 'completed') {
           setMatchStatus('finished');
@@ -174,6 +179,7 @@ const GameView: React.FC<GameViewProps> = ({ onExit, isMultiplayer, multiplayerS
       socket.on('opponent_disconnected', handleOpponentDisconnected);
       socket.on('returned_to_home', handleReturnHome);
       socket.on('invite_match_ready', handleInviteMatchReady);
+      socket.on('matchmaking_error', handleMatchmakingError);
       socket.on('match_ended', handleMatchEndedPayload);
       socket.on('restart_match', handleRestartMatch);
 
@@ -189,6 +195,7 @@ const GameView: React.FC<GameViewProps> = ({ onExit, isMultiplayer, multiplayerS
         socket.off('opponent_disconnected', handleOpponentDisconnected);
         socket.off('returned_to_home', handleReturnHome);
         socket.off('invite_match_ready', handleInviteMatchReady);
+        socket.off('matchmaking_error', handleMatchmakingError);
         socket.off('match_ended', handleMatchEndedPayload);
         socket.off('restart_match', handleRestartMatch);
       };

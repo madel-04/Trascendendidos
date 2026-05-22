@@ -32,6 +32,58 @@ type GameRoomStatus = {
 
 type LocalControlMode = "keyboard" | "mouse";
 type LocalPlayerSide = "left" | "right";
+type PersistedMultiplayerSession = {
+  roomId: string;
+  source: "matchmaking" | "invite" | "tournament";
+  side?: "left" | "right";
+  opponent?: string;
+  tournamentId?: string;
+  matchId?: string;
+};
+
+const ACTIVE_MULTIPLAYER_SESSION_KEY = "activeMultiplayerSession";
+
+function readActiveMultiplayerSession(): PersistedMultiplayerSession | null {
+  if (typeof window === "undefined") return null;
+
+  try {
+    const raw = window.localStorage.getItem(ACTIVE_MULTIPLAYER_SESSION_KEY);
+    if (!raw) return null;
+
+    const parsed = JSON.parse(raw) as Partial<PersistedMultiplayerSession>;
+    if (!parsed?.roomId || !parsed?.source) return null;
+
+    if (parsed.source === "matchmaking") {
+      if (parsed.side !== "left" && parsed.side !== "right") return null;
+      return {
+        roomId: parsed.roomId,
+        source: "matchmaking",
+        side: parsed.side,
+        opponent: parsed.opponent?.trim() || "",
+      };
+    }
+
+    return {
+      roomId: parsed.roomId,
+      source: parsed.source === "tournament" ? "tournament" : "invite",
+      opponent: parsed.opponent?.trim() || "",
+      tournamentId: parsed.tournamentId?.trim() || "",
+      matchId: parsed.matchId?.trim() || "",
+    };
+  } catch {
+    return null;
+  }
+}
+
+function writeActiveMultiplayerSession(session: PersistedMultiplayerSession): void {
+  if (typeof window === "undefined") return;
+  window.localStorage.setItem(ACTIVE_MULTIPLAYER_SESSION_KEY, JSON.stringify(session));
+}
+
+function clearActiveMultiplayerSession(): void {
+  if (typeof window === "undefined") return;
+  window.localStorage.removeItem(ACTIVE_MULTIPLAYER_SESSION_KEY);
+}
 
 function KeyboardArrowsIcon() {
   return (
@@ -71,6 +123,7 @@ export default function Play() {
   const [multiplayerState, setMultiplayerState] = useState<{ roomId: string; side: "left" | "right" } | null>(null);
   const [loading, setLoading] = useState(false);
   const [message, setMessage] = useState<{ type: "error" | "success"; text: string } | null>(null);
+  const [persistedSession, setPersistedSession] = useState<PersistedMultiplayerSession | null>(() => readActiveMultiplayerSession());
   const isActiveMatchView = localView === "game" || !!roomStatus?.gameStarted;
 
   const matchContext = useMemo(() => {
@@ -81,11 +134,21 @@ export default function Play() {
     const matchId = searchParams.get("matchId")?.trim() || "";
 
     if (!roomId || (source !== "invite" && source !== "tournament")) {
-      return null;
+      if (!persistedSession || persistedSession.source === "matchmaking") {
+        return null;
+      }
+
+      return {
+        roomId: persistedSession.roomId,
+        opponent: persistedSession.opponent ?? "",
+        source: persistedSession.source,
+        tournamentId: persistedSession.tournamentId ?? "",
+        matchId: persistedSession.matchId ?? "",
+      };
     }
 
     return { roomId, opponent, source, tournamentId, matchId };
-  }, [searchParams]);
+  }, [persistedSession, searchParams]);
 
   const leaveMatchDestination = useMemo(() => {
     if (!matchContext) return "/";
@@ -97,6 +160,41 @@ export default function Play() {
   }, [matchContext]);
 
   const isTournamentMatch = matchContext?.source === "tournament";
+
+  useEffect(() => {
+    if (!matchContext) return;
+
+    const nextSession: PersistedMultiplayerSession = {
+      roomId: matchContext.roomId,
+      source: matchContext.source,
+      opponent: matchContext.opponent,
+      tournamentId: matchContext.tournamentId,
+      matchId: matchContext.matchId,
+    };
+
+    if (
+      persistedSession?.roomId === nextSession.roomId &&
+      persistedSession.source === nextSession.source &&
+      (persistedSession.opponent ?? "") === (nextSession.opponent ?? "") &&
+      (persistedSession.tournamentId ?? "") === (nextSession.tournamentId ?? "") &&
+      (persistedSession.matchId ?? "") === (nextSession.matchId ?? "")
+    ) {
+      return;
+    }
+
+    writeActiveMultiplayerSession(nextSession);
+    setPersistedSession(nextSession);
+  }, [matchContext, persistedSession]);
+
+  useEffect(() => {
+    if (matchContext || multiplayerState || !persistedSession || persistedSession.source !== "matchmaking") {
+      return;
+    }
+
+    setMultiplayerState({ roomId: persistedSession.roomId, side: persistedSession.side! });
+    setLocalView("game");
+    setIsMatchFinished(false);
+  }, [matchContext, multiplayerState, persistedSession]);
 
   // Join game room when component mounts or roomId changes
   const joinRoom = useCallback(async () => {
@@ -116,6 +214,8 @@ export default function Play() {
       const data = await response.json();
 
       if (!response.ok) {
+        clearActiveMultiplayerSession();
+        setPersistedSession(null);
         setMessage({ type: "error", text: data.error || t("JOIN_ROOM_ERROR") });
         return;
       }
@@ -136,6 +236,8 @@ export default function Play() {
         setIsReady(statusData.players.you.ready);
       }
     } catch (error) {
+      clearActiveMultiplayerSession();
+      setPersistedSession(null);
       setMessage({ type: "error", text: t("JOIN_ROOM_CONNECTION_ERROR") });
     } finally {
       setLoading(false);
@@ -283,11 +385,15 @@ export default function Play() {
             onStartGame={() => {
               setMultiplayerState(null);
               setIsMatchFinished(false);
+              clearActiveMultiplayerSession();
+              setPersistedSession(null);
               setLocalView("controls");
             }}
             onStartMultiplayer={() => {
               setMultiplayerState(null);
               setIsMatchFinished(false);
+              clearActiveMultiplayerSession();
+              setPersistedSession(null);
               setLocalView("lobby");
             }}
             onOpenSettings={() => setLocalView("settings")}
@@ -360,6 +466,9 @@ export default function Play() {
             onMatchFound={(roomId, side) => {
               setMultiplayerState({ roomId, side });
               setIsMatchFinished(false);
+              const nextSession: PersistedMultiplayerSession = { roomId, side, source: "matchmaking" };
+              writeActiveMultiplayerSession(nextSession);
+              setPersistedSession(nextSession);
               setLocalView("game");
             }}
             onCancel={() => setLocalView("menu")}
@@ -370,6 +479,8 @@ export default function Play() {
             onExit={() => {
               setMultiplayerState(null);
               setIsMatchFinished(false);
+              clearActiveMultiplayerSession();
+              setPersistedSession(null);
               if (multiplayerState) {
                 navigate("/");
               } else {
@@ -378,7 +489,10 @@ export default function Play() {
             }}
             isMultiplayer={!!multiplayerState}
             multiplayerSide={multiplayerState?.side}
+            multiplayerOpponentUsername={persistedSession?.source === "matchmaking" ? persistedSession.opponent : undefined}
             roomId={multiplayerState?.roomId}
+            joinInviteRoom={!!multiplayerState}
+            waitForRealtimeReady={!!multiplayerState}
             onStatusChange={setIsMatchFinished}
             settings={settings}
             localControlMode={localControlMode}
@@ -492,6 +606,8 @@ export default function Play() {
           onExit={() => {
             setRoomStatus(null);
             setIsReady(false);
+            clearActiveMultiplayerSession();
+            setPersistedSession(null);
             navigate(leaveMatchDestination);
           }}
           isMultiplayer
