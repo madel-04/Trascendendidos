@@ -19,25 +19,12 @@ import PlayAccessGate from "./components/PlayAccessGate";
 import ProtectedRoute from "./components/ProtectedRoute";
 // Importamos el contexto de autenticación
 import { useAuth } from "./context/AuthContext";
+import { BACKEND_URL, BACKEND_WS_URL, resolveBackendAssetUrl } from "./lib/backend";
 // Importamos hooks de React para manejar efectos y estado
 import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 
-// Obtenemos la URL base de la API desde las variables de entorno de Vite
-// import.meta.env → Variables de entorno disponibles en Vite
-// VITE_API_BASE → Se define en docker-compose.yml o .env
-// ?? "http://localhost:3000" → Valor por defecto si no está definida
-const API = import.meta.env.VITE_API_BASE ?? "http://localhost:3000";
-
-function toWsBaseUrl(httpBase: string): string {
-  if (httpBase.startsWith("https://")) {
-    return `wss://${httpBase.slice("https://".length)}`;
-  }
-  if (httpBase.startsWith("http://")) {
-    return `ws://${httpBase.slice("http://".length)}`;
-  }
-  return httpBase;
-}
+// La URL del backend se resuelve desde VITE_API_BASE o desde el host actual.
 
 type AppNotification = {
   id: string;
@@ -54,23 +41,15 @@ export default function App() {
   const [notifOpen, setNotifOpen] = useState(false);
   const [notifications, setNotifications] = useState<AppNotification[]>([]);
   const isPlayRoute = location.pathname.startsWith("/play");
-  const isProfileRoute = location.pathname.startsWith("/profile");
-  const isWideHubRoute =
-    isProfileRoute ||
-    location.pathname.startsWith("/tournament") ||
-    location.pathname.startsWith("/organizations") ||
-    isPlayRoute;
-  const isWidePanelRoute =
-    isProfileRoute ||
-    location.pathname.startsWith("/tournament") ||
-    location.pathname.startsWith("/organizations");
   const isHomeRoute = location.pathname === "/";
+  const isWideHubRoute = !isHomeRoute;
+  const isWidePanelRoute = !isHomeRoute && !isPlayRoute;
 
   // useEffect: Hook que ejecuta código cuando el componente se monta
   // [] → Array vacío significa que solo se ejecuta una vez al montar
   useEffect(() => {
     // Hacemos una petición HTTP al endpoint de health check
-    fetch(`${API}/api/health`)
+    fetch(`${BACKEND_URL}/api/health`)
       .then((r) => r.json())           // Convertimos la respuesta a JSON
       .then((j) => setHealth(JSON.stringify(j)))  // Convertimos el objeto a string y guardamos
       .catch(() => setHealth("(error)"));  // Si falla, mostramos "(error)"
@@ -85,7 +64,7 @@ export default function App() {
     const token = localStorage.getItem("authToken");
     if (!token) return;
 
-    const ws = new WebSocket(`${toWsBaseUrl(API)}/ws?token=${encodeURIComponent(token)}`);
+    const ws = new WebSocket(`${BACKEND_WS_URL}/ws?token=${encodeURIComponent(token)}`);
 
     ws.onmessage = (event) => {
       try {
@@ -100,7 +79,7 @@ export default function App() {
           match_invite_received: t("MATCH_INVITE_RECEIVED"),
           match_invite_accepted: t("MATCH_INVITE_ACCEPTED"),
           match_invite_rejected: t("MATCH_INVITE_REJECTED"),
-          tournament_match_ready: "Tu partida de torneo esta lista",
+          tournament_match_ready: t("WS_tournament_match_ready"),
         };
 
         if (!messages[payload.event]) return;
@@ -181,7 +160,22 @@ export default function App() {
                     )}
                   </div>
                   <LanguageSwitcher />
-                  <NavLink className={({ isActive }) => `nav-link${isActive ? " nav-link-active" : ""}`} to="/profile">{t("PROFILE")}: {user.username}</NavLink>
+                  <NavLink className={({ isActive }) => `nav-link${isActive ? " nav-link-active" : ""}`} to="/profile" style={{ display: "flex", alignItems: "center", gap: "8px", padding: "4px 12px 4px 4px" }}>
+                    {user.avatarUrl ? (
+                      <img 
+                        src={resolveBackendAssetUrl(user.avatarUrl) || ""} 
+                        alt={user.username} 
+                        style={{ width: "28px", height: "28px", borderRadius: "50%", objectFit: "cover" }} 
+                      />
+                    ) : (
+                      <div style={{ width: "28px", height: "28px", borderRadius: "50%", background: "rgba(255,255,255,0.1)", display: "flex", alignItems: "center", justifyContent: "center" }}>
+                        <svg viewBox="0 0 24 24" fill="currentColor" width="18" height="18">
+                          <path d="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z"/>
+                        </svg>
+                      </div>
+                    )}
+                    <span>{user.username}</span>
+                  </NavLink>
                   <button className="btn btn-outline" onClick={logout}>{t("LOGOUT")}</button>
                 </>
               ) : (
@@ -239,7 +233,7 @@ export default function App() {
         </main>
 
         <footer className={`footer${isHomeRoute ? " footer-home" : ""}`}>
-          <div>Transcendence Project</div>
+          <div>{t("TRANSCENDENCE_PROJECT")}</div>
           <div>
             <Link to="/privacy">{t("Privacy Policy")}</Link>
             {" · "}

@@ -2,8 +2,7 @@ import { FormEvent, useCallback, useEffect, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
-
-const API = import.meta.env.VITE_API_BASE ?? "http://localhost:3000";
+import { BACKEND_URL } from "../lib/backend";
 
 type TournamentPermissions = {
   canManage: boolean;
@@ -113,7 +112,7 @@ export default function Tournament() {
     if (!token || !authHeaders) return;
     setLoadingList(true);
     try {
-      const response = await fetch(`${API}/api/tournament`, { headers: authHeaders });
+      const response = await fetch(`${BACKEND_URL}/api/tournament`, { headers: authHeaders });
       const data = await response.json();
       if (!response.ok) {
         setMessage({ type: "error", text: data.error ?? t("TOURNAMENT_LIST_LOAD_ERROR") });
@@ -141,7 +140,7 @@ export default function Tournament() {
     if (!token || !authHeaders) return;
     setLoadingDetail(true);
     try {
-      const response = await fetch(`${API}/api/tournament/${tournamentId}`, { headers: authHeaders });
+      const response = await fetch(`${BACKEND_URL}/api/tournament/${tournamentId}`, { headers: authHeaders });
       const data = await response.json();
       if (!response.ok) {
         setMessage({ type: "error", text: data.error ?? t("TOURNAMENT_DETAIL_LOAD_ERROR") });
@@ -190,7 +189,7 @@ export default function Tournament() {
     setMessage(null);
 
     try {
-      const response = await fetch(`${API}/api/tournament`, {
+      const response = await fetch(`${BACKEND_URL}/api/tournament`, {
         method: "POST",
         headers: {
           ...authHeaders,
@@ -225,7 +224,7 @@ export default function Tournament() {
 
     try {
       const hasPayload = payload !== undefined;
-      const response = await fetch(`${API}${path}`, {
+      const response = await fetch(`${BACKEND_URL}${path}`, {
         method: "POST",
         headers: hasPayload
           ? {
@@ -267,7 +266,7 @@ export default function Tournament() {
     setMessage(null);
 
     try {
-      const response = await fetch(`${API}/api/tournament/${detail.tournament.id}`, {
+      const response = await fetch(`${BACKEND_URL}/api/tournament/${detail.tournament.id}`, {
         method: "PUT",
         headers: {
           ...authHeaders,

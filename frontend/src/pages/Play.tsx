@@ -10,18 +10,7 @@ import GameView from "../components/GameView";
 import Matchmaking from "../components/Matchmaking";
 import SettingsPanel from "../components/SettingsPanel";
 import { useAuth } from "../context/AuthContext";
-
-const API = import.meta.env.VITE_API_BASE ?? "http://localhost:3000";
-
-function toWsBaseUrl(httpBase: string): string {
-  if (httpBase.startsWith("https://")) {
-    return `wss://${httpBase.slice("https://".length)}`;
-  }
-  if (httpBase.startsWith("http://")) {
-    return `ws://${httpBase.slice("http://".length)}`;
-  }
-  return httpBase;
-}
+import { BACKEND_URL, BACKEND_WS_URL } from "../lib/backend";
 
 type GameRoomStatus = {
   roomId: string;
@@ -117,7 +106,7 @@ export default function Play() {
     setMessage(null);
 
     try {
-      const response = await fetch(`${API}/api/game/room/${encodeURIComponent(matchContext.roomId)}/join`, {
+      const response = await fetch(`${BACKEND_URL}/api/game/room/${encodeURIComponent(matchContext.roomId)}/join`, {
         method: "POST",
         headers: {
           Authorization: `Bearer ${token}`,
@@ -133,7 +122,7 @@ export default function Play() {
 
       // Fetch room status after joining
       const statusResponse = await fetch(
-        `${API}/api/game/room/${encodeURIComponent(matchContext.roomId)}/status`,
+        `${BACKEND_URL}/api/game/room/${encodeURIComponent(matchContext.roomId)}/status`,
         {
           headers: {
             Authorization: `Bearer ${token}`,
@@ -144,6 +133,7 @@ export default function Play() {
       const statusData: GameRoomStatus = await statusResponse.json();
       if (statusResponse.ok) {
         setRoomStatus(statusData);
+        setIsReady(statusData.players.you.ready);
       }
     } catch (error) {
       setMessage({ type: "error", text: t("JOIN_ROOM_CONNECTION_ERROR") });
@@ -164,7 +154,7 @@ export default function Play() {
     const interval = setInterval(async () => {
       try {
         const response = await fetch(
-          `${API}/api/game/room/${encodeURIComponent(matchContext.roomId)}/status`,
+          `${BACKEND_URL}/api/game/room/${encodeURIComponent(matchContext.roomId)}/status`,
           {
             headers: {
               Authorization: `Bearer ${token}`,
@@ -188,7 +178,7 @@ export default function Play() {
   useEffect(() => {
     if (!token || !matchContext) return;
 
-    const ws = new WebSocket(`${toWsBaseUrl(API)}/ws?token=${encodeURIComponent(token)}`);
+    const ws = new WebSocket(`${BACKEND_WS_URL}/ws?token=${encodeURIComponent(token)}`);
 
     ws.onmessage = (event) => {
       try {
@@ -203,7 +193,7 @@ export default function Play() {
           if (payload.data?.roomId === matchContext.roomId) {
             // Refetch status
             fetch(
-              `${API}/api/game/room/${encodeURIComponent(matchContext.roomId)}/status`,
+              `${BACKEND_URL}/api/game/room/${encodeURIComponent(matchContext.roomId)}/status`,
               {
                 headers: {
                   Authorization: `Bearer ${token}`,
@@ -235,6 +225,12 @@ export default function Play() {
     };
   }, [isActiveMatchView]);
 
+  useEffect(() => {
+    if (roomStatus?.gameStarted) {
+      setMessage(null);
+    }
+  }, [roomStatus?.gameStarted]);
+
   const markReady = async () => {
     if (!matchContext || !token || isReady) return;
 
@@ -243,7 +239,7 @@ export default function Play() {
 
     try {
       const response = await fetch(
-        `${API}/api/game/room/${encodeURIComponent(matchContext.roomId)}/ready`,
+        `${BACKEND_URL}/api/game/room/${encodeURIComponent(matchContext.roomId)}/ready`,
         {
           method: "POST",
           headers: {
@@ -278,10 +274,7 @@ export default function Play() {
   };
 
   if (!matchContext) {
-    const localShellClassName =
-      localView === "lobby" || localView === "menu" || localView === "settings" || localView === "controls"
-        ? "app-container play-route-shell play-route-shell-center"
-        : "app-container play-route-shell";
+    const localShellClassName = "play-route-shell play-route-shell-center";
 
     return (
       <div className={localShellClassName}>
@@ -400,7 +393,7 @@ export default function Play() {
     <div className="app-container play-route-shell">
       {matchContext ? (
         <>
-          {message && (
+          {message && !roomStatus?.gameStarted && (
             <div
               style={{
                 marginBottom: 12,
@@ -416,7 +409,7 @@ export default function Play() {
             </div>
           )}
 
-          {roomStatus && !(isTournamentMatch && roomStatus.gameStarted) ? (
+          {roomStatus && !roomStatus.gameStarted ? (
             <div className="play-status-card">
               <div>
                 <strong style={{ display: "block", marginBottom: 4 }}>
@@ -472,7 +465,7 @@ export default function Play() {
                 </div>
               )}
             </div>
-          ) : (
+          ) : !roomStatus?.gameStarted ? (
             <div
               className="play-status-card"
               style={{
@@ -484,7 +477,7 @@ export default function Play() {
             >
               {loading ? t("JOINING_ROOM") : t("PREPARING_MATCH")}
             </div>
-          )}
+          ) : null}
         </>
       ) : (
         <div className="play-status-empty">
@@ -503,6 +496,7 @@ export default function Play() {
           }}
           isMultiplayer
           multiplayerSide={roomStatus.players.you.side}
+          multiplayerOpponentUsername={roomStatus.players.opponent.username}
           roomId={roomStatus.roomId}
           joinInviteRoom
           waitForRealtimeReady

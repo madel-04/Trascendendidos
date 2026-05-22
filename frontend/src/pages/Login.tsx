@@ -1,8 +1,7 @@
 import { FormEvent, useEffect, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
-
-const API = import.meta.env.VITE_API_BASE ?? "http://localhost:3000";
+import { BACKEND_URL } from "../lib/backend";
 
 type OAuthProvider = {
   id: string;
@@ -35,7 +34,7 @@ export default function Login() {
   const [leavingTarget, setLeavingTarget] = useState<"/register" | null>(null);
 
   useEffect(() => {
-    fetch(`${API}/api/auth/oauth/providers`)
+    fetch(`${BACKEND_URL}/api/auth/oauth/providers`)
       .then((response) => response.ok ? response.json() : { providers: [] })
       .then((data) => setOauthProviders(Array.isArray(data.providers) ? data.providers : []))
       .catch(() => setOauthProviders([]));
@@ -76,7 +75,7 @@ export default function Login() {
   };
 
   const startOAuthLogin = (providerId: string) => {
-    window.location.href = `${API}/api/auth/oauth/${encodeURIComponent(providerId)}`;
+    window.location.href = `${BACKEND_URL}/api/auth/oauth/${encodeURIComponent(providerId)}`;
   };
 
   const getProviderForLogo = (providerKey: OAuthLogoButton["key"]) =>

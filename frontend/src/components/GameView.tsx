@@ -9,6 +9,7 @@ interface GameViewProps {
   onExit: () => void;
   isMultiplayer?: boolean;
   multiplayerSide?: 'left' | 'right';
+  multiplayerOpponentUsername?: string;
   roomId?: string;
   joinInviteRoom?: boolean;
   waitForRealtimeReady?: boolean;
@@ -20,7 +21,7 @@ interface GameViewProps {
   localPlayerSide?: 'left' | 'right';
 }
 
-const GameView: React.FC<GameViewProps> = ({ onExit, isMultiplayer, multiplayerSide, roomId, joinInviteRoom, waitForRealtimeReady, allowRematch = true, exitLabel, onStatusChange, settings, localControlMode = 'keyboard', localPlayerSide = 'right' }) => {
+const GameView: React.FC<GameViewProps> = ({ onExit, isMultiplayer, multiplayerSide, multiplayerOpponentUsername, roomId, joinInviteRoom, waitForRealtimeReady, allowRematch = true, exitLabel, onStatusChange, settings, localControlMode = 'keyboard', localPlayerSide = 'right' }) => {
   const { t } = useTranslation();
   const { user } = useAuth();
   const canvasRef = React.useRef<PongCanvasHandle | null>(null);
@@ -33,9 +34,14 @@ const GameView: React.FC<GameViewProps> = ({ onExit, isMultiplayer, multiplayerS
   const localResultRecorded = React.useRef(false);
   const isLocalMatch = !isMultiplayer;
   const playerUsername = user?.username ?? t('PLAYER');
+  const opponentUsername = multiplayerOpponentUsername?.trim() || t('OPPONENT');
   const localHumanSide = localPlayerSide;
-  const leftPlayerLabel = isMultiplayer ? t('PLAYER 1') : localHumanSide === 'left' ? playerUsername : t('BOT');
-  const rightPlayerLabel = isMultiplayer ? t('PLAYER 2') : localHumanSide === 'right' ? playerUsername : t('BOT');
+  const leftPlayerLabel = isMultiplayer
+    ? multiplayerSide === 'left' ? playerUsername : opponentUsername
+    : localHumanSide === 'left' ? playerUsername : t('BOT');
+  const rightPlayerLabel = isMultiplayer
+    ? multiplayerSide === 'right' ? playerUsername : opponentUsername
+    : localHumanSide === 'right' ? playerUsername : t('BOT');
   const leftPlayerHint = isMultiplayer
     ? t('W / S to move')
     : localHumanSide === 'left'

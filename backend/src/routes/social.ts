@@ -7,6 +7,7 @@ type UserRow = {
   username: string;
   display_name: string | null;
   avatar_url: string | null;
+  bio?: string | null;
 };
 
 type IdParams = { requestId: string };
@@ -26,7 +27,7 @@ const UsernameParamsSchema = z.object({
 
 async function findUserByUsername(username: string): Promise<UserRow | undefined> {
   const [user] = await query<UserRow>(
-    "SELECT id, username, display_name, avatar_url FROM users WHERE username = $1",
+    "SELECT id, username, display_name, avatar_url, bio FROM users WHERE username = $1",
     [username]
   );
   return user;
@@ -42,6 +43,63 @@ function toPublicUser(user: UserRow) {
 }
 
 export async function socialRoutes(app: FastifyInstance) {
+  app.get<{ Params: UsernameParams }>("/api/social/user/:username", {
+    onRequest: [app.authenticate],
+  }, async (request, reply) => {
+    try {
+      const currentUserId = (request.user as any).userId as number;
+      const { username } = UsernameParamsSchema.parse(request.params);
+      const targetUser = await findUserByUsername(username);
+
+      if (!targetUser) {
+        return reply.code(404).send({ error: "Usuario no encontrado" });
+      }
+
+      const [friend] = await query<{ exists: number }>(
+        `SELECT 1 AS exists
+         FROM friends
+         WHERE user_id = $1 AND friend_id = $2
+         LIMIT 1`,
+        [currentUserId, targetUser.id]
+      );
+
+      const [blockedByMe] = await query<{ exists: number }>(
+        `SELECT 1 AS exists
+         FROM blocks
+         WHERE blocker_id = $1 AND blocked_id = $2
+         LIMIT 1`,
+        [currentUserId, targetUser.id]
+      );
+
+      const [blockedMe] = await query<{ exists: number }>(
+        `SELECT 1 AS exists
+         FROM blocks
+         WHERE blocker_id = $1 AND blocked_id = $2
+         LIMIT 1`,
+        [targetUser.id, currentUserId]
+      );
+
+      return reply.send({
+        user: {
+          id: targetUser.id,
+          username: targetUser.username,
+          displayName: targetUser.display_name,
+          avatarUrl: targetUser.avatar_url,
+          bio: targetUser.bio ?? null,
+          isFriend: Boolean(friend),
+          blockedByMe: Boolean(blockedByMe),
+          blockedMe: Boolean(blockedMe),
+        },
+      });
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        return reply.code(400).send({ error: error.errors[0].message });
+      }
+      request.log.error(error, "Error cargando perfil publico");
+      return reply.code(500).send({ error: "Error interno del servidor" });
+    }
+  });
+
   app.get("/api/social/overview", {
     onRequest: [app.authenticate],
   }, async (request, reply) => {

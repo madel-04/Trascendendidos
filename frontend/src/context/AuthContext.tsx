@@ -1,9 +1,7 @@
 // ===== CONTEXTO DE AUTENTICACIÓN =====
 // Maneja el estado global del usuario autenticado
 import { createContext, useContext, useState, useEffect, ReactNode } from "react";
-
-// URL base de la API
-const API = import.meta.env.VITE_API_BASE ?? "http://localhost:3000";
+import { BACKEND_URL } from "../lib/backend";
 
 // ===== TIPOS =====
 interface User {
@@ -51,7 +49,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   // Obtener datos del usuario autenticado
   const fetchUser = async (authToken: string) => {
     try {
-      const response = await fetch(`${API}/api/auth/me`, {
+      const response = await fetch(`${BACKEND_URL}/api/auth/me`, {
         headers: {
           Authorization: `Bearer ${authToken}`,
         },
@@ -85,7 +83,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   // Login
   const login = async (email: string, password: string, twoFAToken?: string) => {
-    const response = await fetch(`${API}/api/auth/login`, {
+    const response = await fetch(`${BACKEND_URL}/api/auth/login`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ email, password, twoFAToken }),
@@ -105,7 +103,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   // Registro
   const register = async (email: string, password: string, username: string) => {
-    const response = await fetch(`${API}/api/auth/register`, {
+    const response = await fetch(`${BACKEND_URL}/api/auth/register`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ email, password, username }),

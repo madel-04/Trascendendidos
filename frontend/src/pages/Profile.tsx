@@ -2,10 +2,9 @@ import { FormEvent, useEffect, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 import SocialPanel from "../components/SocialPanel";
 import { useAuth } from "../context/AuthContext";
+import { BACKEND_URL, resolveBackendAssetUrl } from "../lib/backend";
 import { getLocalBotStats, type LocalBotStats } from "../utils/localGameStats";
 import { evaluatePasswordStrength } from "../utils/passwordStrength";
-
-const API = import.meta.env.VITE_API_BASE ?? "http://localhost:3000";
 
 type ProfileTab = "profile" | "security" | "matches" | "social";
 type StatsView = "multiplayer" | "local";
@@ -62,9 +61,7 @@ type LeaderboardPlayer = {
 };
 
 function resolveAvatarUrl(avatarUrl?: string | null): string | null {
-  if (!avatarUrl) return null;
-  if (avatarUrl.startsWith("http://") || avatarUrl.startsWith("https://")) return avatarUrl;
-  return `${API}${avatarUrl}`;
+  return resolveBackendAssetUrl(avatarUrl);
 }
 
 function statCard(label: string, value: string | number, color = "var(--ink-strong)") {
@@ -125,9 +122,9 @@ export default function Profile() {
       try {
         const headers = { Authorization: `Bearer ${token}` };
         const [statsResponse, historyResponse, leaderboardResponse] = await Promise.all([
-          fetch(`${API}/api/game/stats`, { headers }),
-          fetch(`${API}/api/game/history?limit=10`, { headers }),
-          fetch(`${API}/api/game/leaderboard?limit=10`, { headers }),
+          fetch(`${BACKEND_URL}/api/game/stats`, { headers }),
+          fetch(`${BACKEND_URL}/api/game/history?limit=10`, { headers }),
+          fetch(`${BACKEND_URL}/api/game/leaderboard?limit=10`, { headers }),
         ]);
 
         if (statsResponse.ok) setGameStats(await statsResponse.json());
@@ -163,7 +160,7 @@ export default function Profile() {
 
     setLoading(true);
     try {
-      const response = await fetch(`${API}/api/auth/profile`, {
+      const response = await fetch(`${BACKEND_URL}/api/auth/profile`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
         body: JSON.stringify({ username: username.trim(), displayName: displayName.trim() || undefined, bio: bio.trim() || undefined }),
@@ -194,7 +191,7 @@ export default function Profile() {
     try {
       const formData = new FormData();
       formData.append("avatar", avatarFile);
-      const response = await fetch(`${API}/api/auth/profile/avatar`, { method: "POST", headers: { Authorization: `Bearer ${token}` }, body: formData });
+      const response = await fetch(`${BACKEND_URL}/api/auth/profile/avatar`, { method: "POST", headers: { Authorization: `Bearer ${token}` }, body: formData });
       const data = await response.json();
       if (!response.ok) throw new Error(data.error || "No se pudo subir el avatar");
       setCurrentUser(data.user);
@@ -212,7 +209,7 @@ export default function Profile() {
     if (!token) return;
     setLoading(true);
     try {
-      const response = await fetch(`${API}/api/auth/profile/avatar`, { method: "DELETE", headers: { Authorization: `Bearer ${token}` } });
+      const response = await fetch(`${BACKEND_URL}/api/auth/profile/avatar`, { method: "DELETE", headers: { Authorization: `Bearer ${token}` } });
       const data = await response.json();
       if (!response.ok) throw new Error(data.error || "No se pudo eliminar el avatar");
       setCurrentUser(data.user);
@@ -236,7 +233,7 @@ export default function Profile() {
 
     setLoading(true);
     try {
-      const response = await fetch(`${API}/api/auth/password`, {
+      const response = await fetch(`${BACKEND_URL}/api/auth/password`, {
         method: "POST",
         headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
         body: JSON.stringify({ currentPassword, newPassword }),
@@ -259,7 +256,7 @@ export default function Profile() {
     setLoading(true);
     setMessage(null);
     try {
-      const response = await fetch(`${API}/api/auth/2fa/setup`, { method: "POST", headers: authHeaders });
+      const response = await fetch(`${BACKEND_URL}/api/auth/2fa/setup`, { method: "POST", headers: authHeaders });
       const data = await response.json();
       if (!response.ok) throw new Error(data.error || "Error al generar codigo QR");
       setQrCodeUrl(data.qrCodeUrl);
@@ -278,7 +275,7 @@ export default function Profile() {
     setLoading(true);
     setMessage(null);
     try {
-      const response = await fetch(`${API}/api/auth/2fa/enable`, {
+      const response = await fetch(`${BACKEND_URL}/api/auth/2fa/enable`, {
         method: "POST",
         headers: { "Content-Type": "application/json", ...authHeaders },
         body: JSON.stringify({ token: verificationCode }),
@@ -302,7 +299,7 @@ export default function Profile() {
     if (!authHeaders || !confirm("Quieres deshabilitar 2FA?")) return;
     setLoading(true);
     try {
-      const response = await fetch(`${API}/api/auth/2fa/disable`, { method: "POST", headers: authHeaders });
+      const response = await fetch(`${BACKEND_URL}/api/auth/2fa/disable`, { method: "POST", headers: authHeaders });
       const data = await response.json();
       if (!response.ok) throw new Error(data.error || "Error al deshabilitar 2FA");
       setTwoFAEnabled(false);
@@ -332,40 +329,64 @@ export default function Profile() {
     if (activeTab === "profile") {
       return (
         <form className="profile-panel" onSubmit={handleProfileSave}>
-          <p className="muted">Gestiona tu identidad publica, avatar y bio.</p>
-          <label className="auth-field">
-            <span className="auth-label">Email</span>
-            <input type="email" value={user?.email ?? ""} readOnly />
-          </label>
-          <label className="auth-field">
-            <span className="auth-label">{t("USERNAME")}</span>
-            <input value={username} onChange={(event) => setUsername(event.target.value)} minLength={3} maxLength={50} required />
-          </label>
-          <label className="auth-field">
-            <span className="auth-label">{t("DISPLAY_NAME")}</span>
-            <input value={displayName} onChange={(event) => setDisplayName(event.target.value)} maxLength={80} />
-          </label>
-          <label className="auth-field">
-            <span className="auth-label">{t("BIO")}</span>
-            <textarea value={bio} onChange={(event) => setBio(event.target.value)} maxLength={280} rows={4} />
-          </label>
-          <div className="profile-avatar-row">
-            {resolveAvatarUrl(avatarUrl) && <img src={resolveAvatarUrl(avatarUrl) ?? ""} alt="Avatar actual" />}
-            <span className="auth-label">{t("AVATAR_IMAGE")}</span>
-            <input type="file" accept="image/png,image/jpeg,image/webp,image/gif" onChange={(event) => setAvatarFile(event.target.files?.[0] ?? null)} />
+          <div className="profile-grid-2col">
+            <div style={{ display: "flex", flexDirection: "column", gap: "14px" }}>
+              <p className="muted">{t("MANAGE_IDENTITY")}</p>
+              <label className="auth-field">
+                <span className="auth-label">{t("EMAIL")}</span>
+                <input type="email" value={user?.email ?? ""} readOnly />
+              </label>
+              <label className="auth-field">
+                <span className="auth-label">{t("USERNAME")}</span>
+                <input value={username} onChange={(event) => setUsername(event.target.value)} minLength={3} maxLength={50} required />
+              </label>
+              <label className="auth-field">
+                <span className="auth-label">{t("DISPLAY_NAME")}</span>
+                <input value={displayName} onChange={(event) => setDisplayName(event.target.value)} maxLength={80} />
+              </label>
+            </div>
+            <div style={{ display: "flex", flexDirection: "column", gap: "14px", height: "100%" }}>
+              <label className="auth-field">
+                <span className="auth-label">{t("BIO")}</span>
+                <textarea value={bio} onChange={(event) => setBio(event.target.value)} maxLength={280} style={{ height: "86px", resize: "none" }} />
+              </label>
+
+              <div style={{ display: "flex", flexDirection: "column", gap: "6px", width: "100%" }}>
+                <span className="auth-label">{t("AVATAR_IMAGE")}</span>
+                <div style={{ display: "flex", gap: "16px", flexWrap: "wrap", alignItems: "stretch" }}>
+                  {resolveAvatarUrl(avatarUrl) ? (
+                    <img src={resolveAvatarUrl(avatarUrl) ?? ""} alt="Avatar actual" style={{ width: "124px", height: "124px", borderRadius: "14px", objectFit: "cover", border: "1px solid rgba(255, 255, 255, 0.16)" }} />
+                  ) : (
+                    <div style={{ width: "124px", height: "124px", borderRadius: "14px", border: "1px solid rgba(255, 255, 255, 0.16)", background: "rgba(255, 255, 255, 0.05)", display: "flex", alignItems: "center", justifyContent: "center" }}>
+                      <span style={{ color: "var(--ink-muted)", fontSize: "0.8rem" }}>Sin imagen</span>
+                    </div>
+                  )}
+                  <div style={{ display: "flex", flexDirection: "column", justifyContent: "space-between", flex: 1, minWidth: "220px", height: "124px" }}>
+                    <div style={{ position: "relative", width: "100%" }}>
+                      <input id="avatar-upload" type="file" accept="image/png,image/jpeg,image/webp,image/gif" onChange={(event) => setAvatarFile(event.target.files?.[0] ?? null)} style={{ display: "none" }} />
+                      <label htmlFor="avatar-upload" className="btn btn-outline" style={{ display: "block", textAlign: "center", cursor: "pointer", padding: "8px 10px", fontSize: "0.9rem", width: "100%", margin: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                        {avatarFile ? avatarFile.name : t("BROWSE")}
+                      </label>
+                    </div>
+                    <div className="split-actions" style={{ margin: 0 }}>
+                      <button className="btn btn-outline" type="button" onClick={handleAvatarUpload} disabled={loading || !avatarFile}>{t("UPLOAD_AVATAR")}</button>
+                      <button className="btn btn-outline" type="button" onClick={handleAvatarDelete} disabled={loading || !avatarUrl}>{t("DELETE_AVATAR")}</button>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
           </div>
-          <div className="split-actions">
-            <button className="btn-premium secondary" type="button" onClick={handleAvatarUpload} disabled={loading || !avatarFile}>{t("UPLOAD_AVATAR")}</button>
-            <button className="btn-premium tertiary" type="button" onClick={handleAvatarDelete} disabled={loading || !avatarUrl}>{t("DELETE_AVATAR")}</button>
+          <div style={{ marginTop: "24px" }}>
+            <button className="btn-premium" style={{ width: "100%" }} type="submit" disabled={loading || !!profileValidationError}>{t("SAVE_CHANGES")}</button>
           </div>
-          <button className="btn-premium" type="submit" disabled={loading || !!profileValidationError}>{t("SAVE_CHANGES")}</button>
         </form>
       );
     }
 
     if (activeTab === "security") {
       return (
-        <div className="profile-panel">
+        <div className="profile-panel profile-grid-2col">
           <form className="auth-form" onSubmit={handlePasswordChange}>
             <h2>{t("PASSWORD_SECURITY")}</h2>
             <input type="password" value={currentPassword} onChange={(event) => setCurrentPassword(event.target.value)} placeholder={t("CURRENT_PASSWORD")} required />
@@ -374,25 +395,41 @@ export default function Profile() {
               <div className="password-meter-track">
                 <div className={`password-meter-fill ${passwordStrength.level}`} style={{ width: `${(passwordStrength.score / passwordStrength.rules.length) * 100}%` }} />
               </div>
-              <div className="password-meter-label">Fortaleza: {passwordStrength.level === "strong" ? "Fuerte" : passwordStrength.level === "medium" ? "Media" : "Debil"}</div>
+              <p style={{ margin: "8px 0 0", fontSize: 12 }}>
+                {t("STRENGTH_LABEL")}:{" "}
+                <span
+                  style={{
+                    fontWeight: 700,
+                    color:
+                      passwordStrength.level === "strong"
+                        ? "#00ff9d"
+                        : passwordStrength.level === "medium"
+                        ? "#ffcc00"
+                        : "#ff3366",
+                  }}
+                >
+                  {t(`STRENGTH_LEVEL_${passwordStrength.level.toUpperCase()}`)}
+                </span>
+              </p>
             </div>
             <input type="password" value={confirmNewPassword} onChange={(event) => setConfirmNewPassword(event.target.value)} placeholder={t("CONFIRM_NEW_PASSWORD")} minLength={12} required />
             <button className="btn-premium" type="submit" disabled={loading}>{t("UPDATE_PASSWORD")}</button>
           </form>
 
-          <div className="profile-divider" />
-          <h2>Two-Factor Authentication</h2>
-          <p className="muted">Anade una capa extra de seguridad a tu cuenta.</p>
-          {!twoFAEnabled && !showSetup && <button className="btn-premium secondary" type="button" onClick={handleSetup2FA} disabled={loading}>{t("ENABLE_2FA")}</button>}
-          {!twoFAEnabled && showSetup && qrCodeUrl && (
-            <div className="profile-2fa-box">
-              <img src={qrCodeUrl} alt="QR Code for 2FA" />
-              <code>{secret}</code>
-              <input value={verificationCode} onChange={(event) => setVerificationCode(event.target.value.replace(/\D/g, "").slice(0, 6))} placeholder="000000" maxLength={6} />
-              <button className="btn-premium secondary" type="button" onClick={handleEnable2FA} disabled={loading || verificationCode.length !== 6}>Verificar y activar</button>
-            </div>
-          )}
-          {twoFAEnabled && <button className="btn-premium tertiary" type="button" onClick={handleDisable2FA} disabled={loading}>{t("DISABLE_2FA")}</button>}
+          <div style={{ padding: 24, border: "1px solid rgba(255, 255, 255, 0.16)", borderRadius: 12, background: "rgba(8, 10, 20, 0.45)" }}>
+            <h3 style={{ margin: "0 0 8px", fontSize: 16, color: "#fff" }}>{t("TWO_FACTOR_AUTH")}</h3>
+            <p style={{ margin: "0 0 20px", fontSize: 14, color: "var(--ink-muted)" }}>{t("2FA_DESC")}</p>
+            {!twoFAEnabled && !showSetup && <button className="btn-premium secondary" type="button" onClick={handleSetup2FA} disabled={loading}>{t("ENABLE_2FA")}</button>}
+            {!twoFAEnabled && showSetup && qrCodeUrl && (
+              <div className="profile-2fa-box">
+                <img src={qrCodeUrl} alt="QR Code for 2FA" />
+                <code>{secret}</code>
+                <input value={verificationCode} onChange={(event) => setVerificationCode(event.target.value.replace(/\D/g, "").slice(0, 6))} placeholder="000000" maxLength={6} />
+                <button className="btn-premium secondary" type="button" onClick={handleEnable2FA} disabled={loading || verificationCode.length !== 6}>Verificar y activar</button>
+              </div>
+            )}
+            {twoFAEnabled && <button className="btn-premium tertiary" type="button" onClick={handleDisable2FA} disabled={loading}>{t("DISABLE_2FA")}</button>}
+          </div>
         </div>
       );
     }
@@ -419,80 +456,117 @@ export default function Profile() {
               </button>
             ))}
           </div>
-          {loadingStats ? <p className="muted">Cargando estadisticas...</p> : (
+          {loadingStats ? <p className="muted">{t("LOADING_STATS")}</p> : (
             <div key={statsView} className="profile-subview profile-subview-enter">
               {statsView === "local" && (
-                <>
-                  <div className="profile-stats-grid">
-                    {statCard(t("GAMES_PLAYED"), localBotStats.totalPlayed)}
-                    {statCard(t("GAMES_WON"), localBotStats.wins, "#9bf2bd")}
-                    {statCard(t("GAMES_LOST"), localBotStats.losses, "#ff8da1")}
-                    {statCard("Rival", "Bot", "#f9cb28")}
-                  </div>
-
-                  <h3>{t("LOCAL_BOT_HISTORY")}</h3>
-                  {localBotStats.matches.length === 0 ? <p className="muted">Todavia no tienes partidas locales registradas en este navegador.</p> : (
-                    <div className="match-history-list">
-                      {localBotStats.matches.slice(0, 10).map((match) => (
-                        <article key={match.id} className={`match-history-card ${match.result}`}>
-                          <div><strong>{match.result.toUpperCase()} vs Bot</strong><span>{new Date(match.playedAt).toLocaleString()}</span></div>
-                          <p>Dificultad {match.difficulty} · Objetivo {match.targetScore} · Control {match.controlMode === "mouse" ? "raton" : "teclado"}</p>
-                        </article>
-                      ))}
+                <div className="profile-grid-2col">
+                  <div>
+                    <div className="profile-stats-grid">
+                      {statCard(t("GAMES_PLAYED"), localBotStats.totalPlayed)}
+                      {statCard(t("GAMES_WON"), localBotStats.wins, "#9bf2bd")}
+                      {statCard(t("GAMES_LOST"), localBotStats.losses, "#ff8da1")}
+                      {statCard(t("Rival"), t("Bot"), "#f9cb28")}
                     </div>
-                  )}
-                </>
+                  </div>
+                  <div>
+                    <h3>{t("LOCAL_BOT_HISTORY")}</h3>
+                    {localBotStats.matches.length === 0 ? <p className="muted">{t("NO_LOCAL_HISTORY")}</p> : (
+                      <div className="match-history-list">
+                        {localBotStats.matches.slice(0, 10).map((match) => (
+                          <article key={match.id} className={`match-history-card ${match.result}`}>
+                            <div><strong>{match.result.toUpperCase()} vs {t("Bot")}</strong><span>{new Date(match.playedAt).toLocaleString()}</span></div>
+                            <p>{t("DIFICULTAD")} {match.difficulty} · {t("OBJETIVO")} {match.targetScore} · {t("CONTROL")} {match.controlMode === "mouse" ? t("RATON") : t("TECLADO")}</p>
+                          </article>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                </div>
               )}
 
               {statsView === "multiplayer" && (
-                <>
-                  <div className="profile-stats-grid">
-                    {statCard(t("GAMES_PLAYED"), multiplayerSummary.totalPlayed)}
-                    {statCard("Ranking", gameStats?.ranking ? `#${gameStats.ranking}` : "Sin rank", "#9ef8ff")}
-                    {statCard("Rating", gameStats?.rating ?? 1000)}
-                    {statCard("Nivel", gameStats?.progression.level ?? 1, "#f9cb28")}
-                    {statCard("Win rate", `${gameStats?.winRate ?? 0}%`, "#9bf2bd")}
-                    {statCard(t("GAMES_WON"), gameStats?.wins ?? 0, "#9bf2bd")}
-                    {statCard(t("GAMES_LOST"), gameStats?.losses ?? 0, "#ff8da1")}
-                  </div>
-                  <div className="profile-progress">
-                    <div><strong>Progreso</strong><span>{gameStats?.progression.xp ?? 0} XP</span></div>
-                    <div className="profile-progress-track"><span style={{ width: `${levelProgress}%` }} /></div>
-                  </div>
-
-                  <h3>Achievements</h3>
-                  <div className="achievement-grid">
-                    {(gameStats?.achievements ?? []).map((achievement) => (
-                      <article key={achievement.key} className={`achievement-card ${achievement.unlocked ? "unlocked" : ""}`}>
-                        <strong>{achievement.unlocked ? "Unlocked" : "Locked"} · {achievement.title}</strong>
-                        <p>{achievement.description}</p>
-                        <span>{achievement.progress}/{achievement.target}</span>
-                      </article>
-                    ))}
-                  </div>
-
-                  <h3>Match history</h3>
-                  {matchHistory.length === 0 ? <p className="muted">Todavia no tienes partidas registradas.</p> : (
-                    <div className="match-history-list">
-                      {matchHistory.map((match) => (
-                        <article key={match.id} className={`match-history-card ${match.result}`}>
-                          <div><strong>{match.result.toUpperCase()} vs @{match.opponentUsername}</strong><span>{new Date(match.endedAt).toLocaleString()}</span></div>
-                          <p>1v1 · {match.reason} · {match.scoreFor} - {match.scoreAgainst}</p>
-                        </article>
+                <div className="profile-grid-2col">
+                  <div>
+                    <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 16, marginBottom: 24 }}>
+                      {[
+                        { label: "GAMES_PLAYED", value: multiplayerSummary.totalPlayed },
+                        { label: "GAMES_WON", value: multiplayerSummary.wins },
+                        { label: "GAMES_LOST", value: multiplayerSummary.losses },
+                      ].map(({ label, value }) => (
+                        <div key={label} style={{ textAlign: "center", padding: 16, border: "1px solid rgba(255, 255, 255, 0.12)", background: "rgba(255, 255, 255, 0.03)", borderRadius: 8 }}>
+                          <div style={{ fontSize: 12, textTransform: "uppercase", letterSpacing: "1px", color: "var(--ink-muted)", marginBottom: 8 }}>{t(label)}</div>
+                          <div style={{ fontSize: 24, fontWeight: 700, color: "var(--ink-strong)" }}>{value}</div>
+                        </div>
                       ))}
                     </div>
-                  )}
 
-                  <h3>Leaderboard</h3>
-                  <div className="leaderboard-list">
-                    {leaderboard.map((player) => (
-                      <div key={player.id} className={`leaderboard-row ${player.id === user?.id ? "me" : ""}`}>
-                        <strong>#{player.rank} @{player.username}</strong>
-                        <span>{player.rating} pts · Lvl {player.progression.level} · {player.wins}/{player.losses} · {player.winRate}%</span>
+                    <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(130px, 1fr))", gap: 16, marginBottom: 32 }}>
+                      {[
+                        { label: "RANKING", value: gameStats?.ranking ? `#${gameStats.ranking}` : t("NO_RANK") },
+                        { label: "RATING", value: Math.floor(gameStats?.rating ?? 1000) },
+                        { label: "LEVEL", value: gameStats?.progression.level ?? 1 },
+                        { label: "WIN_RATE", value: `${Math.round(gameStats?.winRate ?? 0)}%` },
+                      ].map(({ label, value }) => (
+                        <div key={label} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "12px 16px", border: "1px solid rgba(255, 255, 255, 0.08)", background: "rgba(255, 255, 255, 0.02)", borderRadius: 8 }}>
+                          <span style={{ fontSize: 12, color: "var(--ink-muted)" }}>{t(label)}</span>
+                          <span style={{ fontSize: 14, fontWeight: 700, color: "var(--ink-strong)" }}>{value}</span>
+                        </div>
+                      ))}
+                    </div>
+
+                    <div style={{ marginBottom: 32 }}>
+                      <h3 style={{ margin: "0 0 16px", fontSize: 15, color: "var(--ink-strong)", borderLeft: "3px solid #00f0ff", paddingLeft: 12 }}>{t("ACHIEVEMENTS")}</h3>
+                      <div className="achievement-grid">
+                        {(gameStats?.achievements ?? []).map((achievement) => (
+                          <div key={achievement.key} style={{ display: "flex", gap: 16, padding: 16, border: "1px solid rgba(255, 255, 255, 0.08)", background: achievement.unlocked ? "rgba(0, 240, 255, 0.04)" : "rgba(255, 255, 255, 0.02)", borderRadius: 12, opacity: achievement.unlocked ? 1 : 0.6 }}>
+                            <div style={{ fontSize: 24 }}>{achievement.unlocked ? "🏆" : "🔒"}</div>
+                            <div style={{ flex: 1 }}>
+                              <p style={{ margin: "0 0 4px", fontSize: 14, color: "var(--ink-strong)" }}>
+                                <strong>{t(achievement.unlocked ? "ACHIEVEMENTS_UNLOCKED" : "ACHIEVEMENTS_LOCKED")} · {t(`ACHIEVEMENT_${achievement.key}_TITLE`)}</strong>
+                              </p>
+                              <p style={{ margin: "0 0 10px", fontSize: 13, color: "var(--ink-muted)", lineHeight: 1.4 }}>{t(`ACHIEVEMENT_${achievement.key}_DESC`)}</p>
+                              <div style={{ height: 4, background: "rgba(255,255,255,0.06)", borderRadius: 2, overflow: "hidden" }}>
+                                <div style={{ height: "100%", width: `${(achievement.progress / achievement.target) * 100}%`, background: achievement.unlocked ? "#00f0ff" : "var(--ink-muted)" }} />
+                              </div>
+                              <div style={{ display: "flex", justifyContent: "space-between", marginTop: 4, fontSize: 10, color: "var(--ink-muted)", textTransform: "uppercase" }}>
+                                <span>{t("PROGRESS")}</span>
+                                <span>{achievement.progress} / {achievement.target}</span>
+                              </div>
+                            </div>
+                          </div>
+                        ))}
                       </div>
-                    ))}
+                    </div>
                   </div>
-                </>
+
+                  <div style={{ display: "flex", flexDirection: "column", gap: "24px" }}>
+                    <div>
+                      <h3 style={{ margin: "0 0 16px", fontSize: 15, color: "var(--ink-strong)", borderLeft: "3px solid #00f0ff", paddingLeft: 12 }}>{t("MATCH_HISTORY")}</h3>
+                      {matchHistory.length === 0 ? <p style={{ margin: 0, fontSize: 14, color: "var(--ink-muted)" }}>{t("NO_MATCH_HISTORY")}</p> : (
+                        <div className="match-history-list">
+                          {matchHistory.map((match) => (
+                            <article key={match.id} className={`match-history-card ${match.result}`}>
+                              <div><strong>{match.result.toUpperCase()} vs @{match.opponentUsername}</strong><span>{new Date(match.endedAt).toLocaleString()}</span></div>
+                              <p style={{ margin: "12px 0 6px", fontSize: 13, color: "var(--ink-muted)" }}>1v1 · {match.reason} · {match.scoreFor} - {match.scoreAgainst}</p>
+                            </article>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+
+                    <div>
+                      <h3>{t("LEADERBOARD")}</h3>
+                      <div className="leaderboard-list">
+                        {leaderboard.map((player) => (
+                          <div key={player.id} className={`leaderboard-row ${player.id === user?.id ? "me" : ""}`}>
+                            <strong>#{player.rank} @{player.username}</strong>
+                            <span>{player.rating} pts · Lvl {player.progression.level} · {player.wins}/{player.losses} · {player.winRate}%</span>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  </div>
+                </div>
               )}
             </div>
           )}
@@ -504,7 +578,7 @@ export default function Profile() {
   })();
 
   return (
-    <section className="glass-panel play-hub-panel play-hub-panel-enter page-hub-panel profile-shell">
+    <section className="glass-panel play-hub-panel play-hub-panel-enter page-hub-panel profile-hub-shell">
       <div className="page-hub-layout page-stack">
         <h1 className="page-title">{t("PROFILE")}</h1>
 
@@ -530,3 +604,4 @@ export default function Profile() {
     </section>
   );
 }
+

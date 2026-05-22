@@ -1,8 +1,8 @@
 import { FormEvent, useEffect, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { useAuth } from "../context/AuthContext";
-
-const API = import.meta.env.VITE_API_BASE ?? "http://localhost:3000";
+import OrganizationChatPanel from "../components/OrganizationChatPanel";
+import { BACKEND_URL } from "../lib/backend";
 
 type OrganizationRole = "owner" | "admin" | "member";
 type JoinRequestStatus = "pending" | "approved" | "rejected" | "cancelled" | null;
@@ -154,7 +154,7 @@ export default function Organizations() {
     if (nextOwnerFilter.trim()) params.set("ownerUsername", nextOwnerFilter.trim());
     if (nextRequestStatusFilter !== "all") params.set("requestStatus", nextRequestStatusFilter);
 
-    const response = await fetch(`${API}/api/organizations?${params.toString()}`, {
+    const response = await fetch(`${BACKEND_URL}/api/organizations?${params.toString()}`, {
       headers: { Authorization: `Bearer ${token}` },
     });
     const json = await response.json();
@@ -179,7 +179,7 @@ export default function Organizations() {
       order: "desc",
     });
 
-    const response = await fetch(`${API}/api/organizations?${params.toString()}`, {
+    const response = await fetch(`${BACKEND_URL}/api/organizations?${params.toString()}`, {
       headers: { Authorization: `Bearer ${token}` },
     });
     const json = await response.json();
@@ -191,7 +191,7 @@ export default function Organizations() {
   async function loadOrganizationDetail(organizationId: number) {
     if (!token) return;
 
-    const response = await fetch(`${API}/api/organizations/${organizationId}`, {
+    const response = await fetch(`${BACKEND_URL}/api/organizations/${organizationId}`, {
       headers: { Authorization: `Bearer ${token}` },
     });
     const json = await response.json();
@@ -256,7 +256,7 @@ export default function Organizations() {
 
     const loadChatMessages = async () => {
       try {
-        const response = await fetch(`${API}/api/organizations/${selectedOrganizationId}/messages?limit=50`, {
+        const response = await fetch(`${BACKEND_URL}/api/organizations/${selectedOrganizationId}/messages?limit=50`, {
           headers: { Authorization: `Bearer ${token}` },
         });
         const json = await response.json();
@@ -296,7 +296,7 @@ export default function Organizations() {
     setLoading(true);
     setMessage(null);
     try {
-      const response = await fetch(`${API}/api/organizations`, {
+      const response = await fetch(`${BACKEND_URL}/api/organizations`, {
         method: "POST",
         headers: {
           Authorization: `Bearer ${token}`,
@@ -329,7 +329,7 @@ export default function Organizations() {
     setLoading(true);
     setMessage(null);
     try {
-      const response = await fetch(`${API}/api/organizations/${organizationId}/apply`, {
+      const response = await fetch(`${BACKEND_URL}/api/organizations/${organizationId}/apply`, {
         method: "POST",
         headers: { Authorization: `Bearer ${token}` },
       });
@@ -355,7 +355,7 @@ export default function Organizations() {
     setLoading(true);
     setMessage(null);
     try {
-      const response = await fetch(`${API}/api/organizations/${selectedOrganization.id}/leave`, {
+      const response = await fetch(`${BACKEND_URL}/api/organizations/${selectedOrganization.id}/leave`, {
         method: "DELETE",
         headers: { Authorization: `Bearer ${token}` },
       });
@@ -380,7 +380,7 @@ export default function Organizations() {
     setLoading(true);
     setMessage(null);
     try {
-      const response = await fetch(`${API}/api/organizations/${selectedOrganizationId}`, {
+      const response = await fetch(`${BACKEND_URL}/api/organizations/${selectedOrganizationId}`, {
         method: "PUT",
         headers: {
           Authorization: `Bearer ${token}`,
@@ -412,7 +412,7 @@ export default function Organizations() {
     setLoading(true);
     setMessage(null);
     try {
-      const response = await fetch(`${API}/api/organizations/${selectedOrganizationId}/members/${member.userId}`, {
+      const response = await fetch(`${BACKEND_URL}/api/organizations/${selectedOrganizationId}/members/${member.userId}`, {
         method: "PATCH",
         headers: {
           Authorization: `Bearer ${token}`,
@@ -442,7 +442,7 @@ export default function Organizations() {
     setLoading(true);
     setMessage(null);
     try {
-      const response = await fetch(`${API}/api/organizations/${selectedOrganizationId}/members/${member.userId}`, {
+      const response = await fetch(`${BACKEND_URL}/api/organizations/${selectedOrganizationId}/members/${member.userId}`, {
         method: "DELETE",
         headers: { Authorization: `Bearer ${token}` },
       });
@@ -467,7 +467,7 @@ export default function Organizations() {
     setLoading(true);
     setMessage(null);
     try {
-      const response = await fetch(`${API}/api/organizations/${selectedOrganizationId}/requests/${requestItem.userId}/${action}`, {
+      const response = await fetch(`${BACKEND_URL}/api/organizations/${selectedOrganizationId}/requests/${requestItem.userId}/${action}`, {
         method: "POST",
         headers: { Authorization: `Bearer ${token}` },
       });
@@ -496,7 +496,7 @@ export default function Organizations() {
 
     setChatLoading(true);
     try {
-      const response = await fetch(`${API}/api/organizations/${selectedOrganizationId}/messages`, {
+      const response = await fetch(`${BACKEND_URL}/api/organizations/${selectedOrganizationId}/messages`, {
         method: "POST",
         headers: {
           Authorization: `Bearer ${token}`,
@@ -654,42 +654,14 @@ export default function Organizations() {
               </div>
             </div>
 
-            <div className="profile-panel">
-              <div className="organization-head">
-                <div>
-                  <h2>Chat</h2>
-                  <p>Habla con los miembros de la organizacion.</p>
-                </div>
-                <span>{chatMessages.length} mensajes</span>
-              </div>
-              <div className="organization-chat-list">
-                {chatMessages.length === 0 ? (
-                  <p className="muted">Todavia no hay mensajes en esta organizacion.</p>
-                ) : (
-                  chatMessages.map((chatMessage) => (
-                    <article key={chatMessage.id} className="organization-chat-message">
-                      <div className="organization-chat-message-head">
-                        <strong>@{chatMessage.author.username}</strong>
-                        <span>{formatDate(chatMessage.createdAt)}</span>
-                      </div>
-                      <p>{chatMessage.content}</p>
-                    </article>
-                  ))
-                )}
-              </div>
-              <form className="organization-chat-form" onSubmit={handleSendChatMessage}>
-                <textarea
-                  value={chatDraft}
-                  onChange={(event) => setChatDraft(event.target.value)}
-                  rows={3}
-                  maxLength={1000}
-                  placeholder="Escribe un mensaje para la organizacion"
-                />
-                <button className="btn-premium" type="submit" disabled={chatLoading || !chatDraft.trim()}>
-                  {chatLoading ? "Enviando..." : "Enviar mensaje"}
-                </button>
-              </form>
-            </div>
+            <OrganizationChatPanel
+              messages={chatMessages}
+              draft={chatDraft}
+              loading={chatLoading}
+              onDraftChange={setChatDraft}
+              onSubmit={handleSendChatMessage}
+              formatDate={formatDate}
+            />
 
             {canReviewRequests ? (
               <div className="profile-panel">

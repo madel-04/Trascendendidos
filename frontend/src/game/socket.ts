@@ -1,9 +1,8 @@
 import { io, Socket } from "socket.io-client";
-
-const API_BASE = import.meta.env.VITE_API_BASE ?? "http://localhost:3000";
+import { BACKEND_URL } from "../lib/backend";
 let lastAuthToken = localStorage.getItem("authToken") ?? "";
 
-export const socket: Socket = io(API_BASE, {
+export const socket: Socket = io(BACKEND_URL, {
   autoConnect: false,
   withCredentials: true,
   transports: ["polling"],
