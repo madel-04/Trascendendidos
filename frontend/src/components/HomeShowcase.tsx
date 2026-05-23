@@ -7,12 +7,24 @@ type Vec2 = {
   y: number;
 };
 
+const showcaseLanguages = ["es", "en", "it"] as const;
+
 export default function HomeShowcase() {
   const navigate = useNavigate();
   const { t } = useTranslation();
   const canvasRef = React.useRef<HTMLCanvasElement | null>(null);
   const timeoutRef = React.useRef<number | null>(null);
   const [isLeaving, setIsLeaving] = React.useState(false);
+  const [showcaseLanguageIndex, setShowcaseLanguageIndex] = React.useState(0);
+  const showcaseLanguage = showcaseLanguages[showcaseLanguageIndex];
+
+  React.useEffect(() => {
+    const interval = window.setInterval(() => {
+      setShowcaseLanguageIndex((current) => (current + 1) % showcaseLanguages.length);
+    }, 5000);
+
+    return () => window.clearInterval(interval);
+  }, []);
 
   React.useEffect(() => {
     const canvas = canvasRef.current;
@@ -281,9 +293,13 @@ export default function HomeShowcase() {
         <div className="home-showcase-content">
           <div className="home-showcase-kicker">{t("HOME_SHOWCASE_KICKER")}</div>
           <h1 className="home-showcase-title">{t("NEON_PONG")}</h1>
-          <p className="home-showcase-copy">{t("HOME_SHOWCASE_COPY")}</p>
+          <p key={`copy-${showcaseLanguage}`} className="home-showcase-copy home-showcase-language-swap">
+            {t("HOME_SHOWCASE_COPY", { lng: showcaseLanguage })}
+          </p>
           <button className="btn home-showcase-cta" type="button" onClick={handlePlay}>
-            {t("PLAY")}
+            <span key={`cta-${showcaseLanguage}`} className="home-showcase-language-swap">
+              {t("PLAY", { lng: showcaseLanguage })}
+            </span>
           </button>
         </div>
       </div>

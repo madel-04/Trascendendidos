@@ -630,6 +630,11 @@ body.play-active-session .content-wrap-play {
   color: rgba(232, 238, 255, 0.82);
 }
 
+.home-showcase-language-swap {
+  display: inline-block;
+  animation: home-language-swap 0.72s cubic-bezier(0.2, 0.82, 0.2, 1) both;
+}
+
 .home-showcase-cta {
   min-width: min(280px, 100%);
   min-height: 52px;
@@ -651,6 +656,23 @@ body.play-active-session .content-wrap-play {
     opacity: 0;
     transform: translateY(22px) scale(0.96);
     filter: blur(8px);
+  }
+  100% {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+    filter: blur(0);
+  }
+}
+
+@keyframes home-language-swap {
+  0% {
+    opacity: 0;
+    transform: translateY(12px) scale(0.98);
+    filter: blur(8px);
+  }
+  58% {
+    opacity: 1;
+    filter: blur(0);
   }
   100% {
     opacity: 1;
