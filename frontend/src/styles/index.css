@@ -616,9 +616,14 @@ h4 {
 .game-pause-button {
   position: absolute;
   top: clamp(12px, 2vw, 20px);
-  right: clamp(12px, 2vw, 20px);
+  left: 50%;
+  transform: translateX(-50%);
   z-index: 9;
   min-width: 110px;
+}
+
+.game-pause-button:hover {
+  transform: translateX(-50%) translateY(0);
 }
 
 .game-overlay {

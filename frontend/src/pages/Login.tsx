@@ -1,8 +1,8 @@
 import { FormEvent, useEffect, useRef, useState } from "react";
+import { useTranslation } from "react-i18next";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
-
-const API = import.meta.env.VITE_API_BASE ?? "http://localhost:3000";
+import { BACKEND_URL } from "../lib/backend";
 
 type OAuthProvider = {
   id: string;
@@ -22,6 +22,7 @@ const OAUTH_LOGO_BUTTONS: OAuthLogoButton[] = [
 ];
 
 export default function Login() {
+  const { t } = useTranslation();
   const { login } = useAuth();
   const navigate = useNavigate();
   const timeoutRef = useRef<number | null>(null);
@@ -35,7 +36,7 @@ export default function Login() {
   const [leavingTarget, setLeavingTarget] = useState<"/register" | null>(null);
 
   useEffect(() => {
-    fetch(`${API}/api/auth/oauth/providers`)
+    fetch(`${BACKEND_URL}/api/auth/oauth/providers`)
       .then((response) => response.ok ? response.json() : { providers: [] })
       .then((data) => setOauthProviders(Array.isArray(data.providers) ? data.providers : []))
       .catch(() => setOauthProviders([]));
@@ -66,9 +67,9 @@ export default function Login() {
     } catch (err: any) {
       if (err.message.includes("2FA")) {
         setRequires2FA(true);
-        setError("Ingresa tu codigo 2FA");
+        setError(t("ENTER_2FA_CODE"));
       } else {
-        setError(err.message || "Error en el login");
+        setError(err.message || t("LOGIN_ERROR"));
       }
     } finally {
       setLoading(false);
@@ -76,7 +77,7 @@ export default function Login() {
   };
 
   const startOAuthLogin = (providerId: string) => {
-    window.location.href = `${API}/api/auth/oauth/${encodeURIComponent(providerId)}`;
+    window.location.href = `${BACKEND_URL}/api/auth/oauth/${encodeURIComponent(providerId)}`;
   };
 
   const getProviderForLogo = (providerKey: OAuthLogoButton["key"]) =>
@@ -92,23 +93,23 @@ export default function Login() {
         <div className="auth-hub-inner">
           <div className="auth-card auth-card-hub">
             <div className="auth-hub-copy auth-hub-copy-left">
-              <h1 className="title-glow auth-hub-title">INICIAR SESION</h1>
-              <p className="auth-hub-subtitle">Entra sin salir del mismo entorno visual del juego y continua directamente hacia el menu principal.</p>
+              <h1 className="title-glow auth-hub-title">{t("LOGIN")}</h1>
+              <p className="auth-hub-subtitle">{t("LOGIN_SUBTITLE")}</p>
             </div>
             <form onSubmit={handleSubmit} className="auth-form">
               <div className="auth-field">
-                <label className="auth-label" htmlFor="email">Email</label>
+                <label className="auth-label" htmlFor="email">{t("EMAIL")}</label>
                 <input className="auth-input" id="email" type="email" value={email} onChange={(e) => setEmail(e.target.value)} required />
               </div>
 
               <div className="auth-field">
-                <label className="auth-label" htmlFor="password">Password</label>
+                <label className="auth-label" htmlFor="password">{t("PASSWORD")}</label>
                 <input className="auth-input" id="password" type="password" value={password} onChange={(e) => setPassword(e.target.value)} required />
               </div>
 
               {requires2FA ? (
                 <div className="auth-field">
-                  <label className="auth-label" htmlFor="twoFAToken">2FA Code</label>
+                  <label className="auth-label" htmlFor="twoFAToken">{t("2FA_CODE")}</label>
                   <input
                     className="auth-input"
                     id="twoFAToken"
@@ -125,22 +126,22 @@ export default function Login() {
               {error ? <div className="auth-error">{error}</div> : null}
 
               <button className="btn-premium auth-submit" type="submit" disabled={loading}>
-                {loading ? "CARGANDO..." : "INICIAR SESION"}
+                {loading ? t("LOADING") : t("LOGIN")}
               </button>
             </form>
 
             <p className="auth-linkline">
-              Aun no tienes cuenta?{" "}
+              {t("NO_ACCOUNT_YET")}{" "}
               <button className="auth-inline-link" type="button" onClick={() => handleSoftNavigate("/register")}>
-                Registrate aqui
+                {t("REGISTER_HERE")}
               </button>
             </p>
           </div>
 
           <div className="auth-brand-panel">
             <div className="auth-brand-copy">
-              <h2>Accesos disponibles</h2>
-              <p>Accede con email y password o entra desde uno de los proveedores ya conectados.</p>
+              <h2>{t("AVAILABLE_LOGINS")}</h2>
+              <p>{t("LOGIN_BRAND_DESC")}</p>
             </div>
             <div className="auth-brand-grid">
               {OAUTH_LOGO_BUTTONS.map((logoButton) => {
@@ -151,7 +152,7 @@ export default function Login() {
                     type="button"
                     className={`auth-brand-tile auth-brand-tile-button auth-brand-tile-${logoButton.key}${provider ? "" : " is-disabled"}`}
                     aria-label={logoButton.label}
-                    title={provider ? `Continuar con ${logoButton.label}` : `${logoButton.label} no disponible`}
+                    title={provider ? t("CONTINUE_WITH", { provider: logoButton.label }) : t("NOT_AVAILABLE", { provider: logoButton.label })}
                     onClick={() => {
                       if (provider) {
                         startOAuthLogin(provider.id);

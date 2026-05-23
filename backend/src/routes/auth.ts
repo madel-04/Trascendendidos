@@ -1,5 +1,5 @@
 // ===== RUTAS DE AUTENTICACIÓN =====
-import { FastifyInstance } from "fastify";
+import { FastifyInstance, FastifyRequest } from "fastify";
 import { z } from "zod";
 import QRCode from "qrcode";
 import { mkdir, unlink } from "fs/promises";
@@ -159,8 +159,26 @@ function getConfiguredOAuthProviders(): OAuthProviderConfig[] {
   return Object.values(OAUTH_PROVIDERS).filter((provider) => provider.clientId && provider.clientSecret);
 }
 
-function getFrontendOrigin(): string {
-  return env.FRONTEND_ORIGIN ?? env.CORS_ORIGIN.split(",")[0].trim();
+function getFrontendOrigin(request: FastifyRequest): string {
+  if (env.FRONTEND_ORIGIN) {
+    return env.FRONTEND_ORIGIN;
+  }
+
+  const originHeader = request.headers.origin;
+  if (typeof originHeader === "string" && originHeader.trim()) {
+    return originHeader.trim();
+  }
+
+  const refererHeader = request.headers.referer;
+  if (typeof refererHeader === "string" && refererHeader.trim()) {
+    try {
+      return new URL(refererHeader).origin;
+    } catch {
+      // Ignore malformed referer values and fall back to configured defaults.
+    }
+  }
+
+  return env.CORS_ORIGIN.split(",")[0].trim();
 }
 
 function getOAuthRedirectUri(request: any, provider: OAuthProvider): string {
@@ -168,8 +186,8 @@ function getOAuthRedirectUri(request: any, provider: OAuthProvider): string {
   return `${backendOrigin}/api/auth/oauth/${provider}/callback`;
 }
 
-function redirectWithOAuthError(reply: any, message: string) {
-  const url = new URL("/oauth/callback", getFrontendOrigin());
+function redirectWithOAuthError(request: FastifyRequest, reply: any, message: string) {
+  const url = new URL("/oauth/callback", getFrontendOrigin(request));
   url.searchParams.set("error", message);
   return reply.redirect(url.toString());
 }
@@ -460,24 +478,24 @@ export async function authRoutes(app: FastifyInstance) {
       const providerId = (request.params as { provider?: string }).provider as OAuthProvider;
       const provider = OAUTH_PROVIDERS[providerId];
       if (!provider || !provider.clientId || !provider.clientSecret) {
-        return redirectWithOAuthError(reply, "Proveedor OAuth no configurado");
+        return redirectWithOAuthError(request, reply, "Proveedor OAuth no configurado");
       }
 
       const queryParams = request.query as { code?: string; state?: string; error?: string };
       if (queryParams.error) {
-        return redirectWithOAuthError(reply, queryParams.error);
+        return redirectWithOAuthError(request, reply, queryParams.error);
       }
       if (!queryParams.code || !queryParams.state) {
-        return redirectWithOAuthError(reply, "Respuesta OAuth incompleta");
+        return redirectWithOAuthError(request, reply, "Respuesta OAuth incompleta");
       }
 
       const state = await app.jwt.verify<{ type?: string; provider?: string }>(queryParams.state);
       if (state.type !== "oauth-state" || state.provider !== providerId) {
-        return redirectWithOAuthError(reply, "Estado OAuth invalido");
+        return redirectWithOAuthError(request, reply, "Estado OAuth invalido");
       }
 
       if (!isRateLimitAllowed(`oauth-callback:${providerId}:${request.ip}`, 30, 60_000)) {
-        return redirectWithOAuthError(reply, "Demasiados intentos OAuth");
+        return redirectWithOAuthError(request, reply, "Demasiados intentos OAuth");
       }
 
       const accessToken = await exchangeOAuthCode(
@@ -489,12 +507,12 @@ export async function authRoutes(app: FastifyInstance) {
       const user = await findOrCreateOAuthUser(providerId, profile);
       const token = createAuthToken(app, user);
 
-      const redirectUrl = new URL("/oauth/callback", getFrontendOrigin());
+      const redirectUrl = new URL("/oauth/callback", getFrontendOrigin(request));
       redirectUrl.searchParams.set("token", token);
       return reply.redirect(redirectUrl.toString());
     } catch (error) {
       console.error("Error completando OAuth:", error);
-      return redirectWithOAuthError(reply, "No se pudo completar OAuth");
+      return redirectWithOAuthError(request, reply, "No se pudo completar OAuth");
     }
   });
 

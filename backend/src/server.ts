@@ -37,6 +37,39 @@ import type {
   SocketData,
 } from "./sockets/types.js";
 
+function normalizeOrigin(origin: string): string {
+  return origin.trim().replace(/\/+$/, "");
+}
+
+function getConfiguredOrigins(): Set<string> {
+  return new Set(
+    env.CORS_ORIGIN
+      .split(",")
+      .map((origin) => normalizeOrigin(origin))
+      .filter(Boolean)
+  );
+}
+
+function isAllowedFrontendOrigin(origin?: string): boolean {
+  if (!origin) return true;
+
+  const normalizedOrigin = normalizeOrigin(origin);
+  if (getConfiguredOrigins().has(normalizedOrigin)) {
+    return true;
+  }
+
+  try {
+    const url = new URL(normalizedOrigin);
+    return (
+      (url.protocol === "http:" || url.protocol === "https:") &&
+      url.port === "5173" &&
+      Boolean(url.hostname)
+    );
+  } catch {
+    return false;
+  }
+}
+
 // ===== CONFIGURACIÓN DEL SERVIDOR =====
 // Creamos la instancia principal de Fastify
 // logger: true → Activa logs automáticos de todas las peticiones HTTP
@@ -51,7 +84,9 @@ const socialSocketsByUser = new Map<number, Set<WsConnection>>();
 // origin: Define qué dominios pueden hacer peticiones (por defecto http://localhost:5173)
 // credentials: Permite enviar cookies y headers de autenticación
 await app.register(cors, { 
-  origin: env.CORS_ORIGIN,
+  origin: (origin, callback) => {
+    callback(null, isAllowedFrontendOrigin(origin));
+  },
   credentials: true 
 });
 
@@ -192,7 +227,9 @@ const io = new SocketIOServer<
   SocketData
 >(app.server, {
   cors: {
-    origin: env.CORS_ORIGIN,
+    origin: (origin, callback) => {
+      callback(null, isAllowedFrontendOrigin(origin));
+    },
     methods: ["GET", "POST"],
     credentials: true,
   },

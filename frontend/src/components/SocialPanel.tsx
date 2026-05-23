@@ -3,20 +3,9 @@ import { useNavigate } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 import { useAuth } from "../context/AuthContext";
 import SocialChatPanel from "./SocialChatPanel";
+import { BACKEND_URL, BACKEND_WS_URL, resolveBackendAssetUrl } from "../lib/backend";
 
-const API = import.meta.env.VITE_API_BASE ?? "http://localhost:3000";
-
-function toWsBaseUrl(httpBase: string): string {
-  if (httpBase.startsWith("https://")) {
-    return `wss://${httpBase.slice("https://".length)}`;
-  }
-  if (httpBase.startsWith("http://")) {
-    return `ws://${httpBase.slice("http://".length)}`;
-  }
-  return httpBase;
-}
-
-type PanelMessage = { type: "success" | "error"; text: string } | null;
+type PanelMessage = { type: "success" | "error"; text: string; isKey?: boolean } | null;
 
 type PublicUser = {
   id: number;
@@ -114,9 +103,7 @@ function displayUserName(user: PublicUser): string {
 }
 
 function resolveAvatarUrl(avatarUrl?: string | null): string | null {
-  if (!avatarUrl) return null;
-  if (avatarUrl.startsWith("http://") || avatarUrl.startsWith("https://")) return avatarUrl;
-  return `${API}${avatarUrl}`;
+  return resolveBackendAssetUrl(avatarUrl);
 }
 
 function formatChatTimestamp(value?: string | null): string {
@@ -212,17 +199,17 @@ export default function SocialPanel({ token }: { token: string | null }) {
     if (!token) return;
     setLoading(true);
     try {
-      const response = await fetch(`${API}/api/social/overview`, {
+      const response = await fetch(`${BACKEND_URL}/api/social/overview`, {
         headers: { Authorization: `Bearer ${token}` },
       });
       const data = await response.json();
       if (!response.ok) {
-        setMessage({ type: "error", text: data.error || "No se pudo cargar la informacion social" });
+        setMessage({ type: "error", text: data.error || "LOAD_SOCIAL_INFO_ERROR", isKey: !data.error });
         return;
       }
       setOverview(data);
     } catch (_error) {
-      setMessage({ type: "error", text: "Error de conexion al cargar datos sociales" });
+      setMessage({ type: "error", text: "LOAD_SOCIAL_INFO_CONNECTION_ERROR", isKey: true });
     } finally {
       setLoading(false);
     }
@@ -231,7 +218,7 @@ export default function SocialPanel({ token }: { token: string | null }) {
   const fetchInvites = useCallback(async () => {
     if (!token) return;
     try {
-      const response = await fetch(`${API}/api/match/invites`, {
+      const response = await fetch(`${BACKEND_URL}/api/match/invites`, {
         headers: { Authorization: `Bearer ${token}` },
       });
       const data: MatchInviteResponse = await response.json();
@@ -246,7 +233,7 @@ export default function SocialPanel({ token }: { token: string | null }) {
   const fetchConversations = useCallback(async () => {
     if (!token) return;
     try {
-      const response = await fetch(`${API}/api/chat/conversations`, {
+      const response = await fetch(`${BACKEND_URL}/api/chat/conversations`, {
         headers: { Authorization: `Bearer ${token}` },
       });
       const data = await response.json();
@@ -260,7 +247,7 @@ export default function SocialPanel({ token }: { token: string | null }) {
   const fetchChatProfile = useCallback(async (targetUsername: string) => {
     if (!token || !targetUsername.trim()) return;
     try {
-      const response = await fetch(`${API}/api/social/user/${encodeURIComponent(targetUsername.trim())}`, {
+      const response = await fetch(`${BACKEND_URL}/api/social/user/${encodeURIComponent(targetUsername.trim())}`, {
         headers: { Authorization: `Bearer ${token}` },
       });
       const data = await response.json();
@@ -276,20 +263,20 @@ export default function SocialPanel({ token }: { token: string | null }) {
     setChatLoading(true);
     try {
       const response = await fetch(
-        `${API}/api/chat/conversation/${encodeURIComponent(targetUsername.trim())}/messages?limit=80`,
+        `${BACKEND_URL}/api/chat/conversation/${encodeURIComponent(targetUsername.trim())}/messages?limit=80`,
         {
           headers: { Authorization: `Bearer ${token}` },
         }
       );
       const data = await response.json();
       if (!response.ok) {
-        setMessage({ type: "error", text: data.error || "No se pudo cargar la conversacion" });
+        setMessage({ type: "error", text: data.error || "LOAD_CONVERSATION_ERROR", isKey: !data.error });
         return;
       }
       setChatMessages(data.messages ?? []);
 
       const readResponse = await fetch(
-        `${API}/api/chat/conversation/${encodeURIComponent(targetUsername.trim())}/read`,
+        `${BACKEND_URL}/api/chat/conversation/${encodeURIComponent(targetUsername.trim())}/read`,
         {
           method: "POST",
           headers: { Authorization: `Bearer ${token}` },
@@ -311,7 +298,7 @@ export default function SocialPanel({ token }: { token: string | null }) {
         });
       }
     } catch (_error) {
-      setMessage({ type: "error", text: "Error de conexion al cargar chat" });
+      setMessage({ type: "error", text: "LOAD_CHAT_CONNECTION_ERROR", isKey: true });
     } finally {
       setChatLoading(false);
     }
@@ -326,7 +313,7 @@ export default function SocialPanel({ token }: { token: string | null }) {
   useEffect(() => {
     if (!token) return;
 
-    const ws = new WebSocket(`${toWsBaseUrl(API)}/ws?token=${encodeURIComponent(token)}`);
+    const ws = new WebSocket(`${BACKEND_WS_URL}/ws?token=${encodeURIComponent(token)}`);
 
     ws.onmessage = (event) => {
       try {
@@ -334,24 +321,24 @@ export default function SocialPanel({ token }: { token: string | null }) {
         if (payload?.channel !== "social") return;
 
         const messages: Record<string, string> = {
-          friend_request_received: "Tienes una nueva solicitud de amistad",
-          friend_request_sent: "Solicitud de amistad enviada",
-          friend_request_accepted: "Una solicitud de amistad fue aceptada",
-          friend_request_rejected: "Una solicitud de amistad fue rechazada",
-          user_blocked_you: "Has sido bloqueado por un usuario",
-          user_unblocked_you: "Un usuario te ha desbloqueado",
-          you_blocked_user: "Usuario bloqueado",
-          you_unblocked_user: "Usuario desbloqueado",
-          chat_message_received: "Nuevo mensaje de chat",
-          match_invite_received: "Tienes una nueva invitacion de partida",
-          match_invite_sent: "Invitacion de partida enviada",
-          match_invite_accepted: "Tu invitacion de partida fue aceptada",
-          match_invite_rejected: "Tu invitacion de partida fue rechazada",
-          tournament_match_ready: "Tu partida de torneo esta lista",
+          friend_request_received: t("WS_friend_request_received"),
+          friend_request_sent: t("WS_friend_request_sent"),
+          friend_request_accepted: t("WS_friend_request_accepted"),
+          friend_request_rejected: t("WS_friend_request_rejected"),
+          user_blocked_you: t("WS_user_blocked_you"),
+          user_unblocked_you: t("WS_user_unblocked_you"),
+          you_blocked_user: t("WS_you_blocked_user"),
+          you_unblocked_user: t("WS_you_unblocked_user"),
+          chat_message_received: t("WS_chat_message_received"),
+          match_invite_received: t("WS_match_invite_received"),
+          match_invite_sent: t("WS_match_invite_sent"),
+          match_invite_accepted: t("WS_match_invite_accepted"),
+          match_invite_rejected: t("WS_match_invite_rejected"),
+          tournament_match_ready: t("WS_tournament_match_ready"),
         };
 
         if (messages[payload.event]) {
-          setMessage({ type: "success", text: messages[payload.event] });
+          setMessage({ type: "success", text: messages[payload.event], isKey: false });
           pushNotification(messages[payload.event]);
         }
 
@@ -425,7 +412,7 @@ export default function SocialPanel({ token }: { token: string | null }) {
     };
 
     ws.onerror = () => {
-      setMessage({ type: "error", text: "No se pudo establecer canal en tiempo real" });
+      setMessage({ type: "error", text: "RTC_CONNECTION_ERROR", isKey: true });
     };
 
     return () => {
@@ -439,7 +426,7 @@ export default function SocialPanel({ token }: { token: string | null }) {
     setActionLoading(true);
     setMessage(null);
     try {
-      const response = await fetch(`${API}/api/social/friend-request`, {
+      const response = await fetch(`${BACKEND_URL}/api/social/friend-request`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -468,7 +455,7 @@ export default function SocialPanel({ token }: { token: string | null }) {
     setActionLoading(true);
     setMessage(null);
     try {
-      const response = await fetch(`${API}/api/social/block`, {
+      const response = await fetch(`${BACKEND_URL}/api/social/block`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -478,7 +465,7 @@ export default function SocialPanel({ token }: { token: string | null }) {
       });
       const data = await response.json();
       if (!response.ok) {
-        setMessage({ type: "error", text: data.error || "No se pudo bloquear al usuario" });
+        setMessage({ type: "error", text: data.error || "BLOCK_ERROR", isKey: !data.error });
         return;
       }
       setBlockUsername("");
@@ -496,7 +483,7 @@ export default function SocialPanel({ token }: { token: string | null }) {
     setActionLoading(true);
     setMessage(null);
     try {
-      const response = await fetch(`${API}/api/social/friend-request/${requestId}/${action}`, {
+      const response = await fetch(`${BACKEND_URL}/api/social/friend-request/${requestId}/${action}`, {
         method: "POST",
         headers: { Authorization: `Bearer ${token}` },
       });
@@ -519,7 +506,7 @@ export default function SocialPanel({ token }: { token: string | null }) {
     setActionLoading(true);
     setMessage(null);
     try {
-      const response = await fetch(`${API}/api/social/block/${encodeURIComponent(username)}`, {
+      const response = await fetch(`${BACKEND_URL}/api/social/block/${encodeURIComponent(username)}`, {
         method: "DELETE",
         headers: { Authorization: `Bearer ${token}` },
       });
@@ -542,7 +529,7 @@ export default function SocialPanel({ token }: { token: string | null }) {
     setActionLoading(true);
     setMessage(null);
     try {
-      const response = await fetch(`${API}/api/social/block`, {
+      const response = await fetch(`${BACKEND_URL}/api/social/block`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -552,13 +539,13 @@ export default function SocialPanel({ token }: { token: string | null }) {
       });
       const data = await response.json();
       if (!response.ok) {
-        setMessage({ type: "error", text: data.error || "No se pudo bloquear al usuario" });
+        setMessage({ type: "error", text: data.error || "BLOCK_ERROR", isKey: !data.error });
         return;
       }
       setMessage({ type: "success", text: "Usuario bloqueado" });
       await fetchOverview();
     } catch (_error) {
-      setMessage({ type: "error", text: "Error de conexion al bloquear" });
+      setMessage({ type: "error", text: "BLOCK_CONNECTION_ERROR", isKey: true });
     } finally {
       setActionLoading(false);
     }
@@ -570,7 +557,7 @@ export default function SocialPanel({ token }: { token: string | null }) {
     setActionLoading(true);
     setMessage(null);
     try {
-      const response = await fetch(`${API}/api/match/invite`, {
+      const response = await fetch(`${BACKEND_URL}/api/match/invite`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -580,7 +567,7 @@ export default function SocialPanel({ token }: { token: string | null }) {
       });
       const data = await response.json();
       if (!response.ok) {
-        setMessage({ type: "error", text: data.error || "No se pudo enviar la invitacion" });
+        setMessage({ type: "error", text: data.error || "INVITE_ERROR", isKey: !data.error });
         return;
       }
       setInviteUsername("");
@@ -598,7 +585,7 @@ export default function SocialPanel({ token }: { token: string | null }) {
     setActionLoading(true);
     setMessage(null);
     try {
-      const response = await fetch(`${API}/api/match/invite/${inviteId}/${action}`, {
+      const response = await fetch(`${BACKEND_URL}/api/match/invite/${inviteId}/${action}`, {
         method: "POST",
         headers: {
           Authorization: `Bearer ${token}`,
@@ -606,7 +593,7 @@ export default function SocialPanel({ token }: { token: string | null }) {
       });
       const data: MatchInviteActionResponse = await response.json();
       if (!response.ok) {
-        setMessage({ type: "error", text: data.error || "No se pudo responder la invitacion" });
+        setMessage({ type: "error", text: data.error || "INVITE_RESPOND_ERROR", isKey: !data.error });
         return;
       }
 
@@ -619,10 +606,14 @@ export default function SocialPanel({ token }: { token: string | null }) {
         navigate(`/play?${params.toString()}`);
       }
 
-      setMessage({ type: "success", text: action === "accept" ? "Invitacion aceptada" : "Invitacion rechazada" });
+      setMessage({
+        type: "success",
+        text: action === "accept" ? "INVITE_ACCEPTED" : "INVITE_REJECTED",
+        isKey: true
+      });
       await fetchInvites();
     } catch (_error) {
-      setMessage({ type: "error", text: "Error de conexion al responder invitacion" });
+      setMessage({ type: "error", text: "INVITE_RESPOND_ERROR", isKey: true });
     } finally {
       setActionLoading(false);
     }
@@ -633,13 +624,13 @@ export default function SocialPanel({ token }: { token: string | null }) {
     setActionLoading(true);
     setMessage(null);
     try {
-      const response = await fetch(`${API}/api/chat/conversation/${encodeURIComponent(chatTarget.trim())}/block`, {
+      const response = await fetch(`${BACKEND_URL}/api/chat/conversation/${encodeURIComponent(chatTarget.trim())}/block`, {
         method: "POST",
         headers: { Authorization: `Bearer ${token}` },
       });
       const data = await response.json();
       if (!response.ok) {
-        setMessage({ type: "error", text: data.error || "No se pudo bloquear al usuario" });
+        setMessage({ type: "error", text: data.error || "BLOCK_ERROR", isKey: !data.error });
         return;
       }
       setMessage({ type: "success", text: data.message });
@@ -649,7 +640,7 @@ export default function SocialPanel({ token }: { token: string | null }) {
       await fetchOverview();
       await fetchConversations();
     } catch (_error) {
-      setMessage({ type: "error", text: "Error de conexion al bloquear" });
+      setMessage({ type: "error", text: "BLOCK_CONNECTION_ERROR", isKey: true });
     } finally {
       setActionLoading(false);
     }
@@ -660,19 +651,19 @@ export default function SocialPanel({ token }: { token: string | null }) {
     setActionLoading(true);
     setMessage(null);
     try {
-      const response = await fetch(`${API}/api/chat/conversation/${encodeURIComponent(chatTarget.trim())}/invite-to-game`, {
+      const response = await fetch(`${BACKEND_URL}/api/chat/conversation/${encodeURIComponent(chatTarget.trim())}/invite-to-game`, {
         method: "POST",
         headers: { Authorization: `Bearer ${token}` },
       });
       const data = await response.json();
       if (!response.ok) {
-        setMessage({ type: "error", text: data.error || "No se pudo enviar la invitacion" });
+        setMessage({ type: "error", text: data.error || "INVITE_ERROR", isKey: !data.error });
         return;
       }
       setMessage({ type: "success", text: data.message });
       await fetchInvites();
     } catch (_error) {
-      setMessage({ type: "error", text: "Error de conexion al invitar" });
+      setMessage({ type: "error", text: "INVITE_CONNECTION_ERROR", isKey: true });
     } finally {
       setActionLoading(false);
     }
@@ -681,7 +672,7 @@ export default function SocialPanel({ token }: { token: string | null }) {
   const sendChatMessage = async (event: FormEvent) => {
     event.preventDefault();
     if (!token || !chatTarget.trim()) {
-      setMessage({ type: "error", text: "Debes seleccionar un amigo para chatear" });
+      setMessage({ type: "error", text: "SELECT_FRIEND_TO_CHAT", isKey: true });
       return;
     }
     if (!chatInput.trim()) return;
@@ -689,7 +680,7 @@ export default function SocialPanel({ token }: { token: string | null }) {
     setActionLoading(true);
     setMessage(null);
     try {
-      const response = await fetch(`${API}/api/chat/conversation/${encodeURIComponent(chatTarget.trim())}/messages`, {
+      const response = await fetch(`${BACKEND_URL}/api/chat/conversation/${encodeURIComponent(chatTarget.trim())}/messages`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -699,7 +690,7 @@ export default function SocialPanel({ token }: { token: string | null }) {
       });
       const data = await response.json();
       if (!response.ok) {
-        setMessage({ type: "error", text: data.error || "No se pudo enviar el mensaje" });
+        setMessage({ type: "error", text: data.error || "SEND_MESSAGE_ERROR", isKey: !data.error });
         return;
       }
 
@@ -708,7 +699,7 @@ export default function SocialPanel({ token }: { token: string | null }) {
         window.clearTimeout(typingTimeoutRef.current);
         typingTimeoutRef.current = null;
       }
-      await fetch(`${API}/api/chat/conversation/${encodeURIComponent(chatTarget.trim())}/typing`, {
+      await fetch(`${BACKEND_URL}/api/chat/conversation/${encodeURIComponent(chatTarget.trim())}/typing`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -719,7 +710,7 @@ export default function SocialPanel({ token }: { token: string | null }) {
       setChatMessages((prev) => [...prev, data.message]);
       await fetchConversations();
     } catch (_error) {
-      setMessage({ type: "error", text: "Error de conexion al enviar mensaje" });
+      setMessage({ type: "error", text: "SEND_MESSAGE_CONNECTION_ERROR", isKey: true });
     } finally {
       setActionLoading(false);
     }
@@ -732,7 +723,7 @@ export default function SocialPanel({ token }: { token: string | null }) {
     if (chatTarget === normalizedUsername) {
       if (token) {
         try {
-          await fetch(`${API}/api/chat/conversation/${encodeURIComponent(normalizedUsername)}/typing`, {
+          await fetch(`${BACKEND_URL}/api/chat/conversation/${encodeURIComponent(normalizedUsername)}/typing`, {
             method: "POST",
             headers: {
               "Content-Type": "application/json",
@@ -767,7 +758,7 @@ export default function SocialPanel({ token }: { token: string | null }) {
     setChatInput(value);
     if (!token || !chatTarget.trim()) return;
 
-    await fetch(`${API}/api/chat/conversation/${encodeURIComponent(chatTarget.trim())}/typing`, {
+    await fetch(`${BACKEND_URL}/api/chat/conversation/${encodeURIComponent(chatTarget.trim())}/typing`, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
@@ -781,7 +772,7 @@ export default function SocialPanel({ token }: { token: string | null }) {
     }
 
     typingTimeoutRef.current = window.setTimeout(() => {
-      void fetch(`${API}/api/chat/conversation/${encodeURIComponent(chatTarget.trim())}/typing`, {
+      void fetch(`${BACKEND_URL}/api/chat/conversation/${encodeURIComponent(chatTarget.trim())}/typing`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -808,7 +799,7 @@ export default function SocialPanel({ token }: { token: string | null }) {
             fontSize: 13,
           }}
         >
-          {message.text}
+          {message.isKey ? t(message.text) : message.text}
         </div>
       )}
 
@@ -820,7 +811,7 @@ export default function SocialPanel({ token }: { token: string | null }) {
           <input
             value={friendUsername}
             onChange={(e) => setFriendUsername(e.target.value)}
-            placeholder="username"
+            placeholder={t("PLACEHOLDER_USERNAME")}
             required
             style={{ flex: 1, padding: 10, border: "1px solid rgba(255, 255, 255, 0.16)", backgroundColor: "rgba(8, 10, 20, 0.86)" }}
           />
@@ -840,7 +831,7 @@ export default function SocialPanel({ token }: { token: string | null }) {
           <input
             value={blockUsername}
             onChange={(e) => setBlockUsername(e.target.value)}
-            placeholder="username"
+            placeholder={t("PLACEHOLDER_USERNAME")}
             required
             style={{ flex: 1, padding: 10, border: "1px solid rgba(255, 255, 255, 0.16)", backgroundColor: "rgba(8, 10, 20, 0.86)" }}
           />
@@ -860,7 +851,7 @@ export default function SocialPanel({ token }: { token: string | null }) {
           <input
             value={inviteUsername}
             onChange={(e) => setInviteUsername(e.target.value)}
-            placeholder="username"
+            placeholder={t("PLACEHOLDER_USERNAME")}
             required
             style={{ flex: 1, padding: 10, border: "1px solid rgba(255, 255, 255, 0.16)", backgroundColor: "rgba(8, 10, 20, 0.86)" }}
           />

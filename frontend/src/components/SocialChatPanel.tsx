@@ -1,7 +1,6 @@
 import { useEffect, useRef, type FormEvent } from "react";
 import { useTranslation } from "react-i18next";
-
-const API = import.meta.env.VITE_API_BASE ?? "http://localhost:3000";
+import { resolveBackendAssetUrl } from "../lib/backend";
 
 type PublicUser = {
   id: number;
@@ -70,9 +69,7 @@ function displayUserName(user: PublicUser): string {
 }
 
 function resolveAvatarUrl(avatarUrl?: string | null): string | null {
-  if (!avatarUrl) return null;
-  if (avatarUrl.startsWith("http://") || avatarUrl.startsWith("https://")) return avatarUrl;
-  return `${API}${avatarUrl}`;
+  return resolveBackendAssetUrl(avatarUrl);
 }
 
 function formatChatTimestamp(value?: string | null): string {
