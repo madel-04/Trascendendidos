@@ -54,7 +54,7 @@ const content = {
       ["8. Utenti internazionali", "Se accedi da fuori regione, riconosci che i dati possono essere trattati in giurisdizioni con leggi privacy diverse."],
       ["9. Minori", "La piattaforma è destinata a minori sotto l'età minima di consenso digitale nella loro giurisdizione."],
       ["10. Modifiche", "Possiamo aggiornare questa informativa. Le modifiche importanti saranno pubblicate nell'app con data aggiornata."],
-      ["11. Contact", "Per domande privacy o richieste dati, contatta l'amministratore tramite i canali ufficiali del progetto."],
+      ["11. Contatto", "Per domande sulla privacy o richieste di dati, contatta l'amministratore tramite i canali ufficiali del progetto."],
     ],
   },
 };
@@ -116,7 +116,7 @@ export default function Privacy() {
             className="btn btn-outline legal-arrow"
             onClick={() => goTo(current - 1)}
             disabled={current === 0}
-            aria-label="Previous page"
+            aria-label={t("LEGAL_PREVIOUS_PAGE")}
           >
             ◀
           </button>
@@ -126,7 +126,7 @@ export default function Privacy() {
                 key={i}
                 className={`legal-dot${i === current ? " active" : ""}`}
                 onClick={() => goTo(i)}
-                aria-label={`Page ${i + 1}`}
+                aria-label={t("LEGAL_PAGE_LABEL", { page: i + 1 })}
               />
             ))}
           </div>
@@ -134,7 +134,7 @@ export default function Privacy() {
             className="btn btn-outline legal-arrow"
             onClick={() => goTo(current + 1)}
             disabled={current === totalPages - 1}
-            aria-label="Next page"
+            aria-label={t("LEGAL_NEXT_PAGE")}
           >
             ▶
           </button>

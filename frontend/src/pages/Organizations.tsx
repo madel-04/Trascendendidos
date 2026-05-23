@@ -104,6 +104,7 @@ export default function Organizations() {
   const canManageMembers = viewer?.canManage ?? false;
   const canChangeRoles = viewer?.role === "owner";
   const canReviewRequests = viewer?.canReviewRequests ?? false;
+  const isOwner = viewer?.role === "owner";
 
   const searchSummary = useMemo(() => {
     if (searchTotal === 0) return t("ORG_SEARCH_SUMMARY_EMPTY");
@@ -663,7 +664,7 @@ export default function Organizations() {
               formatDate={formatDate}
             />
 
-            {canReviewRequests ? (
+            {canReviewRequests && isOwner ? (
               <div className="profile-panel">
                 <div className="organization-head">
                   <h2>{t("ORG_ACCESS_REQUESTS")}</h2>

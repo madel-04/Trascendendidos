@@ -44,7 +44,7 @@ function GlobeIcon() {
 }
 
 const LanguageSwitcher: React.FC = () => {
-  const { i18n } = useTranslation();
+  const { i18n, t } = useTranslation();
   const currentLanguage = i18n.language.startsWith("en")
     ? "en"
     : i18n.language.startsWith("it")
@@ -58,14 +58,14 @@ const LanguageSwitcher: React.FC = () => {
   };
 
   return (
-    <label className="language-switcher" aria-label="Language selector">
+    <label className="language-switcher" aria-label={t("LANGUAGE_SELECTOR_LABEL")}>
       <span className="language-switcher-label" aria-hidden="true">
         {icons[currentLanguage] || <GlobeIcon />}
       </span>
       <select
         value={currentLanguage}
         onChange={(event) => void i18n.changeLanguage(event.target.value)}
-        title="Language"
+        title={t("LANGUAGE_LABEL")}
       >
         <option value="es">ES</option>
         <option value="en">EN</option>

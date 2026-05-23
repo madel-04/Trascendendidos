@@ -114,7 +114,7 @@ function buildViewerContext(role: OrganizationRole | null, requestStatus: JoinRe
     requestStatus,
     canApply: !role && requestStatus !== "pending",
     canManage: role === "owner" || role === "admin",
-    canReviewRequests: role === "owner" || role === "admin",
+    canReviewRequests: role === "owner",
   };
 }
 
@@ -687,7 +687,7 @@ export async function organizationRoutes(app: FastifyInstance) {
       return reply.code(400).send({ error: parsedParams.error.errors[0].message });
     }
 
-    const permission = await requireOrganizationRole(request, reply, parsedParams.data.organizationId, ["owner", "admin"]);
+    const permission = await requireOrganizationRole(request, reply, parsedParams.data.organizationId, ["owner"]);
     if (!permission) return;
 
     const [requestRow] = await query<{ user_id: number }>(
@@ -720,7 +720,7 @@ export async function organizationRoutes(app: FastifyInstance) {
       return reply.code(400).send({ error: parsedParams.error.errors[0].message });
     }
 
-    const permission = await requireOrganizationRole(request, reply, parsedParams.data.organizationId, ["owner", "admin"]);
+    const permission = await requireOrganizationRole(request, reply, parsedParams.data.organizationId, ["owner"]);
     if (!permission) return;
 
     const [requestRow] = await query<{ user_id: number }>(

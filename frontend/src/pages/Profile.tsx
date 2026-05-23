@@ -358,7 +358,7 @@ export default function Profile() {
                 <span className="auth-label">{t("AVATAR_IMAGE")}</span>
                 <div style={{ display: "flex", gap: "16px", flexWrap: "wrap", alignItems: "stretch" }}>
                   {resolveAvatarUrl(avatarUrl) ? (
-                    <img src={resolveAvatarUrl(avatarUrl) ?? ""} alt="Avatar actual" style={{ width: "124px", height: "124px", borderRadius: "14px", objectFit: "cover", border: "1px solid rgba(255, 255, 255, 0.16)" }} />
+                    <img src={resolveAvatarUrl(avatarUrl) ?? ""} alt={t("CURRENT_AVATAR_ALT")} style={{ width: "124px", height: "124px", borderRadius: "14px", objectFit: "cover", border: "1px solid rgba(255, 255, 255, 0.16)" }} />
                   ) : (
                     <div style={{ width: "124px", height: "124px", borderRadius: "14px", border: "1px solid rgba(255, 255, 255, 0.16)", background: "rgba(255, 255, 255, 0.05)", display: "flex", alignItems: "center", justifyContent: "center" }}>
                       <span style={{ color: "var(--ink-muted)", fontSize: "0.8rem" }}>{t("NO_IMAGE")}</span>
@@ -425,7 +425,7 @@ export default function Profile() {
             {!twoFAEnabled && !showSetup && <button className="btn-premium secondary" type="button" onClick={handleSetup2FA} disabled={loading}>{t("ENABLE_2FA")}</button>}
             {!twoFAEnabled && showSetup && qrCodeUrl && (
               <div className="profile-2fa-box">
-                <img src={qrCodeUrl} alt="QR Code for 2FA" />
+                <img src={qrCodeUrl} alt={t("QR_CODE_2FA_ALT")} />
                 <code>{secret}</code>
                 <input value={verificationCode} onChange={(event) => setVerificationCode(event.target.value.replace(/\D/g, "").slice(0, 6))} placeholder="000000" maxLength={6} />
                 <button className="btn-premium secondary" type="button" onClick={handleEnable2FA} disabled={loading || verificationCode.length !== 6}>{t("2FA_VERIFY_AND_ACTIVATE")}</button>
@@ -607,4 +607,3 @@ export default function Profile() {
     </section>
   );
 }
-

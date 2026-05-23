@@ -52,7 +52,7 @@ const content = {
       ["6. Proprietà intellettuale", "Software, brand, design e documentazione sono protetti dalle leggi sulla proprietà intellettuale."],
       ["7. Limiti di responsabilità", ["Non garantiamo funzionamento ininterrotto o privo di errori.", "La responsabilità è limitata ai danni diretti e dimostrabili nei limiti di legge.", "Non siamo responsabili per servizi di terze parti o link esterni."]],
       ["8. Terminazione", "Puoi smettere di usare il servizio in qualsiasi momento. Possiamo terminare l'accesso per motivi legali, sicurezza o violazioni."],
-      ["9. Legge applicabile", "Questi termini sono regolati dalle leggi della giurisdizione del proprietario del proyecto, salvo norme obbligatorie per consumatori."],
+      ["9. Legge applicabile", "Questi termini sono regolati dalle leggi della giurisdizione del proprietario del progetto, salvo norme obbligatorie per i consumatori."],
       ["10. Modifiche", "Possiamo aggiornare i termini per cambi legali, tecnici o di prodotto. L'uso continuato implica accettazione."],
       ["11. Contatto", "Per richieste legali o sui termini, contatta l'amministratore tramite i canali ufficiali."],
     ],
@@ -116,7 +116,7 @@ export default function Terms() {
             className="btn btn-outline legal-arrow"
             onClick={() => goTo(current - 1)}
             disabled={current === 0}
-            aria-label="Previous page"
+            aria-label={t("LEGAL_PREVIOUS_PAGE")}
           >
             ◀
           </button>
@@ -126,7 +126,7 @@ export default function Terms() {
                 key={i}
                 className={`legal-dot${i === current ? " active" : ""}`}
                 onClick={() => goTo(i)}
-                aria-label={`Page ${i + 1}`}
+                aria-label={t("LEGAL_PAGE_LABEL", { page: i + 1 })}
               />
             ))}
           </div>
@@ -134,7 +134,7 @@ export default function Terms() {
             className="btn btn-outline legal-arrow"
             onClick={() => goTo(current + 1)}
             disabled={current === totalPages - 1}
-            aria-label="Next page"
+            aria-label={t("LEGAL_NEXT_PAGE")}
           >
             ▶
           </button>
