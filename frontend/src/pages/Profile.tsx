@@ -468,7 +468,7 @@ export default function Profile() {
                       {statCard(t("GAMES_PLAYED"), localBotStats.totalPlayed)}
                       {statCard(t("GAMES_WON"), localBotStats.wins, "#9bf2bd")}
                       {statCard(t("GAMES_LOST"), localBotStats.losses, "#ff8da1")}
-                      {statCard(t("Rival"), t("Bot"), "#f9cb28")}
+                      {statCard(t("OPPONENT"), t("BOT"), "#f9cb28")}
                     </div>
                   </div>
                   <div>
