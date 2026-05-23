@@ -19,31 +19,12 @@ import PlayAccessGate from "./components/PlayAccessGate";
 import ProtectedRoute from "./components/ProtectedRoute";
 // Importamos el contexto de autenticación
 import { useAuth } from "./context/AuthContext";
+import { BACKEND_URL, BACKEND_WS_URL, resolveBackendAssetUrl } from "./lib/backend";
 // Importamos hooks de React para manejar efectos y estado
 import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 
-// Obtenemos la URL base de la API desde las variables de entorno de Vite
-// import.meta.env → Variables de entorno disponibles en Vite
-// VITE_API_BASE → Se define en docker-compose.yml o .env
-// ?? "http://localhost:3000" → Valor por defecto si no está definida
-const API = import.meta.env.VITE_API_BASE ?? "http://localhost:3000";
-
-function resolveAvatarUrl(api: string, avatarUrl?: string | null): string | null {
-  if (!avatarUrl) return null;
-  if (avatarUrl.startsWith("http://") || avatarUrl.startsWith("https://")) return avatarUrl;
-  return `${api}${avatarUrl}`;
-}
-
-function toWsBaseUrl(httpBase: string): string {
-  if (httpBase.startsWith("https://")) {
-    return `wss://${httpBase.slice("https://".length)}`;
-  }
-  if (httpBase.startsWith("http://")) {
-    return `ws://${httpBase.slice("http://".length)}`;
-  }
-  return httpBase;
-}
+// La URL del backend se resuelve desde VITE_API_BASE o desde el host actual.
 
 type AppNotification = {
   id: string;
@@ -68,7 +49,7 @@ export default function App() {
   // [] → Array vacío significa que solo se ejecuta una vez al montar
   useEffect(() => {
     // Hacemos una petición HTTP al endpoint de health check
-    fetch(`${API}/api/health`)
+    fetch(`${BACKEND_URL}/api/health`)
       .then((r) => r.json())           // Convertimos la respuesta a JSON
       .then((j) => setHealth(JSON.stringify(j)))  // Convertimos el objeto a string y guardamos
       .catch(() => setHealth("(error)"));  // Si falla, mostramos "(error)"
@@ -83,7 +64,7 @@ export default function App() {
     const token = localStorage.getItem("authToken");
     if (!token) return;
 
-    const ws = new WebSocket(`${toWsBaseUrl(API)}/ws?token=${encodeURIComponent(token)}`);
+    const ws = new WebSocket(`${BACKEND_WS_URL}/ws?token=${encodeURIComponent(token)}`);
 
     ws.onmessage = (event) => {
       try {
@@ -182,7 +163,7 @@ export default function App() {
                   <NavLink className={({ isActive }) => `nav-link${isActive ? " nav-link-active" : ""}`} to="/profile" style={{ display: "flex", alignItems: "center", gap: "8px", padding: "4px 12px 4px 4px" }}>
                     {user.avatarUrl ? (
                       <img 
-                        src={resolveAvatarUrl(API, user.avatarUrl) || ""} 
+                        src={resolveBackendAssetUrl(user.avatarUrl) || ""}
                         alt={user.username} 
                         style={{ width: "28px", height: "28px", borderRadius: "50%", objectFit: "cover" }} 
                       />
@@ -253,12 +234,12 @@ export default function App() {
 
         {!isHomeRoute && !isPlayRoute ? (
           <footer className="footer">
-            <div>{t("TRANSCENDENCE_PROJECT")}</div>
-            <div>
-              <Link to="/privacy">{t("PRIVACY_POLICY")}</Link>
-              {" · "}
-              <Link to="/terms">{t("TERMS_OF_SERVICE")}</Link>
-            </div>
+          <div>{t("TRANSCENDENCE_PROJECT")}</div>
+          <div>
+            <Link to="/privacy">{t("PRIVACY_POLICY")}</Link>
+            {" · "}
+            <Link to="/terms">{t("TERMS_OF_SERVICE")}</Link>
+          </div>
           </footer>
         ) : null}
       </div>

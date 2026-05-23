@@ -10,18 +10,7 @@ import GameView from "../components/GameView";
 import Matchmaking from "../components/Matchmaking";
 import SettingsPanel from "../components/SettingsPanel";
 import { useAuth } from "../context/AuthContext";
-
-const API = import.meta.env.VITE_API_BASE ?? "http://localhost:3000";
-
-function toWsBaseUrl(httpBase: string): string {
-  if (httpBase.startsWith("https://")) {
-    return `wss://${httpBase.slice("https://".length)}`;
-  }
-  if (httpBase.startsWith("http://")) {
-    return `ws://${httpBase.slice("http://".length)}`;
-  }
-  return httpBase;
-}
+import { BACKEND_URL, BACKEND_WS_URL } from "../lib/backend";
 
 type GameRoomStatus = {
   roomId: string;
@@ -117,7 +106,7 @@ export default function Play() {
     setMessage(null);
 
     try {
-      const response = await fetch(`${API}/api/game/room/${encodeURIComponent(matchContext.roomId)}/join`, {
+      const response = await fetch(`${BACKEND_URL}/api/game/room/${encodeURIComponent(matchContext.roomId)}/join`, {
         method: "POST",
         headers: {
           Authorization: `Bearer ${token}`,
@@ -133,7 +122,7 @@ export default function Play() {
 
       // Fetch room status after joining
       const statusResponse = await fetch(
-        `${API}/api/game/room/${encodeURIComponent(matchContext.roomId)}/status`,
+        `${BACKEND_URL}/api/game/room/${encodeURIComponent(matchContext.roomId)}/status`,
         {
           headers: {
             Authorization: `Bearer ${token}`,
@@ -165,7 +154,7 @@ export default function Play() {
     const interval = setInterval(async () => {
       try {
         const response = await fetch(
-          `${API}/api/game/room/${encodeURIComponent(matchContext.roomId)}/status`,
+          `${BACKEND_URL}/api/game/room/${encodeURIComponent(matchContext.roomId)}/status`,
           {
             headers: {
               Authorization: `Bearer ${token}`,
@@ -189,7 +178,7 @@ export default function Play() {
   useEffect(() => {
     if (!token || !matchContext) return;
 
-    const ws = new WebSocket(`${toWsBaseUrl(API)}/ws?token=${encodeURIComponent(token)}`);
+    const ws = new WebSocket(`${BACKEND_WS_URL}/ws?token=${encodeURIComponent(token)}`);
 
     ws.onmessage = (event) => {
       try {
@@ -204,7 +193,7 @@ export default function Play() {
           if (payload.data?.roomId === matchContext.roomId) {
             // Refetch status
             fetch(
-              `${API}/api/game/room/${encodeURIComponent(matchContext.roomId)}/status`,
+              `${BACKEND_URL}/api/game/room/${encodeURIComponent(matchContext.roomId)}/status`,
               {
                 headers: {
                   Authorization: `Bearer ${token}`,
@@ -250,7 +239,7 @@ export default function Play() {
 
     try {
       const response = await fetch(
-        `${API}/api/game/room/${encodeURIComponent(matchContext.roomId)}/ready`,
+        `${BACKEND_URL}/api/game/room/${encodeURIComponent(matchContext.roomId)}/ready`,
         {
           method: "POST",
           headers: {
@@ -510,7 +499,7 @@ export default function Play() {
           multiplayerOpponentUsername={roomStatus.players.opponent.username}
           roomId={roomStatus.roomId}
           joinInviteRoom
-          waitForRealtimeReady
+          waitForRealtimeReady={false}
           allowRematch={!isTournamentMatch}
           exitLabel={isTournamentMatch ? t("BACK_TO_TOURNAMENT") : undefined}
           onStatusChange={setIsMatchFinished}
